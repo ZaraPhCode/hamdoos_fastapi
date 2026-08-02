@@ -1,9 +1,17 @@
-?{% extends "admin/base.html" %}
-{% block title %}فاکتور {{ invoice.reference_code or invoice.id }}{% endblock %}
+{% extends "admin/base.html" %}
+{% block title %}جزئیات فاکتور {{ invoice.reference_code or invoice.id }}{% endblock %}
 {% block content %}
-<div class="max-w-5xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">فاکتور {{ invoice.reference_code or invoice.id }}</h1>
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">جزئیات فاکتور</h1>
+                <p class="text-sm text-gray-500 mt-0.5">{{ invoice.reference_code or invoice.id }}</p>
+            </div>
+        </div>
         <div class="flex items-center gap-3">
             <button onclick="window.print()" class="btn-primary flex items-center gap-2">
                 <i class="fas fa-print"></i> پرینت
@@ -13,70 +21,179 @@
             </a>
         </div>
     </div>
-    <div class="card mb-6">
-        <div class="card-body">
-            <div class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4">
-                <div>
-                    <h2 class="text-xl font-bold">آسا‌شاپ</h2>
-                    <p class="text-sm text-gray-500">فاکتور فروش</p>
-                </div>
-                <div class="text-left">
-                    <p class="text-sm text-gray-500">کد: <span class="font-medium" dir="ltr">{{ invoice.reference_code or invoice.id }}</span></p>
-                    <p class="text-sm text-gray-500">تاریخ: <span class="font-medium">{{ invoice.insert_date }}</span></p>
-                    <p class="text-sm text-gray-500">نوع: <span class="font-medium">{{ invoice.type_name or invoice.invoice_type or '---' }}</span></p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="card lg:col-span-2">
+            <div class="card-header bg-gradient-to-r from-indigo-50 to-blue-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center"><i class="fas fa-info"></i></div>
+                    <h2 class="font-semibold text-gray-800">اطلاعات فاکتور</h2>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-8 mb-6">
-                <div>
-                    <h3 class="font-semibold text-sm text-gray-600 mb-2">فروشنده</h3>
-                    <p class="font-medium">{{ invoice.seller_name or 'آسا‌شاپ' }}</p>
-                    <p class="text-sm text-gray-500">{{ invoice.seller_address or '---' }}</p>
-                    <p class="text-sm text-gray-500" dir="ltr">{{ invoice.seller_economic_code or '---' }}</p>
+            <div class="card-body">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <span class="text-gray-500 text-xs">تاریخ</span>
+                        <p class="font-medium text-gray-800 mt-0.5">{{ invoice.date or invoice.insert_date or '-' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-xs">کد پیگیری</span>
+                        <p class="font-medium text-gray-800 mt-0.5" dir="ltr">{{ invoice.reference_code or invoice.id }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-xs">وضعیت</span>
+                        <p class="mt-0.5">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if invoice.status == 'Bought' %}bg-emerald-100 text-emerald-700
+                                {% elif invoice.status == 'Processing' %}bg-amber-100 text-amber-700
+                                {% elif invoice.status == 'Canceled' %}bg-red-100 text-red-700
+                                {% elif invoice.status == 'ReturnFromSale' %}bg-blue-100 text-blue-700
+                                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                {% if invoice.status == 'Bought' %}تائید شده
+                                {% elif invoice.status == 'Processing' %}در حال پردازش
+                                {% elif invoice.status == 'Canceled' %}لغو شده
+                                {% elif invoice.status == 'ReturnFromSale' %}بازگشتی
+                                {% else %}{{ invoice.status }}{% endif %}
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-xs">نام خریدار</span>
+                        <p class="font-medium text-gray-800 mt-0.5">{{ invoice.identity_name or '-' }}</p>
+                    </div>
                 </div>
-                <div>
-                    <h3 class="font-semibold text-sm text-gray-600 mb-2">خریدار</h3>
-                    <p class="font-medium">{{ invoice.buyer_name or invoice.customer.name if invoice.customer else '---' }}</p>
-                    <p class="text-sm text-gray-500">{{ invoice.buyer_address or '---' }}</p>
-                    {% if invoice.customer and invoice.customer.mobile %}<p class="text-sm text-gray-500" dir="ltr">{{ invoice.customer.mobile }}</p>{% endif %}
+                {% if invoice.order_id %}
+                <div class="mt-4 pt-4 border-t border-gray-100 flex items-center gap-3">
+                    <span class="text-gray-500 text-xs">سفارش مرتبط:</span>
+                    <a href="/administration/Orders/Details/{{ invoice.order_id }}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                        <i class="fas fa-external-link-alt ml-1"></i>مشاهده سفارش #{{ invoice.order_id[:8] if invoice.order_id else invoice.order_id }}
+                    </a>
+                    <a href="/administration/invoices/{{ invoice.id }}/update-order" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors">
+                        <i class="fas fa-sync ml-1"></i>بروزرسانی سفارش
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header bg-gradient-to-r from-amber-50 to-orange-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fas fa-exchange-alt"></i></div>
+                    <h2 class="font-semibold text-gray-800">نوع فاکتور</h2>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full border border-gray-200 rounded-lg">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="table-header border-b">#</th>
-                            <th class="table-header border-b">کالا/خدمت</th>
-                            <th class="table-header border-b">تعداد</th>
-                            <th class="table-header border-b">قیمت واحد</th>
-                            <th class="table-header border-b">تخفیف</th>
-                            <th class="table-header border-b">مالیات</th>
-                            <th class="table-header border-b">جمع</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        {% for item in invoice.items %}
-                        <tr class="table-row-hover">
-                            <td class="table-cell">{{ loop.index }}</td>
-                            <td class="table-cell font-medium">{{ item.product_name or item.product.name if item.product else '---' }}</td>
-                            <td class="table-cell">{{ item.quantity }}</td>
-                            <td class="table-cell">{{ "{:,}".format(item.unit_price) }}</td>
-                            <td class="table-cell">{{ "{:,}".format(item.discount or 0) }}</td>
-                            <td class="table-cell">{{ "{:,}".format(item.tax or 0) }}</td>
-                            <td class="table-cell font-medium">{{ "{:,}".format(item.total_price) }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot class="bg-gray-50 border-t border-gray-200">
-                        <tr><td colspan="5" class="px-4 py-2"></td><td class="px-4 py-2 text-sm font-medium">جمع کل:</td><td class="px-4 py-2 font-medium text-blue-600">{{ "{:,}".format(invoice.total_price) }} تومان</td></tr>
-                        {% if invoice.tax_total %}<tr><td colspan="5" class="px-4 py-2"></td><td class="px-4 py-2 text-sm font-medium">مالیات:</td><td class="px-4 py-2">{{ "{:,}".format(invoice.tax_total) }}</td></tr>{% endif %}
-                        {% if invoice.discount_total %}<tr><td colspan="5" class="px-4 py-2"></td><td class="px-4 py-2 text-sm font-medium">تخفیف:</td><td class="px-4 py-2 text-red-600">{{ "{:,}".format(invoice.discount_total) }}</td></tr>{% endif %}
-                        <tr class="border-t border-gray-300"><td colspan="5" class="px-4 py-2"></td><td class="px-4 py-2 text-sm font-bold">قابل پرداخت:</td><td class="px-4 py-2 font-bold text-lg text-blue-600">{{ "{:,}".format(invoice.final_price) }} تومان</td></tr>
-                    </tfoot>
-                </table>
+            <div class="card-body">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                        {% if invoice.type == 'Sale' %}bg-indigo-100 text-indigo-700
+                        {% elif invoice.type == 'Purchase' %}bg-cyan-100 text-cyan-700
+                        {% elif invoice.type == 'Wastage' %}bg-rose-100 text-rose-700
+                        {% elif invoice.type == 'ReturnFromSale' %}bg-blue-100 text-blue-700
+                        {% else %}bg-gray-100 text-gray-600{% endif %}">
+                        {% if invoice.type == 'Sale' %}فروش
+                        {% elif invoice.type == 'Purchase' %}خرید
+                        {% elif invoice.type == 'Wastage' %}ضایعات
+                        {% elif invoice.type == 'ReturnFromSale' %}برگشت از فروش
+                        {% else %}{{ invoice.type }}{% endif %}
+                    </span>
+                </div>
+                {% if invoice.type != 'ReturnFromSale' %}
+                <form method="POST" action="/administration/invoices/{{ invoice.id }}/convert-to-return" onsubmit="return confirm('آیا از تبدیل این فاکتور به برگشتی اطمینان دارید؟')">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <i class="fas fa-undo"></i> تبدیل به برگشتی
+                    </button>
+                </form>
+                {% endif %}
             </div>
-            <div class="mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500 text-center">
-                <p>این فاکتور به صورت الکترونیکی صادر شده و به امضا نیاز ندارد.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-gradient-to-r from-gray-50 to-slate-50">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center"><i class="fas fa-boxes"></i></div>
+                <h2 class="font-semibold text-gray-800">اقلام فاکتور</h2>
+                <span class="text-xs text-gray-500">({{ invoice.invoice_products|length }} قلم)</span>
             </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200 text-gray-500">
+                        <th class="text-center px-4 py-3 font-medium">#</th>
+                        <th class="text-right px-4 py-3 font-medium">نام</th>
+                        <th class="text-right px-4 py-3 font-medium">شماره قطعه</th>
+                        <th class="text-right px-4 py-3 font-medium">تنوع</th>
+                        <th class="text-left px-4 py-3 font-medium">قیمت واحد</th>
+                        <th class="text-center px-4 py-3 font-medium">تعداد</th>
+                        <th class="text-center px-4 py-3 font-medium">TaobaoChoice</th>
+                        <th class="text-left px-4 py-3 font-medium">قیمت ارزی</th>
+                        <th class="text-center px-4 py-3 font-medium">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for item in invoice.invoice_products %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="text-center px-4 py-3 text-gray-400">{{ loop.index }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-800">{{ item.name or '-' }}</td>
+                        <td class="px-4 py-3">
+                            {% if item.product_id and item.part_number %}
+                            <a href="/administration/Products/Details/{{ item.product_id }}" class="text-indigo-600 hover:text-indigo-800 font-mono text-xs" dir="ltr">{{ item.part_number }}</a>
+                            {% else %}
+                            <span class="text-gray-400">{{ item.part_number or '-' }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-gray-600">{{ item.variety_value or '-' }}</td>
+                        <td class="px-4 py-3 text-left font-medium text-gray-800">{{ "{:,.0f}".format(item.unit_price or 0) }}</td>
+                        <td class="text-center px-4 py-3">{{ item.count or 0 }}</td>
+                        <td class="text-center px-4 py-3">
+                            {% if item.taobao_choice_id %}
+                            <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{{ item.taobao_choice_id }}</span>
+                            {% else %}
+                            <span class="text-gray-300">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-left">
+                            {% if item.currency_price and item.currency_name %}
+                            <span class="text-xs text-gray-600">{{ "{:,.0f}".format(item.currency_price) }} {{ item.currency_name }}</span>
+                            {% else %}
+                            <span class="text-gray-300">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center px-4 py-3">
+                            <a href="/administration/invoices/{{ invoice.id }}/products/{{ item.id }}/edit" class="text-amber-600 hover:text-amber-800 mx-1" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="/administration/invoices/{{ invoice.id }}/products/{{ item.id }}/delete" style="display:inline" onsubmit="return confirm('آیا از حذف این قلم اطمینان دارید؟')">
+                                <button type="submit" class="text-red-600 hover:text-red-800 mx-1" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not invoice.invoice_products %}
+                    <tr>
+                        <td colspan="9" class="text-center py-8 text-gray-400">
+                            <i class="fas fa-box-open text-2xl mb-2 block"></i>
+                            هیچ قلمی ثبت نشده است
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+                <tfoot class="bg-gray-50 border-t border-gray-200">
+                    <tr>
+                        <td colspan="4" class="px-4 py-3 text-left font-medium text-gray-600">جمع کل</td>
+                        <td class="px-4 py-3 text-left font-bold text-blue-600 text-lg">{{ "{:,.0f}".format(invoice.total_price or 0) }}</td>
+                        <td class="px-4 py-3"></td>
+                        <td colspan="2" class="px-4 py-3"></td>
+                        <td class="px-4 py-3"></td>
+                    </tr>
+                    {% if invoice.payable and invoice.payable != invoice.total_price %}
+                    <tr>
+                        <td colspan="4" class="px-4 py-3 text-left font-medium text-gray-600">قابل پرداخت</td>
+                        <td class="px-4 py-3 text-left font-bold text-emerald-600 text-lg">{{ "{:,.0f}".format(invoice.payable or 0) }}</td>
+                        <td colspan="4" class="px-4 py-3"></td>
+                    </tr>
+                    {% endif %}
+                </tfoot>
+            </table>
         </div>
     </div>
 </div>

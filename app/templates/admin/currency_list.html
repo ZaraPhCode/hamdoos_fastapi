@@ -1,67 +1,240 @@
-?{% extends "admin/base.html" %}
-{% block title %}نرخ ارز{% endblock %}
+{% extends "admin/base.html" %}
+{% block title %}مدیریت ارز ها{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">مدیریت نرخ ارز</h1>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">مدیریت ارز ها</h1>
+            <p class="text-sm text-gray-500 mt-1">مدیریت نرخ ارزهای فروشگاه</p>
+        </div>
+        <a href="/administration/currencies/new" class="btn-success flex items-center gap-2 text-base px-5 py-2.5">
+            <i class="fas fa-plus"></i> ایجاد ارز
+        </a>
     </div>
-    <div class="card mb-6">
-        <div class="card-header"><h2 class="text-lg font-semibold">افزودن ارز جدید</h2></div>
-        <div class="card-body">
-            <form method="POST" action="/administration/currencies/create" class="flex items-end gap-3">
-                <div class="flex-1">
-                    <label class="form-label" for="title">عنوان</label>
-                    <input type="text" id="title" name="title" class="form-input" placeholder="مثلاً دلار آمریکا" required>
+
+    <!-- Stats strip -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-amber-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">کل ارزها</p>
+                    <p class="text-2xl font-bold mt-1 text-gray-800">{{ currencies|length }}</p>
                 </div>
-                <div class="w-32">
-                    <label class="form-label" for="code">کد</label>
-                    <input type="text" id="code" name="code" class="form-input" placeholder="USD" dir="ltr" required>
+                <i class="fas fa-coins text-amber-400 text-3xl"></i>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-emerald-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">دارای قیمت</p>
+                    <p class="text-2xl font-bold mt-1 text-gray-800">{{ currencies|selectattr('_last_price')|list|length }}</p>
                 </div>
-                <div class="w-40">
-                    <label class="form-label" for="price">نرخ (تومان)</label>
-                    <input type="number" id="price" name="price" class="form-input" placeholder="0" min="0" required>
+                <i class="fas fa-check-circle text-emerald-400 text-3xl"></i>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-red-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-gray-500 text-sm">بدون قیمت</p>
+                    <p class="text-2xl font-bold mt-1 text-gray-800">{{ currencies|rejectattr('_last_price')|list|length }}</p>
                 </div>
-                <button type="submit" class="btn-primary whitespace-nowrap"><i class="fas fa-plus ml-2"></i> افزودن</button>
-            </form>
+                <i class="fas fa-exclamation-circle text-red-400 text-3xl"></i>
+            </div>
         </div>
     </div>
+
     <div class="card">
-        <div class="card-header"><h2 class="text-lg font-semibold">لیست ارزها</h2></div>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="table-header">عنوان</th>
-                        <th class="table-header">کد</th>
-                        <th class="table-header">نرخ (تومان)</th>
-                        <th class="table-header">آخرین بروزرسانی</th>
-                        <th class="table-header">عملیات</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    {% for cur in currencies %}
-                    <tr class="table-row-hover">
-                        <td class="table-cell font-medium">{{ cur.title }}</td>
-                        <td class="table-cell"><span class="badge bg-blue-100 text-blue-800" dir="ltr">{{ cur.code }}</span></td>
-                        <td class="table-cell">
-                            <form method="POST" action="/administration/currencies/{{ cur.id }}/update-price" class="flex items-center gap-2">
-                                <input type="number" name="price" value="{{ cur.price }}" class="form-input w-32 text-left" min="0" dir="ltr">
-                                <button type="submit" class="text-blue-600 hover:text-blue-800"><i class="fas fa-save"></i></button>
-                            </form>
-                        </td>
-                        <td class="table-cell text-sm text-gray-500">{{ cur.update_date or '---' }}</td>
-                        <td class="table-cell">
-                            <form method="POST" action="/administration/currencies/{{ cur.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
-                                <button type="submit" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">هیچ ارزی تعریف نشده است.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="card-header flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <h3 class="font-semibold text-gray-700">لیست ارزها</h3>
+                <span class="badge bg-gray-100 text-gray-500">{{ currencies|length }} ارز</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <input id="currency-search" type="text" placeholder="جستجو در ارزها..." class="form-input max-w-sm">
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="currency-table">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2">نام</th>
+                            <th class="text-center py-3 px-2">آخرین قیمت ثبت شده</th>
+                            <th class="text-center py-3 px-2">قیمت در تاریخ</th>
+                            <th class="text-center py-3 px-2 w-80">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cur in currencies %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors" data-search="{{ cur.name or '' }}">
+                            <td class="py-3 px-2 text-center text-gray-500 currency-index">{{ loop.index }}</td>
+                            <td class="py-3 px-2">
+                                <a href="/administration/currencies/{{ cur.id }}" class="font-medium text-gray-800 hover:text-blue-600 transition-colors">{{ cur.name or '—' }}</a>
+                            </td>
+                            <td class="py-3 px-2 text-center">
+                                {% if cur._last_price %}
+                                <span class="font-mono text-sm text-gray-800" dir="ltr">{{ "{:,.0f}".format(cur._last_price.price) }}</span>
+                                {% else %}
+                                <span class="text-gray-400">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-center text-sm text-gray-500">
+                                {% if cur._last_price and cur._last_price.date %}
+                                {{ cur._last_price.date }}
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-2 flex-wrap">
+                                    <a href="/administration/currencies/{{ cur.id }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors">
+                                        <i class="fas fa-eye"></i> جزییات
+                                    </a>
+                                    <a href="/administration/currencies/{{ cur.id }}/update-price" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-medium hover:bg-emerald-200 transition-colors">
+                                        <i class="fas fa-sync-alt"></i> بروزرسانی قیمت
+                                    </a>
+                                    <a href="/administration/currencies/{{ cur.id }}/edit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium hover:bg-amber-200 transition-colors">
+                                        <i class="fas fa-edit"></i> ویرایش
+                                    </a>
+                                    <a href="/administration/currency-details/create/{{ cur.id }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 text-xs font-medium hover:bg-purple-200 transition-colors">
+                                        <i class="fas fa-plus-circle"></i> ایجاد جزییات ارز
+                                    </a>
+                                    <a href="#" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors delete-btn" data-id="{{ cur.id }}" data-name="{{ cur.name }}">
+                                        <i class="fas fa-trash"></i> حذف
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="py-12 text-center text-gray-400">
+                                <i class="fas fa-coins text-3xl mb-3"></i>
+                                <p>هیچ ارزی یافت نشد.</p>
+                                <a href="/administration/currencies/new" class="text-blue-600 hover:underline mt-2 inline-block">ایجاد اولین ارز</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                <div class="flex items-center gap-2 text-sm text-gray-500">
+                    <span>نمایش</span>
+                    <select id="currency-page-size" class="form-input w-auto py-1.5">
+                        <option value="5">۵</option>
+                        <option value="10" selected>۱۰</option>
+                        <option value="20">۲۰</option>
+                        <option value="50">۵۰</option>
+                        <option value="100">۱۰۰</option>
+                        <option value="all">همه</option>
+                    </select>
+                    <span>رکورد در هر صفحه</span>
+                </div>
+                <div class="flex items-center gap-1 text-sm">
+                    <button type="button" id="currency-prev" class="pagination-btn">
+                        <i class="fas fa-chevron-right"></i> قبلی
+                    </button>
+                    <span id="currency-page-info" class="px-3 py-1 text-gray-600">صفحه ۱</span>
+                    <button type="button" id="currency-next" class="pagination-btn">
+                        بعدی <i class="fas fa-chevron-left"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Delete confirmation modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+        <div class="text-center">
+            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trash text-red-500 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">حذف ارز</h3>
+            <p class="text-sm text-gray-500 mb-6">آیا از حذف <span id="delete-name" class="font-semibold text-gray-700"></span> اطمینان دارید؟</p>
+            <form id="delete-form" method="POST" action="">
+                <div class="flex items-center gap-3 justify-center">
+                    <button type="button" id="delete-cancel" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    var $allRows = $('#currency-table tbody tr').filter(function () {
+        return $(this).find('td').length > 1;
+    });
+    var $pageSize = $('#currency-page-size');
+    var $pageInfo = $('#currency-page-info');
+    var $prevBtn = $('#currency-prev');
+    var $nextBtn = $('#currency-next');
+    var currentPage = 1;
+    var pageSize = parseInt($pageSize.val(), 10);
+
+    function getFilteredRows() {
+        var q = $('#currency-search').val().toLowerCase();
+        if (!q) return $allRows;
+        return $allRows.filter(function () {
+            return ($(this).data('search') || '').toLowerCase().indexOf(q) !== -1;
+        });
+    }
+
+    function applyPagination() {
+        var $filtered = getFilteredRows();
+        var total = $filtered.length;
+        if (isNaN(pageSize) || total === 0) {
+            $allRows.hide();
+            $filtered.show();
+            currentPage = 1;
+            $pageInfo.text('صفحه ۱');
+            $prevBtn.prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+            $nextBtn.prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+            return;
+        }
+        var totalPages = Math.ceil(total / pageSize);
+        if (currentPage > totalPages) { currentPage = totalPages; }
+        if (currentPage < 1) { currentPage = 1; }
+        var start = (currentPage - 1) * pageSize;
+        var end = Math.min(start + pageSize, total);
+        $allRows.hide();
+        $filtered.slice(start, end).show();
+        $filtered.each(function (i) {
+            $(this).find('.currency-index').text(start + i + 1);
+        });
+        $pageInfo.text('صفحه ' + currentPage + ' از ' + (totalPages || 1));
+        $prevBtn.prop('disabled', currentPage <= 1).toggleClass('opacity-50 cursor-not-allowed', currentPage <= 1);
+        $nextBtn.prop('disabled', currentPage >= totalPages).toggleClass('opacity-50 cursor-not-allowed', currentPage >= totalPages);
+    }
+
+    $('#currency-search').on('keyup', function () { currentPage = 1; applyPagination(); });
+    $pageSize.on('change', function () {
+        pageSize = $(this).val() === 'all' ? NaN : parseInt($(this).val(), 10);
+        currentPage = 1; applyPagination();
+    });
+    $prevBtn.on('click', function () { if (currentPage > 1) { currentPage--; applyPagination(); } });
+    $nextBtn.on('click', function () { currentPage++; applyPagination(); });
+    applyPagination();
+
+    var $modal = $('#delete-modal');
+    $('.delete-btn').on('click', function (e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        $('#delete-name').text(name);
+        $('#delete-form').attr('action', '/administration/currencies/' + id + '/delete');
+        $modal.removeClass('hidden');
+    });
+    $('#delete-cancel').on('click', function () { $modal.addClass('hidden'); });
+    $modal.on('click', function (e) { if (e.target === this) $modal.addClass('hidden'); });
+});
+</script>
 {% endblock %}

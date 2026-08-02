@@ -1,0 +1,112 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'ایجاد دسته ای اقلام فاکتور' if batch_type == 'product' else 'ایجاد دسته ای فاکتور' }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-teal-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-teal-200">
+                    <i class="fas {{ 'fa-layer-group' if batch_type == 'product' else 'fa-copy' }}"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ 'ایجاد دسته ای اقلام فاکتور' if batch_type == 'product' else 'ایجاد دسته ای فاکتور' }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">مدیریت فاکتورها</p>
+                </div>
+            </div>
+            <a href="/administration/invoices" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border-r-4 border-red-500 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center"><i class="fas fa-upload"></i></div>
+                <div>
+                    <h2 class="font-semibold text-gray-800">آپلود فایل اکسل</h2>
+                    <p class="text-xs text-gray-500">
+                        {% if batch_type == 'product' %}
+                        فایل اکسل شامل ستون‌های: کد فاکتور، شناسه محصول، تعداد، قیمت
+                        {% else %}
+                        فایل اکسل شامل ستون‌های: تاریخ، نوع، وضعیت، شناسه محصولات
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <form method="POST" action="{{ '/administration/invoices/create-batch-invoice-product' if batch_type == 'product' else '/administration/invoices/create-batch' }}" enctype="multipart/form-data" class="space-y-5">
+                <div>
+                    <label class="form-label" for="file">فایل اکسل <span class="text-red-500">*</span></label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-teal-400 transition-colors cursor-pointer" onclick="document.getElementById('file').click()">
+                        <i class="fas fa-file-excel text-4xl text-emerald-500 mb-3 block"></i>
+                        <p class="text-sm text-gray-600 mb-1">فایل اکسل خود را انتخاب کنید</p>
+                        <p class="text-xs text-gray-400">فایل‌های با فرمت .xlsx پشتیبانی می‌شوند</p>
+                        <input type="file" id="file" name="file" accept=".xlsx,.xls" class="hidden" required onchange="updateFileName(this)">
+                        <div id="file-name" class="mt-3 text-sm text-teal-600 font-medium hidden"></div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <a href="{{ '/administration/invoices/sample-batch-invoice-product' if batch_type == 'product' else '/administration/invoices/sample-batch' }}" class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium transition-colors">
+                        <i class="fas fa-download"></i> دانلود اکسل نمونه
+                    </a>
+                    <div class="flex items-center gap-3">
+                        <a href="/administration/invoices" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"><i class="fas fa-times"></i> انصراف</a>
+                        <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                            <i class="fas fa-check"></i> ایجاد
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center"><i class="fas fa-question-circle"></i></div>
+                <h2 class="font-semibold text-gray-800">راهنما</h2>
+            </div>
+        </div>
+        <div class="p-6 text-sm text-gray-600 space-y-2">
+            {% if batch_type == 'product' %}
+            <p><i class="fas fa-check-circle text-emerald-500 ml-1"></i> فایل اکسل باید دارای ستون‌های زیر باشد:</p>
+            <ul class="list-disc list-inside pr-4 space-y-1 text-gray-500">
+                <li><strong>کد فاکتور</strong> — کد یکتای فاکتور</li>
+                <li><strong>شناسه محصول</strong> — شناسه محصول</li>
+                <li><strong>تعداد</strong> — تعداد اقلام</li>
+                <li><strong>قیمت</strong> — قیمت واحد</li>
+            </ul>
+            {% else %}
+            <p><i class="fas fa-check-circle text-emerald-500 ml-1"></i> فایل اکسل باید دارای ستون‌های زیر باشد:</p>
+            <ul class="list-disc list-inside pr-4 space-y-1 text-gray-500">
+                <li><strong>تاریخ</strong> — تاریخ فاکتور به فرمت شمسی</li>
+                <li><strong>نوع</strong> — Sale, Purchase, Wastage, ReturnFromSale</li>
+                <li><strong>وضعیت</strong> — Bought, Processing, Canceled</li>
+                <li><strong>محصولات</strong> — شناسه محصولات</li>
+            </ul>
+            {% endif %}
+            <p class="text-xs text-gray-400 mt-2"><i class="fas fa-lightbulb text-amber-400 ml-1"></i> برای دریافت فایل نمونه از دکمه "دانلود اکسل نمونه" استفاده کنید.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateFileName(input) {
+    var nameDiv = document.getElementById('file-name');
+    if (input.files && input.files.length > 0) {
+        nameDiv.textContent = '📄 ' + input.files[0].name;
+        nameDiv.classList.remove('hidden');
+    } else {
+        nameDiv.classList.add('hidden');
+    }
+}
+</script>
+{% endblock %}

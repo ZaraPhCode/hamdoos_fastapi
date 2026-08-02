@@ -75,6 +75,43 @@ async def get_currency_history(db: AsyncSession, currency_id: uuid.UUID, limit: 
     return list(result.scalars().all())
 
 
+async def get_currency_by_id(db: AsyncSession, currency_id: uuid.UUID) -> Optional[Currency]:
+    stmt = select(Currency).where(Currency.id == currency_id, Currency.is_removed == False)
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def update_currency(db: AsyncSession, currency: Currency, name: str) -> Currency:
+    currency.name = name
+    currency.update_date = datetime.now(timezone.utc)
+    await db.flush()
+    return currency
+
+
+async def delete_currency(db: AsyncSession, currency: Currency) -> None:
+    currency.is_removed = True
+    currency.update_date = datetime.now(timezone.utc)
+    await db.flush()
+
+
+async def get_all_currency_details(db: AsyncSession, currency_id: uuid.UUID, page: int = 1, page_size: int = 20) -> tuple[list[CurrencyDetail], int]:
+    count_stmt = select(func.count(CurrencyDetail.id)).where(
+        CurrencyDetail.currency_id == currency_id, CurrencyDetail.is_removed == False
+    )
+    count_result = await db.execute(count_stmt)
+    total = count_result.scalar() or 0
+
+    stmt = (
+        select(CurrencyDetail)
+        .where(CurrencyDetail.currency_id == currency_id, CurrencyDetail.is_removed == False)
+        .order_by(CurrencyDetail.date.desc().nullslast(), CurrencyDetail.insert_date.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all()), total
+
+
 # ── Wallet ──
 
 async def get_or_create_wallet(db: AsyncSession, user_id: uuid.UUID) -> Wallet:

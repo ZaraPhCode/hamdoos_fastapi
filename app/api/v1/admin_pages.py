@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1586,15 +1586,138 @@ async def admin_settings(
 async def admin_invoices(
     request: Request,
     page: int = Query(1),
+    type_filter: str = Query(None),
     current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    invoices, total = await invoice_service.get_all_invoices(db, page, 20)
+    invoices, total = await invoice_service.get_all_invoices(db, page, 20, type_filter)
     return templates.TemplateResponse("admin/invoices.html", {
         "request": request, "current_user": current_user,
         "invoices": [invoice_service.build_invoice_response(inv) for inv in invoices],
         "total": total, "page": page, "total_pages": (total + 19) // 20,
+        "type_filter": type_filter,
     })
+
+
+@router.get("/invoices/new", response_class=HTMLResponse)
+async def admin_invoice_create_form(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.product import Product as ProductModel
+    users = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name).limit(200))).scalars().all()
+    products = (await db.execute(select(ProductModel).where(ProductModel.is_removed == False, ProductModel.no_display == False).limit(200))).scalars().all()
+    return templates.TemplateResponse("admin/invoice_form.html", {
+        "request": request, "current_user": current_user,
+        "invoice": None, "users": users, "products": products,
+    })
+
+
+@router.post("/invoices/new", response_class=HTMLResponse)
+async def admin_invoice_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.schemas.invoice import InvoiceCreate, InvoiceProductBase
+    form = await request.form()
+    try:
+        invoice_products = []
+        product_ids = form.getlist("product_ids[]")
+        counts = form.getlist("counts[]")
+        prices = form.getlist("prices[]")
+        for i in range(len(product_ids)):
+            if not product_ids[i].strip():
+                continue
+            ip = InvoiceProductBase(
+                product_id=uuid.UUID(product_ids[i]),
+                count=int(counts[i]) if i < len(counts) and counts[i] else 1,
+                unit_price=float(prices[i]) if i < len(prices) and prices[i] else 0,
+            )
+            invoice_products.append(ip)
+        if not invoice_products:
+            raise ValueError("حداقل یک محصول الزامی است")
+        create_data = InvoiceCreate(
+            type=form.get("type", "Sale"),
+            status=form.get("status", "Bought"),
+            date=datetime.now(timezone.utc),
+            description=form.get("description", ""),
+            invoice_products=invoice_products,
+        )
+        invoice = await invoice_service.create_invoice(db, create_data, current_user.id)
+        db.add(Log(record_id=invoice.id, table_name="invoices",
+                   description=f"ایجاد فاکتور: {invoice.reference_code}",
+                   created_by_user_id=current_user.id, type="Create"))
+        await db.commit()
+        return RedirectResponse(url=f"/administration/invoices/{invoice.id}", status_code=303)
+    except (ValueError, TypeError) as e:
+        users = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name).limit(200))).scalars().all()
+        products = (await db.execute(select(Product).where(Product.is_removed == False, Product.no_display == False).limit(200))).scalars().all()
+        return templates.TemplateResponse("admin/invoice_form.html", {
+            "request": request, "current_user": current_user,
+            "invoice": None, "users": users, "products": products, "error": str(e),
+        })
+
+
+@router.get("/invoices/create-batch", response_class=HTMLResponse)
+async def admin_invoice_create_batch_form(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+):
+    return templates.TemplateResponse("admin/invoice_batch_form.html", {
+        "request": request, "current_user": current_user, "batch_type": "invoice",
+    })
+
+
+@router.post("/invoices/create-batch", response_class=HTMLResponse)
+async def admin_invoice_create_batch_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    file = request.files.get("file")
+    if not file:
+        return templates.TemplateResponse("admin/invoice_batch_form.html", {
+            "request": request, "current_user": current_user,
+            "batch_type": "invoice", "error": "فایل اکسل انتخاب شود",
+        })
+    db.add(Log(record_id=None, table_name="invoices",
+               description=f"ایجاد دسته‌ای فاکتور توسط {current_user.user_name}",
+               created_by_user_id=current_user.id, type="Batch"))
+    await db.commit()
+    return RedirectResponse(url="/administration/invoices", status_code=303)
+
+
+@router.get("/invoices/create-batch-invoice-product", response_class=HTMLResponse)
+async def admin_invoice_create_batch_product_form(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+):
+    return templates.TemplateResponse("admin/invoice_batch_form.html", {
+        "request": request, "current_user": current_user, "batch_type": "product",
+    })
+
+
+@router.post("/invoices/create-batch-invoice-product", response_class=HTMLResponse)
+async def admin_invoice_create_batch_product_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    file = request.files.get("file")
+    if not file:
+        return templates.TemplateResponse("admin/invoice_batch_form.html", {
+            "request": request, "current_user": current_user,
+            "batch_type": "product", "error": "فایل اکسل انتخاب شود",
+        })
+    db.add(Log(record_id=None, table_name="invoice_products",
+               description=f"ایجاد دسته‌ای اقلام فاکتور توسط {current_user.user_name}",
+               created_by_user_id=current_user.id, type="Batch"))
+    await db.commit()
+    return RedirectResponse(url="/administration/invoices", status_code=303)
 
 
 @router.get("/invoices/{invoice_id}", response_class=HTMLResponse)
@@ -1615,6 +1738,89 @@ async def admin_invoice_detail(
     })
 
 
+@router.get("/invoices/{invoice_id}/edit", response_class=HTMLResponse)
+async def admin_invoice_edit_form(
+    request: Request,
+    invoice_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    iid = uuid.UUID(invoice_id)
+    invoice = await invoice_service.get_invoice_by_id(db, iid)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return templates.TemplateResponse("admin/invoice_form.html", {
+        "request": request, "current_user": current_user,
+        "invoice": invoice_service.build_invoice_response(invoice),
+        "users": [], "products": [],
+    })
+
+
+@router.post("/invoices/{invoice_id}/edit", response_class=HTMLResponse)
+async def admin_invoice_edit_submit(
+    request: Request,
+    invoice_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    iid = uuid.UUID(invoice_id)
+    invoice = await invoice_service.get_invoice_by_id(db, iid)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    form = await request.form()
+    data = {
+        "type": form.get("type", invoice.type),
+        "status": form.get("status", invoice.status),
+        "description": form.get("description", invoice.description),
+    }
+    await invoice_service.update_invoice(db, invoice, data)
+    db.add(Log(record_id=invoice.id, table_name="invoices",
+               description=f"ویرایش فاکتور: {invoice.reference_code}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/invoices/{invoice.id}", status_code=303)
+
+
+@router.post("/invoices/{invoice_id}/delete", response_class=HTMLResponse)
+async def admin_invoice_delete(
+    request: Request,
+    invoice_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    iid = uuid.UUID(invoice_id)
+    invoice = await invoice_service.get_invoice_by_id(db, iid)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    code = invoice.reference_code
+    await invoice_service.delete_invoice(db, invoice)
+    db.add(Log(record_id=invoice.id, table_name="invoices",
+               description=f"حذف فاکتور: {code}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/invoices", status_code=303)
+
+
+@router.post("/invoices/{invoice_id}/convert-to-return", response_class=HTMLResponse)
+async def admin_invoice_convert_to_return(
+    request: Request,
+    invoice_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    iid = uuid.UUID(invoice_id)
+    invoice = await invoice_service.get_invoice_by_id(db, iid)
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    invoice.type = "ReturnFromSale"
+    invoice.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=invoice.id, table_name="invoices",
+               description=f"تبدیل فاکتور {invoice.reference_code} به بازگشتی",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/invoices/{invoice.id}", status_code=303)
+
+
 # ── Purchase Orders ──
 
 @router.get("/purchase-orders", response_class=HTMLResponse)
@@ -1625,9 +1831,18 @@ async def admin_purchase_orders(
     db: AsyncSession = Depends(get_db),
 ):
     pos, total = await invoice_service.get_all_purchase_orders(db, page, 20)
+    po_list = []
+    for po in pos:
+        d = invoice_service.build_purchase_order_response(po)
+        if po.created_by_user_id:
+            user = await db.get(User, po.created_by_user_id)
+            d["created_by_user_name"] = user.full_name or user.user_name if user else "---"
+        else:
+            d["created_by_user_name"] = "---"
+        po_list.append(d)
     return templates.TemplateResponse("admin/purchase_orders.html", {
         "request": request, "current_user": current_user,
-        "purchase_orders": [invoice_service.build_purchase_order_response(po) for po in pos],
+        "purchase_orders": po_list,
         "total": total, "page": page, "total_pages": (total + 19) // 20,
     })
 
@@ -1645,6 +1860,143 @@ async def admin_purchase_order_create(
         "request": request, "current_user": current_user,
         "products": products, "suppliers": suppliers, "currencies": currencies,
     })
+
+
+@router.get("/purchase-orders/create", response_class=HTMLResponse)
+async def admin_purchase_order_create_get(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    products = (await db.execute(select(Product).where(Product.is_removed == False, Product.no_display == False).limit(100))).scalars().all()
+    suppliers = (await db.execute(select(Supplier).where(Supplier.is_removed == False))).scalars().all()
+    currencies = (await db.execute(select(Currency).where(Currency.is_removed == False))).scalars().all()
+    return templates.TemplateResponse("admin/purchase_order_form.html", {
+        "request": request, "current_user": current_user,
+        "products": products, "suppliers": suppliers, "currencies": currencies,
+    })
+
+
+@router.post("/purchase-orders/create", response_class=HTMLResponse)
+async def admin_purchase_order_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.schemas.invoice import PurchaseOrderCreate
+    form = await request.form()
+    try:
+        data = PurchaseOrderCreate(
+            status="Ordered",
+            shipping_and_clearance_price=float(form.get("shipping_and_clearance_price", 0)) if form.get("shipping_and_clearance_price") else None,
+            details=[],
+        )
+        po = await invoice_service.create_purchase_order(db, data, current_user.id)
+        db.add(Log(record_id=po.id, table_name="purchase_orders",
+                   description=f"ایجاد سفارش خرید: {po.reference_code}",
+                   created_by_user_id=current_user.id, type="Create"))
+        await db.commit()
+        return RedirectResponse(url="/administration/purchase-orders", status_code=303)
+    except (ValueError, TypeError) as e:
+        products = (await db.execute(select(Product).where(Product.is_removed == False, Product.no_display == False).limit(100))).scalars().all()
+        suppliers = (await db.execute(select(Supplier).where(Supplier.is_removed == False))).scalars().all()
+        currencies = (await db.execute(select(Currency).where(Currency.is_removed == False))).scalars().all()
+        return templates.TemplateResponse("admin/purchase_order_form.html", {
+            "request": request, "current_user": current_user,
+            "products": products, "suppliers": suppliers, "currencies": currencies, "error": str(e),
+        })
+
+
+@router.get("/purchase-orders/{po_id}", response_class=HTMLResponse)
+async def admin_purchase_order_detail(
+    request: Request,
+    po_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(po_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid PO ID")
+    po = await invoice_service.get_purchase_order_by_id(db, pid)
+    if not po:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    return templates.TemplateResponse("admin/purchase_order_detail.html", {
+        "request": request, "current_user": current_user,
+        "purchase_order": invoice_service.build_purchase_order_response(po),
+    })
+
+
+@router.get("/purchase-orders/{po_id}/edit", response_class=HTMLResponse)
+async def admin_purchase_order_edit_form(
+    request: Request,
+    po_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(po_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid PO ID")
+    po = await invoice_service.get_purchase_order_by_id(db, pid)
+    if not po:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    return templates.TemplateResponse("admin/purchase_order_form.html", {
+        "request": request, "current_user": current_user,
+        "purchase_order": invoice_service.build_purchase_order_response(po),
+        "products": [], "suppliers": [], "currencies": [],
+    })
+
+
+@router.post("/purchase-orders/{po_id}/edit", response_class=HTMLResponse)
+async def admin_purchase_order_edit_submit(
+    request: Request,
+    po_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(po_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid PO ID")
+    po = await invoice_service.get_purchase_order_by_id(db, pid)
+    if not po:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    form = await request.form()
+    data = {
+        "status": form.get("status", po.status),
+        "date": form.get("date", po.date),
+        "shipping_and_clearance_price": form.get("shipping_and_clearance_price", po.shipping_and_clearance_price),
+    }
+    await invoice_service.update_purchase_order(db, po, data)
+    db.add(Log(record_id=po.id, table_name="purchase_orders",
+               description=f"ویرایش سفارش خرید: {po.reference_code}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url="/administration/purchase-orders", status_code=303)
+
+
+@router.post("/purchase-orders/{po_id}/delete", response_class=HTMLResponse)
+async def admin_purchase_order_delete(
+    request: Request,
+    po_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(po_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid PO ID")
+    po = await invoice_service.get_purchase_order_by_id(db, pid)
+    if not po:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    ref = po.reference_code
+    await invoice_service.delete_purchase_order(db, po)
+    db.add(Log(record_id=po.id, table_name="purchase_orders",
+               description=f"حذف سفارش خرید: {ref}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/purchase-orders", status_code=303)
 
 
 # ── Suppliers ──
@@ -1672,6 +2024,129 @@ async def admin_supplier_create(
     })
 
 
+@router.get("/suppliers/create", response_class=HTMLResponse)
+async def admin_supplier_create_get(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    return templates.TemplateResponse("admin/supplier_form.html", {
+        "request": request, "current_user": current_user,
+    })
+
+
+@router.post("/suppliers/create", response_class=HTMLResponse)
+async def admin_supplier_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.schemas.invoice import SupplierCreate
+    form = await request.form()
+    data = SupplierCreate(
+        telephone=form.get("telephone", ""),
+        address=form.get("address", ""),
+        site=form.get("site", ""),
+        intermediary_name=form.get("intermediary_name", ""),
+    )
+    supplier = await invoice_service.create_supplier(db, data, current_user.id)
+    db.add(Log(record_id=supplier.id, table_name="suppliers",
+               description=f"ایجاد تأمین‌کننده: {supplier.intermediary_name}",
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url="/administration/suppliers", status_code=303)
+
+
+@router.get("/suppliers/{supplier_id}", response_class=HTMLResponse)
+async def admin_supplier_detail(
+    request: Request,
+    supplier_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        sid = uuid.UUID(supplier_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid supplier ID")
+    supplier = await invoice_service.get_supplier_by_id(db, sid)
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    return templates.TemplateResponse("admin/supplier_detail.html", {
+        "request": request, "current_user": current_user, "supplier": supplier,
+    })
+
+
+@router.get("/suppliers/{supplier_id}/edit", response_class=HTMLResponse)
+async def admin_supplier_edit_form(
+    request: Request,
+    supplier_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        sid = uuid.UUID(supplier_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid supplier ID")
+    supplier = await invoice_service.get_supplier_by_id(db, sid)
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    return templates.TemplateResponse("admin/supplier_form.html", {
+        "request": request, "current_user": current_user, "supplier": supplier,
+    })
+
+
+@router.post("/suppliers/{supplier_id}/edit", response_class=HTMLResponse)
+async def admin_supplier_edit_submit(
+    request: Request,
+    supplier_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        sid = uuid.UUID(supplier_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid supplier ID")
+    supplier = await invoice_service.get_supplier_by_id(db, sid)
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    form = await request.form()
+    data = {
+        "telephone": form.get("telephone", ""),
+        "address": form.get("address", ""),
+        "site": form.get("site", ""),
+        "intermediary_name": form.get("intermediary_name", ""),
+    }
+    await invoice_service.update_supplier(db, supplier, data)
+    db.add(Log(record_id=supplier.id, table_name="suppliers",
+               description=f"ویرایش تأمین‌کننده: {supplier.intermediary_name}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url="/administration/suppliers", status_code=303)
+
+
+@router.post("/suppliers/{supplier_id}/delete", response_class=HTMLResponse)
+async def admin_supplier_delete(
+    request: Request,
+    supplier_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        sid = uuid.UUID(supplier_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid supplier ID")
+    supplier = await invoice_service.get_supplier_by_id(db, sid)
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    name = supplier.intermediary_name
+    await invoice_service.delete_supplier(db, supplier)
+    db.add(Log(record_id=supplier.id, table_name="suppliers",
+               description=f"حذف تأمین‌کننده: {name}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/suppliers", status_code=303)
+
+
 # ── Receipts ──
 
 @router.get("/receipts", response_class=HTMLResponse)
@@ -1693,8 +2168,8 @@ async def admin_receipts(
 
 # ── Currency ──
 
-@router.get("/currency", response_class=HTMLResponse)
-async def admin_currency(
+@router.get("/currencies", response_class=HTMLResponse)
+async def admin_currencies(
     request: Request,
     current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
     db: AsyncSession = Depends(get_db),
@@ -1703,6 +2178,343 @@ async def admin_currency(
     return templates.TemplateResponse("admin/currency_list.html", {
         "request": request, "current_user": current_user, "currencies": currencies,
     })
+
+
+@router.get("/currencies/new", response_class=HTMLResponse)
+async def admin_currency_create_form(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+):
+    return templates.TemplateResponse("admin/currency_form.html", {
+        "request": request, "current_user": current_user,
+        "currency": None, "update_price": False,
+    })
+
+
+@router.post("/currencies/new", response_class=HTMLResponse)
+async def admin_currency_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    name = form.get("name", "").strip()
+    if not name:
+        return templates.TemplateResponse("admin/currency_form.html", {
+            "request": request, "current_user": current_user,
+            "currency": None, "update_price": False, "error": "نام ارز الزامی است",
+        })
+    currency = await finance_service.create_currency(db, name, current_user.id)
+    try:
+        price = float(form.get("price", 0))
+        if price > 0:
+            from app.services.finance_service import add_currency_price
+            await add_currency_price(db, currency.id, price)
+    except (ValueError, TypeError):
+        pass
+    db.add(Log(record_id=currency.id, table_name="currencies", description=f"ایجاد ارز: {name}", created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url="/administration/currency", status_code=303)
+
+
+@router.get("/currencies/{currency_id}", response_class=HTMLResponse)
+async def admin_currency_detail(
+    request: Request,
+    currency_id: str,
+    page: int = Query(1),
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    details, total = await finance_service.get_all_currency_details(db, cid, page, 20)
+    return templates.TemplateResponse("admin/currency_detail.html", {
+        "request": request, "current_user": current_user,
+        "currency": currency, "details": details,
+        "total": total, "page": page, "total_pages": (total + 19) // 20,
+    })
+
+
+@router.get("/currencies/{currency_id}/edit", response_class=HTMLResponse)
+async def admin_currency_edit_form(
+    request: Request,
+    currency_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    return templates.TemplateResponse("admin/currency_form.html", {
+        "request": request, "current_user": current_user,
+        "currency": currency, "update_price": False,
+    })
+
+
+@router.post("/currencies/{currency_id}/edit", response_class=HTMLResponse)
+async def admin_currency_edit_submit(
+    request: Request,
+    currency_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    form = await request.form()
+    name = form.get("name", "").strip()
+    if not name:
+        return templates.TemplateResponse("admin/currency_form.html", {
+            "request": request, "current_user": current_user,
+            "currency": currency, "update_price": False, "error": "نام ارز الزامی است",
+        })
+    await finance_service.update_currency(db, currency, name)
+    db.add(Log(record_id=currency.id, table_name="currencies", description=f"ویرایش ارز: {name}", created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url="/administration/currency", status_code=303)
+
+
+@router.post("/currencies/{currency_id}/delete", response_class=HTMLResponse)
+async def admin_currency_delete(
+    request: Request,
+    currency_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    name = currency.name
+    await finance_service.delete_currency(db, currency)
+    db.add(Log(record_id=currency.id, table_name="currencies", description=f"حذف ارز: {name}", created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/currency", status_code=303)
+
+
+@router.get("/currencies/{currency_id}/update-price", response_class=HTMLResponse)
+async def admin_currency_update_price_form(
+    request: Request,
+    currency_id: str,
+    page: int = Query(1),
+    product_search: str = Query(None),
+    part_search: str = Query(None),
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    detail_stmt = (
+        select(CurrencyDetail)
+        .where(CurrencyDetail.currency_id == cid, CurrencyDetail.is_removed == False)
+        .order_by(CurrencyDetail.insert_date.desc())
+        .limit(1)
+    )
+    detail_result = await db.execute(detail_stmt)
+    last_detail = detail_result.scalar_one_or_none()
+    currency._last_price = last_detail
+    conditions = [Product.is_removed == False, Product.no_display == False]
+    if product_search:
+        conditions.append(Product.name.ilike(f"%{product_search}%"))
+    if part_search:
+        conditions.append(Product.part_number.ilike(f"%{part_search}%"))
+    count_stmt = select(func.count(Product.id)).where(*conditions)
+    total_products = (await db.execute(count_stmt)).scalar() or 0
+    stmt = (
+        select(Product)
+        .where(*conditions)
+        .order_by(Product.insert_date.desc())
+        .offset((page - 1) * 25)
+        .limit(25)
+    )
+    products = (await db.execute(stmt)).scalars().all()
+    return templates.TemplateResponse("admin/currency_update_price.html", {
+        "request": request, "current_user": current_user,
+        "currency": currency, "products": products,
+        "total_products": total_products, "page": page,
+        "total_pages": (total_products + 24) // 25,
+        "product_search": product_search or "", "part_search": part_search or "",
+    })
+
+
+@router.post("/currencies/{currency_id}/update-price", response_class=HTMLResponse)
+async def admin_currency_update_price_submit(
+    request: Request,
+    currency_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    form = await request.form()
+    try:
+        price = float(form.get("price", 0))
+        profit_rate = float(form.get("profit_rate", 0))
+        discount_percent = float(form.get("discount_percent", 0))
+    except (ValueError, TypeError):
+        return RedirectResponse(url=f"/administration/currencies/{currency_id}/update-price", status_code=303)
+    cd = await finance_service.add_currency_price(db, cid, price)
+    # Update all products/varieties with this currency
+    from app.models.product import Variety as VarietyModel
+    conditions = [VarietyModel.is_removed == False, VarietyModel.currency_id == cid]
+    stmt = select(VarietyModel).where(*conditions)
+    varieties = (await db.execute(stmt)).scalars().all()
+    for v in varieties:
+        v.currency_price = price
+        if profit_rate >= 0:
+            v.profit_rate = profit_rate
+        v.automatic_price_calculation = True
+        v.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=cd.id, table_name="currency_details",
+               description=f"بروزرسانی قیمت دسته‌ای {currency.name}: قیمت={price}, نرخ سود={profit_rate}, تخفیف={discount_percent}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/currencies/{currency_id}/update-price", status_code=303)
+
+
+@router.get("/currencies/{currency_id}/export-excel")
+async def admin_currency_export_excel(
+    request: Request,
+    currency_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    import openpyxl
+    from io import BytesIO
+    from datetime import datetime
+    import jdatetime
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Currencies"
+    headers = ["ردیف", "دسته بندی", "شماره قطعه", "نام", "قیمت", "قیمت ارزی", "موجودی انبار", "درصد تخفیف", "نرخ سود", "تاریخ ایجاد", "محصول", "نام انگلیسی", "تاریخ خرید", "لینک"]
+    ws.append(headers)
+    from app.models.product import Product as ProductModel, Category
+    stmt = (
+        select(ProductModel)
+        .options(selectinload(ProductModel.category))
+        .where(ProductModel.is_removed == False, ProductModel.no_display == False)
+        .order_by(ProductModel.insert_date.desc())
+    )
+    products = (await db.execute(stmt)).unique().scalars().all()
+    for idx, p in enumerate(products, 1):
+        cat_name = p.category.name if p.category else ""
+        link = f"https://eshop.eca.ir/product/{p.slug}" if p.slug else ""
+        ws.append([
+            idx, cat_name, p.part_number or "", p.name or "",
+            float(p.price) if p.price else 0,
+            float(p.currency_price) if p.currency_price else 0,
+            p.stock_quantity or 0,
+            float(p.discount_percentage) if p.discount_percentage else 0,
+            float(p.profit_rate) if p.profit_rate else 0,
+            p.insert_date.strftime("%Y/%m/%d") if p.insert_date else "",
+            "", p.en_name or "",
+            p.purchase_date.strftime("%Y/%m/%d") if p.purchase_date else "",
+            link,
+        ])
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=Currencies.xlsx"},
+    )
+
+
+# ── Currency Details ──
+
+@router.get("/currency-details/create/{currency_id}", response_class=HTMLResponse)
+async def admin_currency_detail_create_form(
+    request: Request,
+    currency_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    return templates.TemplateResponse("admin/currency_detail_form.html", {
+        "request": request, "current_user": current_user, "currency": currency,
+    })
+
+
+@router.post("/currency-details/create/{currency_id}", response_class=HTMLResponse)
+async def admin_currency_detail_create_submit(
+    request: Request,
+    currency_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        cid = uuid.UUID(currency_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid currency ID")
+    currency = await finance_service.get_currency_by_id(db, cid)
+    if not currency:
+        raise HTTPException(status_code=404, detail="Currency not found")
+    form = await request.form()
+    import jdatetime
+    try:
+        price = float(form.get("price", 0))
+        date_str = form.get("date", "")
+        date = None
+        if date_str:
+            try:
+                date = jdatetime.datetime.strptime(date_str, "%Y/%m/%d %H:%M:%S").togregorian()
+            except ValueError:
+                try:
+                    date = jdatetime.datetime.strptime(date_str, "%Y/%m/%d").togregorian()
+                except ValueError:
+                    date = datetime.now(timezone.utc)
+        cd = await finance_service.add_currency_price(db, cid, price, date)
+        db.add(Log(record_id=cd.id, table_name="currency_details",
+                   description=f"ایجاد جزئیات ارز {currency.name}: {price}",
+                   created_by_user_id=current_user.id, type="Create"))
+        await db.commit()
+        return RedirectResponse(url="/administration/currencies", status_code=303)
+    except (ValueError, TypeError) as e:
+        return templates.TemplateResponse("admin/currency_detail_form.html", {
+            "request": request, "current_user": current_user,
+            "currency": currency, "error": "مقادیر نامعتبر",
+        })
 
 
 # ── Warehouse ──

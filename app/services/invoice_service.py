@@ -54,6 +54,21 @@ async def create_supplier(db: AsyncSession, request: SupplierCreate, user_id: uu
     return supplier
 
 
+async def update_supplier(db: AsyncSession, supplier: Supplier, data: dict) -> Supplier:
+    for field in ("telephone", "address", "site", "intermediary_name"):
+        if field in data:
+            setattr(supplier, field, data[field])
+    supplier.update_date = datetime.now(timezone.utc)
+    await db.flush()
+    return supplier
+
+
+async def delete_supplier(db: AsyncSession, supplier: Supplier) -> None:
+    supplier.is_removed = True
+    supplier.update_date = datetime.now(timezone.utc)
+    await db.flush()
+
+
 # ── Invoices ──
 
 async def generate_reference_code(db: AsyncSession) -> str:
@@ -223,14 +238,34 @@ async def get_all_invoices(
 
     stmt = (
         select(Invoice)
+        .options(selectinload(Invoice.invoice_products), selectinload(Invoice.user))
         .where(*conditions)
         .order_by(Invoice.insert_date.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
     result = await db.execute(stmt)
-    invoices = result.scalars().all()
+    invoices = result.unique().scalars().all()
     return list(invoices), total
+
+
+async def update_invoice(db: AsyncSession, invoice: Invoice, data: dict) -> Invoice:
+    for field in ("type", "status", "date", "description", "notes", "tracking_number",
+                  "identity_type", "identity_name", "national_code_or_id", "economic_code",
+                  "identity_postal_code", "identity_address", "identity_country",
+                  "identity_province", "identity_city", "identity_phone_number",
+                  "post_type", "pay_method", "is_cash"):
+        if field in data:
+            setattr(invoice, field, data[field])
+    invoice.update_date = datetime.now(timezone.utc)
+    await db.flush()
+    return invoice
+
+
+async def delete_invoice(db: AsyncSession, invoice: Invoice) -> None:
+    invoice.is_removed = True
+    invoice.update_date = datetime.now(timezone.utc)
+    await db.flush()
 
 
 async def create_invoice_from_order(db: AsyncSession, order_id: uuid.UUID) -> Optional[Invoice]:
@@ -354,6 +389,27 @@ async def get_all_purchase_orders(
     result = await db.execute(stmt)
     pos = result.unique().scalars().all()
     return list(pos), total
+
+
+async def update_purchase_order(db: AsyncSession, po: PurchaseOrder, data: dict) -> PurchaseOrder:
+    if "date" in data:
+        po.date = data["date"]
+    if "status" in data:
+        po.status = data["status"]
+    if "shipping_and_clearance_price" in data:
+        try:
+            po.shipping_and_clearance_price = float(data["shipping_and_clearance_price"])
+        except (ValueError, TypeError):
+            pass
+    po.update_date = datetime.now(timezone.utc)
+    await db.flush()
+    return po
+
+
+async def delete_purchase_order(db: AsyncSession, po: PurchaseOrder) -> None:
+    po.is_removed = True
+    po.update_date = datetime.now(timezone.utc)
+    await db.flush()
 
 
 def build_invoice_response(invoice: Invoice) -> dict:

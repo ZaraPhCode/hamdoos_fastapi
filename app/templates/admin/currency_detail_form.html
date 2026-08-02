@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}ایجاد جزئیات ارز{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-purple-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-purple-200"><i class="fas fa-plus-circle"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">ایجاد جزئیات ارز</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">ثبت قیمت جدید برای {{ currency.name }}</p>
+                </div>
+            </div>
+            <a href="/administration/currencies" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+        </div>
+    </div>
+    {% if error %}
+    <div class="bg-red-50 border-r-4 border-red-500 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="/administration/currency-details/create/{{ currency.id }}" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div>
+            <label class="form-label">ارز</label>
+            <input type="text" class="form-input bg-gray-50" value="{{ currency.name }}" readonly>
+        </div>
+        <div>
+            <label class="form-label" for="date">تاریخ <span class="text-red-500">*</span></label>
+            <input type="text" id="date" name="date" class="form-input" required placeholder="1404/01/01 16:30:04" dir="ltr" value="{{ '1404/01/01 16:30:04' }}">
+        </div>
+        <div>
+            <label class="form-label" for="price">قیمت <span class="text-red-500">*</span></label>
+            <input type="number" id="price" name="price" class="form-input" required placeholder="0" min="0" step="0.01" dir="ltr" value="0">
+        </div>
+        <div class="flex items-center gap-3 justify-end pt-2">
+            <a href="/administration/currencies" class="btn-secondary">بازگشت به لیست</a>
+            <button type="submit" class="btn-primary"><i class="fas fa-check ml-2"></i> ایجاد</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

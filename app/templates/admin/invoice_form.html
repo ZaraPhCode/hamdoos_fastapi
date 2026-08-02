@@ -1,0 +1,77 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'ویرایش فاکتور' if invoice else 'ایجاد فاکتور' }}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ 'ویرایش فاکتور' if invoice else 'ایجاد فاکتور' }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">مدیریت فاکتورها</p>
+                </div>
+            </div>
+            <a href="/administration/invoices" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border-r-4 border-red-500 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+        <i class="fas fa-exclamation-circle"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ '/administration/invoices/' + invoice.id|string + '/edit' if invoice else '/administration/invoices/new' }}" class="space-y-6" id="invoice-form">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fas fa-info"></i></div>
+                    <div><h2 class="font-semibold text-gray-800">اطلاعات فاکتور</h2><p class="text-xs text-gray-500">مشخصات اصلی فاکتور</p></div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
+                    <div>
+                        <label class="form-label" for="DateStr">تاریخ <span class="text-red-500">*</span></label>
+                        <input type="text" id="DateStr" name="DateStr" value="{{ invoice.DateStr if invoice and invoice.DateStr else '' }}" class="form-input" required placeholder="۱۴۰۳/۰۱/۰۱">
+                    </div>
+                    <div>
+                        <label class="form-label" for="type">نوع <span class="text-red-500">*</span></label>
+                        <select id="type" name="type" class="form-input" required>
+                            <option value="Sale" {{ 'selected' if invoice and invoice.type == 'Sale' else '' }}>فروش</option>
+                            <option value="Purchase" {{ 'selected' if invoice and invoice.type == 'Purchase' else '' }}>خرید</option>
+                            <option value="Wastage" {{ 'selected' if invoice and invoice.type == 'Wastage' else '' }}>ضایعات</option>
+                            <option value="ReturnFromSale" {{ 'selected' if invoice and invoice.type == 'ReturnFromSale' else '' }}>برگشت از فروش</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="status">وضعیت <span class="text-red-500">*</span></label>
+                        <select id="status" name="status" class="form-input" required>
+                            <option value="Ordered" {{ 'selected' if invoice and invoice.status == 'Ordered' else '' }}>در حال خرید</option>
+                            <option value="Bought" {{ 'selected' if invoice and invoice.status == 'Bought' else '' }}>خریداری شده</option>
+                            <option value="Processing" {{ 'selected' if invoice and invoice.status == 'Processing' else '' }}>در حال پردازش</option>
+                            <option value="Canceled" {{ 'selected' if invoice and invoice.status == 'Canceled' else '' }}>لغو شده</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2"><i class="fas fa-info-circle text-gray-300"></i> {{ 'ویرایش فاکتور' if invoice else 'ایجاد فاکتور جدید' }}</p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/invoices" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"><i class="fas fa-times"></i> انصراف</a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-check"></i> {{ 'ذخیره' if invoice else 'ایجاد' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "بروزرسانی قیمت" if update_price else ("ویرایش ارز" if currency else "ایجاد ارز") }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-amber-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-amber-200">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "بروزرسانی قیمت ارز" if update_price else ("ویرایش ارز" if currency else "ایجاد ارز جدید") }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ "ثبت قیمت جدید برای" if update_price else ("ویرایش اطلاعات ارز" if currency else "ثبت ارز جدید") }} {{ currency.name if currency else '' }}</p>
+                </div>
+            </div>
+            <a href="/administration/currencies" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border-r-4 border-red-500 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{% if update_price %}/administration/currencies/{{ currency.id }}/update-price{% elif currency %}/administration/currencies/{{ currency.id }}/edit{% else %}/administration/currencies/new{% endif %}" class="space-y-6" id="currency-form">
+        <input type="hidden" name="log" id="Log">
+
+        <!-- Main info -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">
+                            {% if update_price %}
+                                ثبت قیمت جدید
+                            {% elif currency %}
+                                ویرایش اطلاعات ارز
+                            {% else %}
+                                اطلاعات ارز جدید
+                            {% endif %}
+                        </h2>
+                        <p class="text-xs text-gray-500">
+                            {% if update_price %}
+                                قیمت جدید این ارز را وارد کنید
+                            {% elif currency %}
+                                اطلاعات این ارز را ویرایش کنید
+                            {% else %}
+                                مشخصات ارز جدید را وارد کنید
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-{% if update_price %}1{% else %}1{% endif %} gap-x-8 gap-y-5">
+                    {% if update_price %}
+                    <!-- Update price mode -->
+                    <div>
+                        <label class="form-label">نام ارز</label>
+                        <input type="text" class="form-input bg-gray-50" value="{{ currency.name }}" readonly>
+                    </div>
+                    <div>
+                        <label class="form-label" for="date">تاریخ <span class="text-red-500">*</span></label>
+                        <input type="text" id="date" name="date" class="form-input" required placeholder="1403/01/01" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="form-label" for="price">قیمت (تومان) <span class="text-red-500">*</span></label>
+                        <input type="number" id="price" name="price" class="form-input" required placeholder="0" min="0" dir="ltr">
+                    </div>
+                    {% elif currency %}
+                    <!-- Edit mode -->
+                    <div>
+                        <label class="form-label" for="name">نام <span class="text-red-500">*</span></label>
+                        <input type="text" id="name" name="name" value="{{ currency.name }}" class="form-input" required placeholder="مثال: دلار آمریکا">
+                    </div>
+                    {% else %}
+                    <!-- Create mode -->
+                    <div>
+                        <label class="form-label" for="name">نام <span class="text-red-500">*</span></label>
+                        <input type="text" id="name" name="name" class="form-input" required placeholder="مثال: دلار آمریکا">
+                    </div>
+                    <div>
+                        <label class="form-label" for="price">قیمت اولیه (تومان) <span class="text-red-500">*</span></label>
+                        <input type="number" id="price" name="price" class="form-input" required placeholder="0" min="0" dir="ltr">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-gray-300"></i>
+                    {{ "بروزرسانی قیمت" if update_price else ("ویرایش ارز" if currency else "ایجاد ارز جدید") }}
+                </p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/currencies" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-times"></i> انصراف
+                    </a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-check"></i>
+                        {% if update_price %}
+                            بروز رسانی قیمت محصولات
+                        {% elif currency %}
+                            بروزرسانی
+                        {% else %}
+                            ذخیره
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(function () {
+    $('#currency-form').on('submit', function () {
+        var log = '';
+        $('#currency-form :input').not('[type="submit"], [type="button"], [type="hidden"]').each(function () {
+            var name = $(this).attr('name') || '';
+            var val = $(this).val() || '';
+            log += name + ': ' + val + '; ';
+        });
+        $('#Log').val(log);
+        return true;
+    });
+});
+</script>
+{% endblock %}

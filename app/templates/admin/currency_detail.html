@@ -1,0 +1,161 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات ارز {{ currency.name }}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-amber-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-amber-200">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">جزئیات ارز</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ currency.name }}</p>
+                </div>
+            </div>
+            <a href="/administration/currencies" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <!-- Currency info card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-50 to-yellow-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold text-gray-800">اطلاعات ارز</h2>
+                    <p class="text-xs text-gray-500">مشخصات این ارز</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">نام</dt>
+                    <dd class="text-sm text-gray-800 font-medium">{{ currency.name or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">آخرین قیمت</dt>
+                    <dd class="text-sm text-gray-800 font-medium">
+                        {% if currency._last_price %}
+                        <span class="font-mono" dir="ltr">{{ "{:,.0f}".format(currency._last_price.price) }}</span>
+                        {% else %}
+                        <span class="text-gray-400">—</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="border-t border-gray-100 md:col-span-2 my-2"></div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">تعداد سوابق قیمت</dt>
+                    <dd class="text-sm text-gray-800 font-medium">{{ total or 0 }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">آخرین بروزرسانی قیمت</dt>
+                    <dd class="text-sm text-gray-800">
+                        {% if currency._last_price and currency._last_price.date %}
+                        {{ currency._last_price.date }}
+                        {% else %}
+                        <span class="text-gray-400">—</span>
+                        {% endif %}
+                    </dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Price history table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">لیست قیمت‌ها</h2>
+                        <p class="text-xs text-gray-500">سابقه قیمت‌های ثبت شده برای این ارز</p>
+                    </div>
+                </div>
+                <span class="badge bg-blue-100 text-blue-700">{{ total }} سابقه</span>
+            </div>
+        </div>
+        <div class="p-6">
+            {% if details %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-center py-3 px-2">قیمت</th>
+                            <th class="text-center py-3 px-2">تاریخ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detail in details %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500 w-12">{{ (page - 1) * 20 + loop.index }}</td>
+                            <td class="py-3 px-2 text-center">
+                                <span class="font-mono text-sm text-gray-800" dir="ltr">{{ "{:,.0f}".format(detail.price) }}</span>
+                            </td>
+                            <td class="py-3 px-2 text-center text-sm text-gray-500">{{ detail.date or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Server-side pagination -->
+            <div class="flex items-center justify-between gap-3 mt-4">
+                <div class="text-sm text-gray-500">
+                    نمایش {{ (page - 1) * 20 + 1 }} تا {{ page * 20 if page * 20 < total else total }} از {{ total }} سابقه
+                </div>
+                <div class="flex items-center gap-1 text-sm">
+                    {% if page > 1 %}
+                    <a href="/administration/currencies/{{ currency.id }}?page={{ page - 1 }}" class="pagination-btn">
+                        <i class="fas fa-chevron-right"></i> قبلی
+                    </a>
+                    {% else %}
+                    <button class="pagination-btn opacity-50 cursor-not-allowed" disabled>
+                        <i class="fas fa-chevron-right"></i> قبلی
+                    </button>
+                    {% endif %}
+                    <span class="px-3 py-1 text-gray-600">صفحه {{ page }} از {{ total_pages or 1 }}</span>
+                    {% if page < total_pages %}
+                    <a href="/administration/currencies/{{ currency.id }}?page={{ page + 1 }}" class="pagination-btn">
+                        بعدی <i class="fas fa-chevron-left"></i>
+                    </a>
+                    {% else %}
+                    <button class="pagination-btn opacity-50 cursor-not-allowed" disabled>
+                        بعدی <i class="fas fa-chevron-left"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-12 text-gray-400">
+                <i class="fas fa-chart-line text-4xl mb-3"></i>
+                <p class="text-sm">هیچ سابقه قیمتی برای این ارز ثبت نشده است.</p>
+                <a href="/administration/currencies/{{ currency.id }}/update-price" class="text-blue-600 hover:underline mt-2 inline-block">ثبت اولین قیمت</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <a href="/administration/logs/{{ currency.id }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                <i class="fas fa-history"></i> سوابق
+            </a>
+            <a href="/administration/currencies" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,64 +1,93 @@
-?{% extends "admin/base.html" %}
+{% extends "admin/base.html" %}
 {% block title %}سفارشات خرید{% endblock %}
 {% block content %}
-<div class="max-w-6xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">مدیریت سفارشات خرید</h1>
-        <a href="/administration/purchase-orders/create" class="btn-primary flex items-center gap-2">
-            <i class="fas fa-plus"></i> سفارش خرید جدید
-        </a>
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-emerald-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-200"><i class="fas fa-truck-loading"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">لیست سفارش های خرید</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">مدیریت سفارشات خرید از تامین کنندگان ({{ total or 0 }})</p>
+                </div>
+            </div>
+            <a href="/administration/purchase-orders/create" class="btn-primary flex items-center gap-2"><i class="fas fa-plus"></i> ایجاد سفارش خرید</a>
+        </div>
     </div>
-    <div class="card">
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="table-header">#</th>
-                        <th class="table-header">کد مرجع</th>
-                        <th class="table-header">تأمین‌کننده</th>
-                        <th class="table-header">وضعیت</th>
-                        <th class="table-header">هزینه حمل</th>
-                        <th class="table-header">مبلغ کل</th>
-                        <th class="table-header">تاریخ</th>
-                        <th class="table-header">عملیات</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-5 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <span>نمایش</span>
+                <select class="border rounded px-2 py-1 text-sm" onchange="changePageSize(this.value)">
+                    <option value="25" {% if page == 25 %}selected{% endif %}>25</option>
+                    <option value="50" {% if page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if page == 100 %}selected{% endif %}>100</option>
+                </select>
+                <span>رکورد</span>
+            </div>
+            <div><input type="text" class="form-input text-sm" placeholder="جستجو..." oninput="filterTable(this.value)"></div>
+        </div>
+        <div class="overflow-x-auto p-5">
+            <table class="w-full text-sm" id="po-table">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-3 px-2">#</th>
+                    <th class="text-right py-3 px-2">ایجاد شده توسط کاربر</th>
+                    <th class="text-right py-3 px-2">کد پیگیری</th>
+                    <th class="text-right py-3 px-2">تاریخ</th>
+                    <th class="text-right py-3 px-2">وضعیت</th>
+                    <th class="text-center py-3 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
                     {% for po in purchase_orders %}
-                    <tr class="table-row-hover">
-                        <td class="table-cell">{{ po.id }}</td>
-                        <td class="table-cell font-medium" dir="ltr">{{ po.reference_code or '---' }}</td>
-                        <td class="table-cell text-sm">{{ po.supplier_name or po.supplier.name if po.supplier else '---' }}</td>
-                        <td class="table-cell">
-                            {% if po.status == 'pending' %}<span class="badge bg-amber-100 text-amber-800">در انتظار</span>
-                            {% elif po.status == 'approved' %}<span class="badge bg-blue-100 text-blue-800">تأیید شده</span>
-                            {% elif po.status == 'shipped' %}<span class="badge bg-indigo-100 text-indigo-800">ارسال شده</span>
-                            {% elif po.status == 'received' %}<span class="badge bg-emerald-100 text-emerald-800">دریافت شده</span>
-                            {% elif po.status == 'canceled' %}<span class="badge bg-red-100 text-red-800">لغو شده</span>
-                            {% else %}<span class="badge bg-gray-100 text-gray-800">{{ po.status }}</span>{% endif %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-2 text-gray-400">{{ loop.index + (page-1)*20 }}</td>
+                        <td class="py-3 px-2">{{ po.created_by_user_name or '---' }}</td>
+                        <td class="py-3 px-2 font-medium" dir="ltr">{{ po.reference_code or '---' }}</td>
+                        <td class="py-3 px-2 text-gray-500">{{ po.date.strftime('%Y/%m/%d') if po.date else '---' }}</td>
+                        <td class="py-3 px-2">
+                            {% set st = po.status or '' %}
+                            {% if st == 'Ordered' %}<span class="px-2 py-0.5 rounded text-xs bg-yellow-100 text-yellow-700">در حال خرید</span>
+                            {% elif st == 'Bought' %}<span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">خرید شده</span>
+                            {% elif st == 'Shipped' %}<span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">ارسال شده</span>
+                            {% elif st == 'Received' %}<span class="px-2 py-0.5 rounded text-xs bg-emerald-100 text-emerald-700">دریافت شده</span>
+                            {% elif st == 'Canceled' %}<span class="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">لغو شده</span>
+                            {% else %}<span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">{{ st }}</span>{% endif %}
                         </td>
-                        <td class="table-cell text-sm">{{ "{:,}".format(po.shipping_cost or 0) }}</td>
-                        <td class="table-cell font-medium">{{ "{:,}".format(po.total_price or 0) }} تومان</td>
-                        <td class="table-cell text-sm">{{ po.insert_date }}</td>
-                        <td class="table-cell">
-                            <a href="/administration/purchase-orders/{{ po.id }}" class="text-blue-600 hover:text-blue-800" title="مشاهده">
-                                <i class="fas fa-eye"></i>
-                            </a>
+                        <td class="py-3 px-2 text-center">
+                            <a href="/administration/purchase-orders/{{ po.id }}" class="text-indigo-600 hover:underline ml-2" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/purchase-orders/{{ po.id }}/edit" class="text-blue-600 hover:underline ml-2" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="/administration/purchase-orders/{{ po.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">هیچ سفارش خریدی یافت نشد.</td></tr>
+                    <tr><td colspan="6" class="text-center py-8 text-gray-400">موردی یافت نشد</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% if total_pages and total_pages > 1 %}
+        <div class="border-t px-5 py-4 flex justify-center gap-2">
+            {% for p in range(1, total_pages + 1) %}
+            <a href="?page={{ p }}" class="px-3 py-1 rounded text-sm border {{ 'bg-blue-600 text-white border-blue-600' if p == page else 'border-gray-300 hover:bg-gray-100' }}">{{ p }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="border-t px-5 py-3 text-sm text-gray-400">
+            نمایش 1 تا {{ purchase_orders|length }} از {{ total or 0 }} رکورد
+        </div>
     </div>
-    {% if total_pages > 1 %}
-    <div class="flex items-center justify-center gap-2 mt-6">
-        {% for p in range(1, total_pages + 1) %}
-        <a href="/administration/purchase-orders?page={{ p }}" class="pagination-btn {{ 'active' if p == page else '' }}">{{ p }}</a>
-        {% endfor %}
-    </div>
-    {% endif %}
 </div>
+<script>
+function filterTable(val) {
+    var rows = document.querySelectorAll('#po-table tbody tr');
+    rows.forEach(function(r) {
+        r.style.display = r.textContent.includes(val) ? '' : 'none';
+    });
+}
+function changePageSize(val) {
+    window.location.href = '?page=' + val;
+}
+</script>
 {% endblock %}
