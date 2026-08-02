@@ -1,92 +1,181 @@
-?{% extends "admin/base.html" %}
-{% block title %}جزئیات کاربر {{ user.name or user.username }}{% endblock %}
+{% extends "admin/base.html" %}
+{% block title %}جزئیات کاربر{% endblock %}
+{% set gender_labels = {'Unknown': 'نامشخص', 'Male': 'مرد', 'Female': 'زن'} %}
+{% set status_labels = {'AwaitingConfirmation': 'در انتظار تایید', 'Confirmed': 'تایید شده', 'PendingDeletion': 'در انتظار حذف', 'Rejected': 'رد شده'} %}
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">جزئیات کاربر</h1>
-        <a href="/administration/users" class="btn-secondary flex items-center gap-2">
-            <i class="fas fa-arrow-right"></i> بازگشت
-        </a>
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="card lg:col-span-2">
-            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات کاربر</h2></div>
-            <div class="card-body grid grid-cols-2 gap-4">
-                <div><span class="text-gray-500 text-sm">نام کاربری:</span><p class="font-medium">{{ user.username }}</p></div>
-                <div><span class="text-gray-500 text-sm">نام:</span><p class="font-medium">{{ user.name or '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">نام خانوادگی:</span><p class="font-medium">{{ user.family or '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">موبایل:</span><p class="font-medium" dir="ltr">{{ user.mobile or '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">ایمیل:</span><p class="font-medium" dir="ltr">{{ user.email or '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">تاریخ ثبت‌نام:</span><p class="font-medium">{{ user.insert_date }}</p></div>
-                <div><span class="text-gray-500 text-sm">وضعیت:</span>
-                    <p>{% if user.is_active %}<span class="badge bg-emerald-100 text-emerald-800">فعال</span>{% else %}<span class="badge bg-red-100 text-red-800">غیرفعال</span>{% endif %}</p>
-                </div>
-                <div><span class="text-gray-500 text-sm">تأیید موبایل:</span>
-                    <p>{% if user.mobile_confirmed %}<span class="badge bg-emerald-100 text-emerald-800">تأیید شده</span>{% else %}<span class="badge bg-gray-100 text-gray-800">تأیید نشده</span>{% endif %}</p>
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-blue-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-blue-200"><i class="fas fa-user"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">کاربران</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">جزئیات</p>
                 </div>
             </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><h2 class="text-lg font-semibold">عملیات</h2></div>
-            <div class="card-body space-y-3">
-                <form method="POST" action="/administration/users/{{ user.id }}/toggle-active">
-                    {% if user.is_active %}
-                    <button type="submit" class="btn-danger w-full"><i class="fas fa-ban ml-2"></i> غیرفعال کردن</button>
-                    {% else %}
-                    <button type="submit" class="btn-success w-full"><i class="fas fa-check ml-2"></i> فعال کردن</button>
-                    {% endif %}
-                </form>
-                <form method="POST" action="/administration/users/{{ user.id }}/reset-password" onsubmit="return confirm('آیا از بازنشانی رمز عبور اطمینان دارید؟')">
-                    <button type="submit" class="btn-warning w-full"><i class="fas fa-key ml-2"></i> بازنشانی رمز</button>
-                </form>
-                <form method="POST" action="/administration/users/{{ user.id }}/delete" onsubmit="return confirm('آیا از حذف این کاربر اطمینان دارید؟')">
-                    <button type="submit" class="btn-danger w-full"><i class="fas fa-trash ml-2"></i> حذف کاربر</button>
-                </form>
-            </div>
+            <a href="/administration/users" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت</a>
         </div>
     </div>
-    <div class="card mt-6">
-        <div class="card-header"><h2 class="text-lg font-semibold">مدیریت نقش‌ها</h2></div>
-        <div class="card-body">
-            <form method="POST" action="/administration/users/{{ user.id }}/roles" class="space-y-4">
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {% for role in roles %}
-                    <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="checkbox" name="role_ids" value="{{ role.id }}" {{ 'checked' if role.id in user.role_ids else '' }} class="w-4 h-4 text-blue-600 rounded border-gray-300">
-                        <div>
-                            <p class="font-medium text-sm">{{ role.name }}</p>
-                            {% if role.description %}<p class="text-xs text-gray-500">{{ role.description }}</p>{% endif %}
-                        </div>
-                    </label>
-                    {% endfor %}
-                </div>
-                <div class="flex justify-end">
-                    <button type="submit" class="btn-primary"><i class="fas fa-save ml-2"></i> ذخیره نقش‌ها</button>
-                </div>
-            </form>
+
+    <!-- User Info -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800">اطلاعات کاربر</h2>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                <div><dt class="text-xs text-gray-500 mb-1">نام کامل</dt><dd class="text-sm font-medium">{{ user.full_name or user.user_name }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">نام کاربری</dt><dd class="text-sm">{{ user.user_name or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">ایمیل</dt><dd class="text-sm">{{ user.email or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">EmailConfirmed</dt><dd class="text-sm">{{ 'بله' if user.email_confirmed else 'خیر' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">تلفن همراه</dt><dd class="text-sm">{{ user.phone_number or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">PhoneNumberConfirmed</dt><dd class="text-sm">{{ 'بله' if user.phone_number_confirmed else 'خیر' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">InsertDate</dt><dd class="text-sm">{{ user.insert_date.strftime('%Y/%m/%d %H:%M') if user.insert_date else '0001-01-01T00:00:00' }}</dd></div>
+            </dl>
         </div>
     </div>
-    {% if user.orders %}
-    <div class="card mt-6">
-        <div class="card-header"><h2 class="text-lg font-semibold">آخرین سفارشات</h2></div>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr><th class="table-header">#</th><th class="table-header">تاریخ</th><th class="table-header">مبلغ</th><th class="table-header">وضعیت</th></tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    {% for o in user.orders[:10] %}
-                    <tr class="table-row-hover">
-                        <td class="table-cell"><a href="/administration/orders/{{ o.id }}" class="text-blue-600 hover:underline">{{ o.reference_code or o.id }}</a></td>
-                        <td class="table-cell">{{ o.insert_date }}</td>
-                        <td class="table-cell">{{ "{:,}".format(o.total_price) }} تومان</td>
-                        <td class="table-cell"><span class="badge bg-gray-100 text-gray-800">{{ o.status_name or o.status }}</span></td>
+
+    <!-- Addresses -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+            <h2 class="font-semibold text-gray-800">لیست آدرس ها</h2>
+            <a href="/administration/addresses/new?user_id={{ user.id }}" class="btn-primary text-sm py-1.5"><i class="fas fa-plus ml-1"></i> ایجاد آدرس جدید</a>
+        </div>
+        <div class="p-5">
+            <div class="mb-3 text-sm text-gray-500">نمایش {{ addresses|length }} رکورد</div>
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-2 px-2">#</th>
+                    <th class="text-right py-2 px-2">جایگزین</th>
+                    <th class="text-right py-2 px-2">آدرس</th>
+                    <th class="text-right py-2 px-2">نام</th>
+                    <th class="text-right py-2 px-2">نام خانوادگی</th>
+                    <th class="text-right py-2 px-2">شهر</th>
+                    <th class="text-right py-2 px-2">Province</th>
+                    <th class="text-right py-2 px-2">کشور</th>
+                    <th class="text-center py-2 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for addr in addresses %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-2 px-2 text-gray-400">{{ loop.index }}</td>
+                        <td class="py-2 px-2">{{ addr.alias or '' }}</td>
+                        <td class="py-2 px-2 max-w-xs truncate">{{ addr.address_description or '' }}</td>
+                        <td class="py-2 px-2">{{ addr.first_name or '' }}</td>
+                        <td class="py-2 px-2">{{ addr.last_name or '' }}</td>
+                        <td class="py-2 px-2">{{ addr.province_city.name if addr.province_city else '' }}</td>
+                        <td class="py-2 px-2">{{ addr.province_city.province.name if addr.province_city and addr.province_city.province else '' }}</td>
+                        <td class="py-2 px-2">{{ addr.country or '' }}</td>
+                        <td class="py-2 px-2 text-center">
+                            <a href="/administration/users/{{ user.id }}/addresses/{{ addr.id }}" class="text-indigo-600 hover:underline ml-1" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/users/{{ user.id }}/addresses/{{ addr.id }}/edit" class="text-blue-600 hover:underline ml-1" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="/administration/users/{{ user.id }}/addresses/{{ addr.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
                     </tr>
+                    {% else %}
+                    <tr><td colspan="9" class="text-center py-4 text-gray-400">آدرسی یافت نشد</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-    {% endif %}
+
+    <!-- Bank Infos -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+            <h2 class="font-semibold text-gray-800">لیست اطلاعات بانکی</h2>
+            <a href="/administration/bank-infos/new?user_id={{ user.id }}" class="btn-primary text-sm py-1.5"><i class="fas fa-plus ml-1"></i> ایجاد اطلاعات حساب بانکی</a>
+        </div>
+        <div class="p-5">
+            <div class="mb-3 text-sm text-gray-500">نمایش {{ bank_infos|length }} رکورد</div>
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-2 px-2">#</th>
+                    <th class="text-right py-2 px-2">صاحب حساب</th>
+                    <th class="text-right py-2 px-2">نام بانک</th>
+                    <th class="text-right py-2 px-2">شماره شبا</th>
+                    <th class="text-center py-2 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for bi in bank_infos %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-2 px-2 text-gray-400">{{ loop.index }}</td>
+                        <td class="py-2 px-2">{{ bi.account_owner or '' }}</td>
+                        <td class="py-2 px-2">{{ bi.bank_name or '' }}</td>
+                        <td class="py-2 px-2" dir="ltr">{{ bi.sheba_number or '' }}</td>
+                        <td class="py-2 px-2 text-center">
+                            <a href="/administration/users/{{ user.id }}/bank-infos/{{ bi.id }}" class="text-indigo-600 hover:underline ml-1" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/users/{{ user.id }}/bank-infos/{{ bi.id }}/edit" class="text-blue-600 hover:underline ml-1" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="/administration/users/{{ user.id }}/bank-infos/{{ bi.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center py-4 text-gray-400">اطلاعات بانکی یافت نشد</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Orders -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800">لیست سفارشات</h2>
+        </div>
+        <div class="p-5">
+            <div class="mb-3 text-sm text-gray-500">نمایش {{ orders|length }} رکورد</div>
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-2 px-2">#</th>
+                    <th class="text-right py-2 px-2">کاربر</th>
+                    <th class="text-right py-2 px-2">کد پیگیری</th>
+                    <th class="text-right py-2 px-2">قیمت کل</th>
+                    <th class="text-right py-2 px-2">قیمت کل بعد از تخفیف</th>
+                    <th class="text-right py-2 px-2">قابل پرداخت</th>
+                    <th class="text-right py-2 px-2">روش پرداخت</th>
+                    <th class="text-right py-2 px-2">تاریخ</th>
+                    <th class="text-right py-2 px-2">وضعیت سفارش</th>
+                    <th class="text-center py-2 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for o in orders %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-2 px-2 text-gray-400">{{ loop.index }}</td>
+                        <td class="py-2 px-2">{{ user.full_name or user.user_name }}</td>
+                        <td class="py-2 px-2">{{ o.reference_code or '' }}</td>
+                        <td class="py-2 px-2">{{ o.total_price or '' }}</td>
+                        <td class="py-2 px-2">{{ o.total_price_after_discount or '' }}</td>
+                        <td class="py-2 px-2">{{ o.payable or '' }}</td>
+                        <td class="py-2 px-2">{{ o.pay_method_id or '' }}</td>
+                        <td class="py-2 px-2">{{ o.insert_date.strftime('%Y/%m/%d') if o.insert_date else '' }}</td>
+                        <td class="py-2 px-2">{{ o.order_status or '' }}</td>
+                        <td class="py-2 px-2 text-center">
+                            <a href="/administration/orders/{{ o.id }}" class="text-indigo-600 hover:underline ml-1" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/orders/{{ o.id }}/edit" class="text-blue-600 hover:underline ml-1" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="/administration/orders/{{ o.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="10" class="text-center py-4 text-gray-400">سفارشی یافت نشد</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bottom Buttons -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <a href="/administration/logs/{{ user.id }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"><i class="fas fa-history"></i> سوابق</a>
+            <a href="/administration/users" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+{% block title %}مدیریت دسترسی‌ها{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-amber-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-amber-200">
+                    <i class="fas fa-key"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">دسترسی‌ها</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">مدیریت دسترسی‌های نقش‌ها</p>
+                </div>
+            </div>
+            <a href="/administration/role-claims/new" class="btn-primary flex items-center gap-2"><i class="fas fa-plus"></i> دسترسی جدید</a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-5">
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-3 px-2">نقش</th>
+                    <th class="text-right py-3 px-2">نام عملیات</th>
+                    <th class="text-right py-3 px-2">نوع عملیات</th>
+                    <th class="text-right py-3 px-2">نوع ادعا</th>
+                    <th class="text-center py-3 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for rc in items %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-2 font-medium">{{ rc.role.name if rc.role else '—' }}</td>
+                        <td class="py-3 px-2">{{ rc.operation_name or '—' }}</td>
+                        <td class="py-3 px-2">{{ rc.operation_type or '—' }}</td>
+                        <td class="py-3 px-2">{{ rc.claim_type or '—' }}</td>
+                        <td class="py-3 px-2 text-center">
+                            <a href="/administration/role-claims/{{ rc.id }}" class="text-indigo-600 hover:underline ml-2" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/role-claims/{{ rc.id }}/edit" class="text-blue-600 hover:underline ml-2" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="/administration/role-claims/{{ rc.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center py-8 text-gray-400">هیچ دسترسی‌ای یافت نشد</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_pages and total_pages > 1 %}
+        <div class="border-t px-5 py-4 flex justify-center gap-2">
+            {% for p in range(1, total_pages + 1) %}
+            <a href="?page={{ p }}" class="px-3 py-1 rounded text-sm border {{ 'bg-blue-600 text-white border-blue-600' if p == page else 'border-gray-300 hover:bg-gray-100' }}">{{ p }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

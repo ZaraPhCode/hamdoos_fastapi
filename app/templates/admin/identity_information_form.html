@@ -1,0 +1,103 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش اطلاعات هویتی" if info else "اطلاعات هویتی جدید" }}{% endblock %}
+{% set fd = form_data|default({}) %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-purple-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-purple-200"><i class="fas fa-id-card"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش اطلاعات هویتی" if info else "اطلاعات هویتی جدید" }}</h1>
+                </div>
+            </div>
+            <a href="/administration/identity-informations" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت</a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ '/administration/identity-informations/' ~ info.id ~ '/edit' if info else '/administration/identity-informations/new' }}" class="space-y-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200 px-6 py-4">
+                <h2 class="font-semibold text-gray-800">مشخصات</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div>
+                        <label class="form-label">کاربر <span class="text-red-500">*</span></label>
+                        <select name="user_id" class="form-input" required>
+                            <option value="">انتخاب کاربر</option>
+                            {% for u in users %}
+                            <option value="{{ u.id }}" {{ 'selected' if info and info.user_id == u.id else '' }}>{{ u.full_name or u.user_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">نام <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" value="{{ info.name if info else fd.get('name', '') }}" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="form-label">نوع</label>
+                        <select name="type" class="form-input">
+                            <option value="Real" {{ 'selected' if (info and info.type == 'Real') or fd.get('type') == 'Real' else '' }}>حقیقی</option>
+                            <option value="Legal" {{ 'selected' if (info and info.type == 'Legal') or fd.get('type') == 'Legal' else '' }}>حقوقی</option>
+                            <option value="CivicParticipation" {{ 'selected' if (info and info.type == 'CivicParticipation') or fd.get('type') == 'CivicParticipation' else '' }}>مشارکت مدنی</option>
+                            <option value="Non_IranianNationals" {{ 'selected' if (info and info.type == 'Non_IranianNationals') or fd.get('type') == 'Non_IranianNationals' else '' }}>اتباع غیر ایرانی</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">کد ملی / شناسه ملی</label>
+                        <input type="text" name="national_code_or_id" value="{{ info.national_code_or_id if info else fd.get('national_code_or_id', '') }}" class="form-input" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="form-label">کد اقتصادی</label>
+                        <input type="text" name="economic_code" value="{{ info.economic_code if info else fd.get('economic_code', '') }}" class="form-input" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="form-label">کد پستی</label>
+                        <input type="text" name="postal_code" value="{{ info.postal_code if info else fd.get('postal_code', '') }}" class="form-input" dir="ltr" maxlength="10">
+                    </div>
+                    <div>
+                        <label class="form-label">شماره تماس</label>
+                        <input type="text" name="phone_number" value="{{ info.phone_number if info else fd.get('phone_number', '') }}" class="form-input" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="form-label">کشور</label>
+                        <input type="text" name="country" value="{{ info.country if info else fd.get('country', '') }}" class="form-input" value="ایران">
+                    </div>
+                    <div>
+                        <label class="form-label">استان</label>
+                        <input type="text" name="province" value="{{ info.province if info else fd.get('province', '') }}" class="form-input">
+                    </div>
+                    <div>
+                        <label class="form-label">شهر</label>
+                        <input type="text" name="city" value="{{ info.city if info else fd.get('city', '') }}" class="form-input">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="form-label">آدرس</label>
+                        <textarea name="address" class="form-input" rows="3">{{ info.address if info else fd.get('address', '') }}</textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="final_consumer" {{ 'checked' if (info and info.final_consumer) or fd.get('final_consumer') == 'on' else '' }} class="w-4 h-4 text-blue-600 rounded border-gray-300">
+                            <span class="text-sm">مصرف‌کننده نهایی (بدون نیاز به کد اقتصادی)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <a href="/administration/identity-informations" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"><i class="fas fa-times"></i> انصراف</a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5"><i class="fas fa-check"></i> {{ "بروزرسانی" if info else "ذخیره" }}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

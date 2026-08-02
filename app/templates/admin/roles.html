@@ -1,53 +1,112 @@
-?{% extends "admin/base.html" %}
+{% extends "admin/base.html" %}
 {% block title %}نقش‌ها{% endblock %}
 {% block content %}
-<div class="max-w-5xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">مدیریت نقش‌ها</h1>
-        <a href="/administration/roles/create" class="btn-primary flex items-center gap-2">
-            <i class="fas fa-plus"></i> نقش جدید
-        </a>
+<div class="max-w-5xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-green-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-green-200"><i class="fas fa-user-shield"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">نقش‌ها</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">لیست نقش‌ها</p>
+                </div>
+            </div>
+            <button onclick="showCreateModal()" class="btn-primary flex items-center gap-2"><i class="fas fa-plus"></i> نقش جدید</button>
+        </div>
     </div>
-    <div class="card">
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="table-header">#</th>
-                        <th class="table-header">نام نقش</th>
-                        <th class="table-header">توضیحات</th>
-                        <th class="table-header">تعداد کاربران</th>
-                        <th class="table-header">تعداد دسترسی‌ها</th>
-                        <th class="table-header">عملیات</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-5">
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-3 px-2">#</th>
+                    <th class="text-right py-3 px-2">نام نقش</th>
+                    <th class="text-right py-3 px-2">توضیح</th>
+                    <th class="text-center py-3 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
                     {% for role in roles %}
-                    <tr class="table-row-hover">
-                        <td class="table-cell">{{ role.id }}</td>
-                        <td class="table-cell font-medium">{{ role.name }}</td>
-                        <td class="table-cell text-sm text-gray-500 max-w-xs truncate">{{ role.description or '---' }}</td>
-                        <td class="table-cell">{{ role.user_count or 0 }}</td>
-                        <td class="table-cell">{{ role.permission_count or 0 }}</td>
-                        <td class="table-cell">
-                            <div class="flex items-center gap-2">
-                                <a href="/administration/roles/{{ role.id }}/edit" class="text-blue-600 hover:text-blue-800" title="ویرایش">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form method="POST" action="/administration/roles/{{ role.id }}/delete" onsubmit="return confirm('آیا از حذف نقش {{ role.name }} اطمینان دارید؟')" style="display:inline">
-                                    <button type="submit" class="text-red-500 hover:text-red-700" title="حذف">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-2 text-gray-400">{{ loop.index }}</td>
+                        <td class="py-3 px-2 font-medium">{{ role.name }}</td>
+                        <td class="py-3 px-2 text-sm text-gray-500 max-w-xs truncate">{{ role.description or '' }}</td>
+                        <td class="py-3 px-2 text-center">
+                            <a href="/administration/roles/{{ role.id }}" class="text-indigo-600 hover:underline ml-2" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <button onclick="showEditModal('{{ role.id }}', '{{ role.name }}', '{{ role.description or '' }}')" class="text-blue-600 hover:underline ml-2" title="ویرایش"><i class="fas fa-edit"></i></button>
+                            <form method="POST" action="/administration/roles/{{ role.id }}/delete" onsubmit="return confirm('آیا از حذف نقش {{ role.name }} اطمینان دارید؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">هیچ نقشی یافت نشد.</td></tr>
+                    <tr><td colspan="4" class="px-4 py-8 text-center text-gray-500">هیچ نقشی یافت نشد.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<!-- Create Modal -->
+<div id="create-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-96">
+        <h3 class="font-bold mb-4">نقش جدید</h3>
+        <form method="POST" action="/administration/roles/create" class="space-y-4">
+            <div>
+                <label class="block text-sm mb-1">نام نقش <span class="text-red-500">*</span></label>
+                <input type="text" name="name" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+            </div>
+            <div>
+                <label class="block text-sm mb-1">توضیح</label>
+                <input type="text" name="description" class="w-full border rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">ذخیره</button>
+                <button type="button" onclick="document.getElementById('create-modal').classList.add('hidden')" class="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">انصراف</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="edit-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-96">
+        <h3 class="font-bold mb-4">ویرایش نقش</h3>
+        <form method="POST" action="" id="edit-role-form" class="space-y-4">
+            <div>
+                <label class="block text-sm mb-1">نام نقش <span class="text-red-500">*</span></label>
+                <input type="text" name="name" id="edit-name" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+            </div>
+            <div>
+                <label class="block text-sm mb-1">توضیح</label>
+                <input type="text" name="description" id="edit-description" class="w-full border rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">بروزرسانی</button>
+                <button type="button" onclick="document.getElementById('edit-modal').classList.add('hidden')" class="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">انصراف</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showCreateModal() {
+    document.getElementById('create-modal').classList.remove('hidden');
+    document.getElementById('create-modal').classList.add('flex');
+}
+function showEditModal(id, name, desc) {
+    document.getElementById('edit-role-form').action = '/administration/roles/' + id + '/edit';
+    document.getElementById('edit-name').value = name;
+    document.getElementById('edit-description').value = desc;
+    document.getElementById('edit-modal').classList.remove('hidden');
+    document.getElementById('edit-modal').classList.add('flex');
+}
+// Click outside to close
+document.getElementById('create-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+});
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.add('hidden');
+});
+</script>
 {% endblock %}

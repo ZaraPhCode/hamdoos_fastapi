@@ -37,6 +37,37 @@ from app.services.product_service import (
     _build_product_list_response,
 )
 
+from app.services.identity_service import (
+    get_users_paginated,
+    get_user_by_id,
+    create_user,
+    update_user,
+    soft_delete_user,
+    assign_role_to_user,
+    get_roles_with_counts,
+    get_role_by_id,
+    create_role,
+    update_role,
+    soft_delete_role,
+    get_role_claims_with_relations,
+    get_role_claim_by_id,
+    create_role_claim,
+    update_role_claim,
+    soft_delete_role_claim,
+    get_user_roles_with_relations,
+    get_user_role_by_id,
+    create_user_role,
+    update_user_role,
+    soft_delete_user_role,
+    get_identity_infos_with_user,
+    get_identity_info_by_id,
+    create_identity_info,
+    update_identity_info,
+    accept_identity_info,
+    reject_identity_info,
+    soft_delete_identity_info,
+)
+
 from app.services.order_service import (
     get_cart,
     save_cart,

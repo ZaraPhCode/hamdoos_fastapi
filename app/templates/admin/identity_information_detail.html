@@ -1,0 +1,70 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات اطلاعات هویتی{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-purple-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-purple-200"><i class="fas fa-id-card"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ info.name or 'اطلاعات هویتی' }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">جزئیات کامل</p>
+                </div>
+            </div>
+            <a href="/administration/identity-informations" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت</a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800">اطلاعات</h2>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                <div><dt class="text-xs text-gray-500 mb-1">نام</dt><dd class="text-sm font-medium">{{ info.name or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">کاربر</dt><dd class="text-sm">{{ info.user.full_name if info.user else '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">نوع</dt><dd class="text-sm">{{ {'Real': 'حقیقی', 'Legal': 'حقوقی', 'CivicParticipation': 'مشارکت مدنی', 'Non_IranianNationals': 'اتباع غیر ایرانی'}.get(info.type, info.type or '—') }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">وضعیت</dt>
+                    <dd class="text-sm">
+                        {% if info.status == 'Confirmed' %}<span class="badge bg-green-100 text-green-700">تایید شده</span>
+                        {% elif info.status == 'Rejected' %}<span class="badge bg-red-100 text-red-700">رد شده</span>
+                        {% elif info.status == 'PendingDeletion' %}<span class="badge bg-amber-100 text-amber-700">در انتظار حذف</span>
+                        {% else %}<span class="badge bg-yellow-100 text-yellow-700">در انتظار تایید</span>{% endif %}
+                    </dd>
+                </div>
+                <div><dt class="text-xs text-gray-500 mb-1">کد ملی / شناسه ملی</dt><dd class="text-sm">{{ info.national_code_or_id or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">کد اقتصادی</dt><dd class="text-sm">{{ info.economic_code or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">کد پستی</dt><dd class="text-sm">{{ info.postal_code or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">شماره تماس</dt><dd class="text-sm">{{ info.phone_number or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">مصرف‌کننده نهایی</dt><dd class="text-sm">{{ 'بله' if info.final_consumer else 'خیر' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">کشور</dt><dd class="text-sm">{{ info.country or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">استان</dt><dd class="text-sm">{{ info.province or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">شهر</dt><dd class="text-sm">{{ info.city or '—' }}</dd></div>
+                <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">آدرس</dt><dd class="text-sm">{{ info.address or '—' }}</dd></div>
+                <div class="border-t border-gray-100 md:col-span-2 my-2"></div>
+                <div><dt class="text-xs text-gray-500 mb-1">تاریخ ایجاد</dt><dd class="text-sm">{{ info.insert_date.strftime('%Y/%m/%d %H:%M') if info.insert_date else '—' }}</dd></div>
+            </dl>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <a href="/administration/identity-informations/{{ info.id }}/edit" class="btn-warning flex items-center gap-2"><i class="fas fa-edit"></i> ویرایش</a>
+                {% if info.status == 'AwaitingConfirmation' %}
+                <form method="POST" action="/administration/identity-informations/{{ info.id }}/accept" style="display:inline">
+                    <button type="submit" class="btn-success flex items-center gap-2"><i class="fas fa-check"></i> تایید</button>
+                </form>
+                <form method="POST" action="/administration/identity-informations/{{ info.id }}/reject" style="display:inline">
+                    <button type="submit" class="btn-danger flex items-center gap-2"><i class="fas fa-times"></i> رد</button>
+                </form>
+                {% endif %}
+                <form method="POST" action="/administration/identity-informations/{{ info.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                    <button type="submit" class="btn-danger flex items-center gap-2"><i class="fas fa-trash"></i> حذف</button>
+                </form>
+            </div>
+            <a href="/administration/identity-informations" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

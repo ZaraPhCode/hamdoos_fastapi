@@ -1,0 +1,113 @@
+{% extends "admin/base.html" %}
+{% block title %}مدیریت اطلاعات هویتی{% endblock %}
+{% block content %}
+{% set type_labels = {'Real': 'حقیقی', 'Legal': 'حقوقی', 'CivicParticipation': 'مشارکت مدنی', 'Non_IranianNationals': 'اتباع غیر ایرانی'} %}
+{% set status_labels = {'AwaitingConfirmation': 'در انتظار تایید', 'Confirmed': 'تایید شده', 'PendingDeletion': 'در انتظار حذف', 'Rejected': 'رد شده'} %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-purple-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-purple-200"><i class="fas fa-id-card"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">اطلاعات هویتی</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">مدیریت اطلاعات هویتی کاربران برای صورتحساب مالیاتی ({{ total or 0 }})</p>
+                </div>
+            </div>
+            <a href="/administration/identity-informations/new" class="btn-primary flex items-center gap-2"><i class="fas fa-plus"></i> جدید</a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-5 border-b border-gray-200">
+            <form method="GET" class="flex flex-wrap gap-3 items-end">
+                <div>
+                    <label class="form-label text-xs">کاربران</label>
+                    <select name="user_filter" class="form-input text-sm" onchange="this.form.submit()">
+                        <option value="">همه کاربران</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {{ 'selected' if user_filter == u.id|string else '' }}>{{ u.full_name or u.user_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label text-xs">کد/شناسه ملی</label>
+                    <input type="text" name="national_code_filter" value="{{ national_code_filter }}" class="form-input text-sm" placeholder="جستجوی کد ملی..." onchange="this.form.submit()">
+                </div>
+                <div>
+                    <label class="form-label text-xs">نوع</label>
+                    <select name="type_filter" class="form-input text-sm" onchange="this.form.submit()">
+                        <option value="">همه</option>
+                        {% for t in identity_types %}
+                        <option value="{{ t.value }}" {{ 'selected' if type_filter == t.value else '' }}>{{ type_labels.get(t.value, t.value) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label text-xs">وضعیت</label>
+                    <select name="status_filter" class="form-input text-sm" onchange="this.form.submit()">
+                        <option value="">همه</option>
+                        {% for s in identity_statuses %}
+                        <option value="{{ s.value }}" {{ 'selected' if status_filter == s.value else '' }}>{{ status_labels.get(s.value, s.value) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary text-sm"><i class="fas fa-search"></i> فیلتر</button>
+            </form>
+        </div>
+        <div class="p-5">
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-3 px-2">#</th>
+                    <th class="text-right py-3 px-2">نام</th>
+                    <th class="text-right py-3 px-2">کاربر</th>
+                    <th class="text-right py-3 px-2">کد ملی/شناسه</th>
+                    <th class="text-right py-3 px-2">نوع</th>
+                    <th class="text-right py-3 px-2">وضعیت</th>
+                    <th class="text-center py-3 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-2 text-gray-400">{{ loop.index + (page-1)*20 }}</td>
+                        <td class="py-3 px-2 font-medium">{{ item.name or '—' }}</td>
+                        <td class="py-3 px-2">{{ item.user.full_name if item.user and item.user.full_name else (item.user.user_name if item.user else '—') }}</td>
+                        <td class="py-3 px-2">{{ item.national_code_or_id or '—' }}</td>
+                        <td class="py-3 px-2">{{ type_labels.get(item.type, item.type or '—') }}</td>
+                        <td class="py-3 px-2">
+                            {% if item.status == 'Confirmed' %}<span class="badge bg-green-100 text-green-700">تایید شده</span>
+                            {% elif item.status == 'Rejected' %}<span class="badge bg-red-100 text-red-700">رد شده</span>
+                            {% elif item.status == 'PendingDeletion' %}<span class="badge bg-amber-100 text-amber-700">در انتظار حذف</span>
+                            {% else %}<span class="badge bg-yellow-100 text-yellow-700">در انتظار تایید</span>{% endif %}
+                        </td>
+                        <td class="py-3 px-2 text-center">
+                            <a href="/administration/identity-informations/{{ item.id }}" class="text-indigo-600 hover:underline ml-2" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/identity-informations/{{ item.id }}/edit" class="text-blue-600 hover:underline ml-2" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            {% if item.status == 'AwaitingConfirmation' %}
+                            <form method="POST" action="/administration/identity-informations/{{ item.id }}/accept" style="display:inline" class="ml-1">
+                                <button type="submit" class="text-green-600 hover:text-green-800" title="تایید"><i class="fas fa-check"></i></button>
+                            </form>
+                            <form method="POST" action="/administration/identity-informations/{{ item.id }}/reject" style="display:inline" class="ml-1">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="رد"><i class="fas fa-times"></i></button>
+                            </form>
+                            {% endif %}
+                            <form method="POST" action="/administration/identity-informations/{{ item.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center py-8 text-gray-400">موردی یافت نشد</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_pages and total_pages > 1 %}
+        <div class="border-t px-5 py-4 flex justify-center gap-2">
+            {% for p in range(1, total_pages + 1) %}
+            <a href="?page={{ p }}&type_filter={{ type_filter }}&status_filter={{ status_filter }}&user_filter={{ user_filter }}&national_code_filter={{ national_code_filter }}" class="px-3 py-1 rounded text-sm border {{ 'bg-blue-600 text-white border-blue-600' if p == page else 'border-gray-300 hover:bg-gray-100' }}">{{ p }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

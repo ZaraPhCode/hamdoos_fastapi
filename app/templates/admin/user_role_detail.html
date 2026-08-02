@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات انتساب نقش{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-teal-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-teal-200"><i class="fas fa-user-tag"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">جزئیات انتساب نقش</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ ur.user.full_name if ur.user else '' }} ← {{ ur.role.name if ur.role else '' }}</p>
+                </div>
+            </div>
+            <a href="/administration/user-roles" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800">اطلاعات انتساب</h2>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                <div><dt class="text-xs text-gray-500 mb-1">کاربر</dt><dd class="text-sm font-medium">{{ ur.user.full_name if ur.user else ur.user_id }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">نقش</dt><dd class="text-sm font-medium">{{ ur.role.name if ur.role else '—' }}</dd></div>
+                <div class="border-t border-gray-100 md:col-span-2 my-2"></div>
+                <div><dt class="text-xs text-gray-500 mb-1">تاریخ ایجاد</dt><dd class="text-sm">{{ ur.insert_date.strftime('%Y/%m/%d %H:%M') if ur.insert_date else '—' }}</dd></div>
+            </dl>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <a href="/administration/user-roles/{{ ur.id }}/edit" class="btn-warning flex items-center gap-2"><i class="fas fa-edit"></i> ویرایش</a>
+                <form method="POST" action="/administration/user-roles/{{ ur.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                    <button type="submit" class="btn-danger flex items-center gap-2"><i class="fas fa-trash"></i> حذف</button>
+                </form>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="/administration/logs/{{ ur.id }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"><i class="fas fa-history"></i> سوابق</a>
+                <a href="/administration/user-roles" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

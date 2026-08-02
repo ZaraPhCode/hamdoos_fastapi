@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش کاربر" if user else "ایجاد کاربر" }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-blue-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-blue-200">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش کاربر" if user else "ایجاد کاربر جدید" }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ "ویرایش اطلاعات کاربر" if user else "ثبت کاربر جدید" }}</p>
+                </div>
+            </div>
+            <a href="/administration/users" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت
+            </a>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ '/administration/users/' ~ user.id ~ '/edit' if user else '/administration/users/new' }}" class="space-y-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+                <h2 class="font-semibold text-gray-800">اطلاعات کاربر</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div>
+                        <label class="form-label">نام کاربری <span class="text-red-500">*</span></label>
+                        <input type="text" name="user_name" value="{{ user.user_name if user else '' }}" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="form-label">نام</label>
+                        <input type="text" name="first_name" value="{{ user.first_name if user else '' }}" class="form-input">
+                    </div>
+                    <div>
+                        <label class="form-label">نام خانوادگی</label>
+                        <input type="text" name="last_name" value="{{ user.last_name if user else '' }}" class="form-input">
+                    </div>
+                    <div>
+                        <label class="form-label">شماره تماس</label>
+                        <input type="text" name="phone_number" value="{{ user.phone_number if user else '' }}" class="form-input" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="form-label">ایمیل</label>
+                        <input type="email" name="email" value="{{ user.email if user else '' }}" class="form-input" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="form-label">کد ملی</label>
+                        <input type="text" name="national_id" value="{{ user.national_id if user else '' }}" class="form-input" dir="ltr" maxlength="10">
+                    </div>
+                    <div>
+                        <label class="form-label">جنسیت</label>
+                        <select name="gender" class="form-input">
+                            <option value="Unknown" {{ 'selected' if user and user.gender == 'Unknown' else '' }}>نامشخص</option>
+                            <option value="Male" {{ 'selected' if user and user.gender == 'Male' else '' }}>مرد</option>
+                            <option value="Female" {{ 'selected' if user and user.gender == 'Female' else '' }}>زن</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">{{ "رمز عبور جدید" if user else "رمز عبور" }}</label>
+                        <input type="password" name="password" class="form-input" dir="ltr" {{ 'required' if not user else '' }}>
+                        {% if user %}<p class="text-xs text-gray-400 mt-1">در صورت تمایل به تغییر رمز، مقدار جدید را وارد کنید</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400"><i class="fas fa-info-circle text-gray-300 ml-1"></i>{{ "ویرایش کاربر" if user else "ایجاد کاربر جدید" }}</p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/users" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"><i class="fas fa-times"></i> انصراف</a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5"><i class="fas fa-check"></i> {{ "بروزرسانی" if user else "ذخیره" }}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

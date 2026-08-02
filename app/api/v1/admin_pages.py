@@ -21,11 +21,11 @@ from app.models.invoice import Invoice, Supplier, SupplierProduct, PurchaseOrder
 from app.models.finance import Receipt, Wallet, CurrencyDetail, WarehouseMovement
 from app.models.customer_content import Comment, Media, NotifiedProduct
 from app.models.support import Ticket, Chat
-from app.models.common import Log, AdminParameter
+from app.models.common import Log, AdminParameter, SmsCode, MobileNumber, BankInfo
 from app.models.manufacturer import Manufacturer
 from app.schemas.product import CategoryCreate, CategoryUpdate
 from app.utils.common_works import generate_slug
-from app.services import admin_service, product_service, order_service, invoice_service, warehouse_service, finance_service, support_service
+from app.services import admin_service, product_service, order_service, invoice_service, warehouse_service, finance_service, support_service, identity_service
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/administration", tags=["Admin Pages"])
@@ -1280,37 +1280,166 @@ async def admin_order_detail(
 async def admin_users(
     request: Request,
     page: int = Query(1),
+    search: str = Query(""),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from sqlalchemy import select, func
-    from app.models.identity import User
-    total = (await db.execute(select(func.count(User.id)).where(User.is_removed == False))).scalar() or 0
-    users = (await db.execute(
-        select(User).where(User.is_removed == False).order_by(User.insert_date.desc()).offset((page-1)*20).limit(20)
-    )).scalars().all()
+    users, total = await identity_service.get_users_paginated(db, page, 20, search)
+    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
     return templates.TemplateResponse("admin/users.html", {
         "request": request, "current_user": current_user,
         "users": users, "total": total, "page": page, "total_pages": (total + 19) // 20,
+        "search": search, "roles": roles,
     })
+
+
+@router.get("/users/new", response_class=HTMLResponse)
+async def admin_user_create(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return templates.TemplateResponse("admin/user_form.html", {
+        "request": request, "current_user": current_user, "user": None,
+    })
+
+
+@router.post("/users/new", response_class=HTMLResponse)
+async def admin_user_create_submit(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    try:
+        user = await identity_service.create_user(db, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/users", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/user_form.html", {
+            "request": request, "current_user": current_user, "user": None, "error": str(e),
+        })
+
+
+@router.get("/users/{user_id}/edit", response_class=HTMLResponse)
+async def admin_user_edit(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    uid = uuid.UUID(user_id)
+    user = await identity_service.get_user_by_id(db, uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return templates.TemplateResponse("admin/user_form.html", {
+        "request": request, "current_user": current_user, "user": user,
+    })
+
+
+@router.post("/users/{user_id}/edit", response_class=HTMLResponse)
+async def admin_user_edit_submit(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    uid = uuid.UUID(user_id)
+    user = await identity_service.get_user_by_id(db, uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    form = await request.form()
+    try:
+        await identity_service.update_user(db, user, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/users", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/user_form.html", {
+            "request": request, "current_user": current_user, "user": user, "error": str(e),
+        })
 
 
 @router.get("/users/{user_id}", response_class=HTMLResponse)
 async def admin_user_detail(
     request: Request,
     user_id: str,
+    page: int = Query(1),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    import uuid
+    from app.models.common import Address, BankInfo
+    from app.models.order import OrderModel as Order
     uid = uuid.UUID(user_id)
-    from app.services.auth_service import get_user_by_id
-    user = await get_user_by_id(db, uid)
+    user = await identity_service.get_user_by_id(db, uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Load addresses
+    addr_page = address_page = page
+    addr_stmt = (
+        select(Address)
+        .options(selectinload(Address.province_city))
+        .where(Address.user_id == uid, Address.is_removed == False)
+        .order_by(Address.insert_date.desc())
+    )
+    addr_count = (await db.execute(select(func.count(Address.id)).where(Address.user_id == uid, Address.is_removed == False))).scalar() or 0
+    addresses = (await db.execute(addr_stmt.offset(0).limit(100))).unique().scalars().all()
+
+    # Load bank infos
+    bank_stmt = (
+        select(BankInfo)
+        .where(BankInfo.user_id == uid, BankInfo.is_removed == False)
+        .order_by(BankInfo.insert_date.desc())
+    )
+    bank_count = (await db.execute(select(func.count(BankInfo.id)).where(BankInfo.user_id == uid, BankInfo.is_removed == False))).scalar() or 0
+    bank_infos = (await db.execute(bank_stmt.offset(0).limit(100))).scalars().all()
+
+    # Load orders
+    order_stmt = (
+        select(Order)
+        .where(Order.user_id == uid, Order.is_removed == False)
+        .order_by(Order.insert_date.desc())
+    )
+    order_count = (await db.execute(select(func.count(Order.id)).where(Order.user_id == uid, Order.is_removed == False))).scalar() or 0
+    orders = (await db.execute(order_stmt.offset(0).limit(100))).scalars().all()
+
     roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
     return templates.TemplateResponse("admin/user_detail.html", {
         "request": request, "current_user": current_user,
         "user": user, "roles": roles,
+        "addresses": addresses, "addr_count": addr_count, "addr_page": 1, "addr_total_pages": (addr_count + 99) // 100,
+        "bank_infos": bank_infos, "bank_count": bank_count, "bank_page": 1, "bank_total_pages": (bank_count + 99) // 100,
+        "orders": orders, "order_count": order_count, "order_page": 1, "order_total_pages": (order_count + 99) // 100,
     })
+
+
+@router.post("/users/{user_id}/delete", response_class=HTMLResponse)
+async def admin_user_delete(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    uid = uuid.UUID(user_id)
+    user = await identity_service.get_user_by_id(db, uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    await identity_service.soft_delete_user(db, user, current_user.id)
+    return RedirectResponse(url="/administration/users", status_code=303)
+
+
+@router.post("/users/{user_id}/roles", response_class=HTMLResponse)
+async def admin_user_assign_role(
+    request: Request,
+    user_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    role_name = form.get("role_name", "")
+    try:
+        await identity_service.assign_role_to_user(db, uuid.UUID(user_id), role_name, current_user.id)
+    except ValueError as e:
+        return RedirectResponse(url=f"/administration/users/{user_id}", status_code=303)
+    return RedirectResponse(url=f"/administration/users/{user_id}", status_code=303)
 
 
 # ── Roles ──
@@ -1321,21 +1450,101 @@ async def admin_roles(
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+    items = await identity_service.get_roles_with_counts(db)
     return templates.TemplateResponse("admin/roles.html", {
-        "request": request, "current_user": current_user, "roles": roles,
+        "request": request, "current_user": current_user, "roles": items,
     })
 
 
-@router.get("/roles/new", response_class=HTMLResponse)
+@router.get("/roles/create", response_class=HTMLResponse)
 async def admin_role_create(
     request: Request,
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
     return templates.TemplateResponse("admin/role_form.html", {
-        "request": request, "current_user": current_user,
+        "request": request, "current_user": current_user, "role": None,
     })
+
+
+@router.post("/roles/create", response_class=HTMLResponse)
+async def admin_role_create_submit(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    try:
+        role = await identity_service.create_role(db, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/roles", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/role_form.html", {
+            "request": request, "current_user": current_user, "role": None, "error": str(e),
+        })
+
+
+@router.get("/roles/{role_id}/edit", response_class=HTMLResponse)
+async def admin_role_edit(
+    request: Request,
+    role_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    role = await identity_service.get_role_by_id(db, uuid.UUID(role_id))
+    if not role or role.is_removed:
+        raise HTTPException(status_code=404, detail="Role not found")
+    return templates.TemplateResponse("admin/role_form.html", {
+        "request": request, "current_user": current_user, "role": role,
+    })
+
+
+@router.post("/roles/{role_id}/edit", response_class=HTMLResponse)
+async def admin_role_edit_submit(
+    request: Request,
+    role_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    role = await identity_service.get_role_by_id(db, uuid.UUID(role_id))
+    if not role or role.is_removed:
+        raise HTTPException(status_code=404, detail="Role not found")
+    form = await request.form()
+    try:
+        await identity_service.update_role(db, role, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/roles", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/role_form.html", {
+            "request": request, "current_user": current_user, "role": role, "error": str(e),
+        })
+
+
+@router.get("/roles/{role_id}", response_class=HTMLResponse)
+async def admin_role_detail(
+    request: Request,
+    role_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    role = await identity_service.get_role_by_id(db, uuid.UUID(role_id))
+    if not role or role.is_removed:
+        raise HTTPException(status_code=404, detail="Role not found")
+    return templates.TemplateResponse("admin/role_detail.html", {
+        "request": request, "current_user": current_user, "role": role,
+    })
+
+
+@router.post("/roles/{role_id}/delete", response_class=HTMLResponse)
+async def admin_role_delete(
+    request: Request,
+    role_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    role = await identity_service.get_role_by_id(db, uuid.UUID(role_id))
+    if not role or role.is_removed:
+        raise HTTPException(status_code=404, detail="Role not found")
+    await identity_service.soft_delete_role(db, role, current_user.id)
+    return RedirectResponse(url="/administration/roles", status_code=303)
 
 
 # ── Comments ──
@@ -2269,22 +2478,159 @@ async def admin_chats(
 @router.get("/identity-informations", response_class=HTMLResponse)
 async def admin_identity_informations(
     request: Request,
+    page: int = Query(1),
+    type_filter: str = Query(""),
+    status_filter: str = Query(""),
+    user_filter: str = Query(""),
+    national_code_filter: str = Query(""),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(IdentityInformation).where(IdentityInformation.is_removed == False).order_by(IdentityInformation.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
+    from app.models.enums import IdentityType, IdentityStatus
+    items, total = await identity_service.get_identity_infos_with_user(
+        db, page, 20, type_filter, status_filter, user_filter, national_code_filter
+    )
+    users = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+    return templates.TemplateResponse("admin/identity_informations.html", {
         "request": request, "current_user": current_user,
-        "title": "اطلاعات هویتی", "items": items,
-        "columns": [
-            {"key": "name", "label": "نام"},
-            {"key": "national_code_or_id", "label": "کد ملی"},
-            {"key": "type", "label": "نوع"},
-            {"key": "status", "label": "وضعیت"},
-        ],
+        "items": items, "total": total, "page": page, "total_pages": (total + 19) // 20,
+        "type_filter": type_filter, "status_filter": status_filter,
+        "user_filter": user_filter, "national_code_filter": national_code_filter,
+        "users": users, "identity_types": list(IdentityType), "identity_statuses": list(IdentityStatus),
     })
+
+
+@router.get("/identity-informations/new", response_class=HTMLResponse)
+async def admin_identity_information_create(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    users = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+    return templates.TemplateResponse("admin/identity_information_form.html", {
+        "request": request, "current_user": current_user,
+        "info": None, "users": users,
+    })
+
+
+@router.post("/identity-informations/new", response_class=HTMLResponse)
+async def admin_identity_information_create_submit(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    users = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+    try:
+        info = await identity_service.create_identity_info(db, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/identity-informations", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/identity_information_form.html", {
+            "request": request, "current_user": current_user,
+            "info": None, "users": users, "error": str(e), "form_data": dict(form),
+        })
+
+
+@router.get("/identity-informations/{info_id}/edit", response_class=HTMLResponse)
+async def admin_identity_information_edit(
+    request: Request,
+    info_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    info = await identity_service.get_identity_info_by_id(db, uuid.UUID(info_id))
+    if not info:
+        raise HTTPException(status_code=404, detail="Identity information not found")
+    users = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+    return templates.TemplateResponse("admin/identity_information_form.html", {
+        "request": request, "current_user": current_user,
+        "info": info, "users": users,
+    })
+
+
+@router.post("/identity-informations/{info_id}/edit", response_class=HTMLResponse)
+async def admin_identity_information_edit_submit(
+    request: Request,
+    info_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    info = await identity_service.get_identity_info_by_id(db, uuid.UUID(info_id))
+    if not info:
+        raise HTTPException(status_code=404, detail="Identity information not found")
+    form = await request.form()
+    users = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+    try:
+        await identity_service.update_identity_info(db, info, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/identity-informations", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/identity_information_form.html", {
+            "request": request, "current_user": current_user,
+            "info": info, "users": users, "error": str(e), "form_data": dict(form),
+        })
+
+
+@router.get("/identity-informations/{info_id}", response_class=HTMLResponse)
+async def admin_identity_information_detail(
+    request: Request,
+    info_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    info = await identity_service.get_identity_info_by_id(db, uuid.UUID(info_id))
+    if not info:
+        raise HTTPException(status_code=404, detail="Identity information not found")
+    return templates.TemplateResponse("admin/identity_information_detail.html", {
+        "request": request, "current_user": current_user, "info": info,
+    })
+
+
+@router.post("/identity-informations/{info_id}/accept", response_class=HTMLResponse)
+async def admin_identity_information_accept(
+    request: Request,
+    info_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    info = await identity_service.get_identity_info_by_id(db, uuid.UUID(info_id))
+    if not info:
+        raise HTTPException(status_code=404, detail="Identity information not found")
+    try:
+        await identity_service.accept_identity_info(db, info, current_user.id)
+    except ValueError as e:
+        pass
+    return RedirectResponse(url="/administration/identity-informations", status_code=303)
+
+
+@router.post("/identity-informations/{info_id}/reject", response_class=HTMLResponse)
+async def admin_identity_information_reject(
+    request: Request,
+    info_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    info = await identity_service.get_identity_info_by_id(db, uuid.UUID(info_id))
+    if not info:
+        raise HTTPException(status_code=404, detail="Identity information not found")
+    try:
+        await identity_service.reject_identity_info(db, info, current_user.id)
+    except ValueError as e:
+        pass
+    return RedirectResponse(url="/administration/identity-informations", status_code=303)
+
+
+@router.post("/identity-informations/{info_id}/delete", response_class=HTMLResponse)
+async def admin_identity_information_delete(
+    request: Request,
+    info_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    info = await identity_service.get_identity_info_by_id(db, uuid.UUID(info_id))
+    if not info:
+        raise HTTPException(status_code=404, detail="Identity information not found")
+    await identity_service.soft_delete_identity_info(db, info, current_user.id)
+    return RedirectResponse(url="/administration/identity-informations", status_code=303)
 
 
 # ── Similar Products ──
@@ -3711,20 +4057,120 @@ def _checkbox_bool(form, key):
 @router.get("/role-claims", response_class=HTMLResponse)
 async def admin_role_claims(
     request: Request,
+    page: int = Query(1),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(RoleClaim).where(RoleClaim.is_removed == False).order_by(RoleClaim.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
+    items, total = await identity_service.get_role_claims_with_relations(db, page, 50)
+    return templates.TemplateResponse("admin/role_claims.html", {
         "request": request, "current_user": current_user,
-        "title": "دسترسی‌ها", "items": items,
-        "columns": [
-            {"key": "role_id", "label": "شناسه نقش"},
-            {"key": "operation_name", "label": "عملیات"},
-        ],
+        "items": items, "total": total, "page": page, "total_pages": (total + 49) // 50,
     })
+
+
+@router.get("/role-claims/new", response_class=HTMLResponse)
+async def admin_role_claim_create(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+    from app.models.enums import OperationType
+    return templates.TemplateResponse("admin/role_claim_form.html", {
+        "request": request, "current_user": current_user,
+        "rc": None, "roles": roles, "operation_types": list(OperationType),
+    })
+
+
+@router.post("/role-claims/new", response_class=HTMLResponse)
+async def admin_role_claim_create_submit(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+    from app.models.enums import OperationType
+    try:
+        rc = await identity_service.create_role_claim(db, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/role-claims", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/role_claim_form.html", {
+            "request": request, "current_user": current_user,
+            "rc": None, "roles": roles, "operation_types": list(OperationType),
+            "error": str(e), "form_data": dict(form),
+        })
+
+
+@router.get("/role-claims/{claim_id}/edit", response_class=HTMLResponse)
+async def admin_role_claim_edit(
+    request: Request,
+    claim_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    rc = await identity_service.get_role_claim_by_id(db, uuid.UUID(claim_id))
+    if not rc:
+        raise HTTPException(status_code=404, detail="Role claim not found")
+    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+    from app.models.enums import OperationType
+    return templates.TemplateResponse("admin/role_claim_form.html", {
+        "request": request, "current_user": current_user,
+        "rc": rc, "roles": roles, "operation_types": list(OperationType),
+    })
+
+
+@router.post("/role-claims/{claim_id}/edit", response_class=HTMLResponse)
+async def admin_role_claim_edit_submit(
+    request: Request,
+    claim_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    rc = await identity_service.get_role_claim_by_id(db, uuid.UUID(claim_id))
+    if not rc:
+        raise HTTPException(status_code=404, detail="Role claim not found")
+    form = await request.form()
+    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+    from app.models.enums import OperationType
+    try:
+        await identity_service.update_role_claim(db, rc, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/role-claims", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/role_claim_form.html", {
+            "request": request, "current_user": current_user,
+            "rc": rc, "roles": roles, "operation_types": list(OperationType),
+            "error": str(e), "form_data": dict(form),
+        })
+
+
+@router.get("/role-claims/{claim_id}", response_class=HTMLResponse)
+async def admin_role_claim_detail(
+    request: Request,
+    claim_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    rc = await identity_service.get_role_claim_by_id(db, uuid.UUID(claim_id))
+    if not rc:
+        raise HTTPException(status_code=404, detail="Role claim not found")
+    return templates.TemplateResponse("admin/role_claim_detail.html", {
+        "request": request, "current_user": current_user, "rc": rc,
+    })
+
+
+@router.post("/role-claims/{claim_id}/delete", response_class=HTMLResponse)
+async def admin_role_claim_delete(
+    request: Request,
+    claim_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    rc = await identity_service.get_role_claim_by_id(db, uuid.UUID(claim_id))
+    if not rc:
+        raise HTTPException(status_code=404, detail="Role claim not found")
+    await identity_service.soft_delete_role_claim(db, rc, current_user.id)
+    return RedirectResponse(url="/administration/role-claims", status_code=303)
 
 
 # ── User Roles ──
@@ -3732,17 +4178,117 @@ async def admin_role_claims(
 @router.get("/user-roles", response_class=HTMLResponse)
 async def admin_user_roles(
     request: Request,
+    page: int = Query(1),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(UserRole).where(UserRole.is_removed == False).order_by(UserRole.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
+    items, total = await identity_service.get_user_roles_with_relations(db, page, 50)
+    return templates.TemplateResponse("admin/user_roles.html", {
         "request": request, "current_user": current_user,
-        "title": "نقش کاربران", "items": items,
-        "columns": [
-            {"key": "user_id", "label": "شناسه کاربر"},
-            {"key": "role_id", "label": "شناسه نقش"},
-        ],
+        "items": items, "total": total, "page": page, "total_pages": (total + 49) // 50,
     })
+
+
+@router.get("/user-roles/new", response_class=HTMLResponse)
+async def admin_user_role_create(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    users = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+    return templates.TemplateResponse("admin/user_role_form.html", {
+        "request": request, "current_user": current_user,
+        "ur": None, "users": users, "roles": roles,
+    })
+
+
+@router.post("/user-roles/new", response_class=HTMLResponse)
+async def admin_user_role_create_submit(
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    users_list = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+    try:
+        ur = await identity_service.create_user_role(db, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/user-roles", status_code=303)
+    except ValueError as e:
+        return templates.TemplateResponse("admin/user_role_form.html", {
+            "request": request, "current_user": current_user,
+            "ur": None, "users": users_list, "roles": roles,
+            "error": str(e), "form_data": dict(form),
+        })
+
+
+@router.get("/user-roles/{ur_id}/edit", response_class=HTMLResponse)
+async def admin_user_role_edit(
+    request: Request,
+    ur_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    ur = await identity_service.get_user_role_by_id(db, uuid.UUID(ur_id))
+    if not ur:
+        raise HTTPException(status_code=404, detail="User role not found")
+    users_list = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+    roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+    return templates.TemplateResponse("admin/user_role_form.html", {
+        "request": request, "current_user": current_user,
+        "ur": ur, "users": users_list, "roles": roles,
+    })
+
+
+@router.post("/user-roles/{ur_id}/edit", response_class=HTMLResponse)
+async def admin_user_role_edit_submit(
+    request: Request,
+    ur_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    ur = await identity_service.get_user_role_by_id(db, uuid.UUID(ur_id))
+    if not ur:
+        raise HTTPException(status_code=404, detail="User role not found")
+    form = await request.form()
+    try:
+        await identity_service.update_user_role(db, ur, dict(form), current_user.id)
+        return RedirectResponse(url="/administration/user-roles", status_code=303)
+    except ValueError as e:
+        users_list = (await db.execute(select(User).where(User.is_removed == False).order_by(User.first_name))).scalars().all()
+        roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
+        return templates.TemplateResponse("admin/user_role_form.html", {
+            "request": request, "current_user": current_user,
+            "ur": ur, "users": users_list, "roles": roles,
+            "error": str(e), "form_data": dict(form),
+        })
+
+
+@router.get("/user-roles/{ur_id}", response_class=HTMLResponse)
+async def admin_user_role_detail(
+    request: Request,
+    ur_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    ur = await identity_service.get_user_role_by_id(db, uuid.UUID(ur_id))
+    if not ur:
+        raise HTTPException(status_code=404, detail="User role not found")
+    return templates.TemplateResponse("admin/user_role_detail.html", {
+        "request": request, "current_user": current_user, "ur": ur,
+    })
+
+
+@router.post("/user-roles/{ur_id}/delete", response_class=HTMLResponse)
+async def admin_user_role_delete(
+    request: Request,
+    ur_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    ur = await identity_service.get_user_role_by_id(db, uuid.UUID(ur_id))
+    if not ur:
+        raise HTTPException(status_code=404, detail="User role not found")
+    await identity_service.soft_delete_user_role(db, ur, current_user.id)
+    return RedirectResponse(url="/administration/user-roles", status_code=303)
