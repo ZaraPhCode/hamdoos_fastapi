@@ -1,0 +1,79 @@
+{% extends "admin/base.html" %}
+{% block title %}جزییات محصول مرتبط{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">محصولات مرتبط</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">جزئیات</p>
+                </div>
+            </div>
+            <a href="/administration/related-products" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <!-- Detail card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                    <i class="fas fa-link"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold text-gray-800">اطلاعات ارتباط محصولات مرتبط</h2>
+                    <p class="text-xs text-gray-500">مشخصات این ارتباط</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">محصول</dt>
+                    <dd class="text-sm text-gray-800 font-medium">
+                        {% if related_product.product %}
+                        <a href="/administration/products/{{ related_product.product.id }}/details" class="text-indigo-600 hover:underline">{{ related_product.product.name }}</a>
+                        {% else %}{{ related_product.product_id }}{% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">محصول مرتبط</dt>
+                    <dd class="text-sm text-gray-800 font-medium">
+                        {% if related_product.relate_product %}
+                        <a href="/administration/products/{{ related_product.relate_product.id }}/details" class="text-indigo-600 hover:underline">{{ related_product.relate_product.name }}</a>
+                        {% else %}{{ related_product.relate_product_id }}{% endif %}
+                    </dd>
+                </div>
+                <div class="border-t border-gray-100 md:col-span-2 my-2"></div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">تاریخ ایجاد</dt>
+                    <dd class="text-sm text-gray-800">{{ related_product.insert_date.strftime('%Y/%m/%d - %H:%M') if related_product.insert_date else '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">آخرین بروزرسانی</dt>
+                    <dd class="text-sm text-gray-800">{{ related_product.update_date.strftime('%Y/%m/%d - %H:%M') if related_product.update_date else '—' }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <a href="/administration/logs/{{ related_product.id }}?user_id={{ current_user.id }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                <i class="fas fa-history"></i> سوابق
+            </a>
+            <a href="/administration/related-products" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

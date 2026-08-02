@@ -1,45 +1,45 @@
 {% extends "admin/base.html" %}
-{% block title %}مدیریت برندها{% endblock %}
+{% block title %}برچسب محصولات{% endblock %}
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">مدیریت برندها</h1>
-            <p class="text-sm text-gray-500 mt-1">لیست برندهای فروشگاه</p>
+            <h1 class="text-2xl font-bold text-gray-800">برچسب محصولات</h1>
+            <p class="text-sm text-gray-500 mt-1">ارتباط بین محصولات و برچسب‌ها</p>
         </div>
-        <a href="/administration/brands/new" class="btn-success flex items-center gap-2 text-base px-5 py-2.5">
-            <i class="fas fa-plus"></i> ایجاد برند
+        <a href="/administration/product-tags/new" class="btn-success flex items-center gap-2 text-base px-5 py-2.5">
+            <i class="fas fa-plus"></i> ایجاد
         </a>
     </div>
 
     <!-- Stats strip -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-violet-500">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-lime-500">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-gray-500 text-sm">کل برندها</p>
+                    <p class="text-gray-500 text-sm">کل ارتباطات</p>
                     <p class="text-2xl font-bold mt-1 text-gray-800">{{ items|length }}</p>
                 </div>
-                <i class="fas fa-award text-violet-400 text-3xl"></i>
+                <i class="fas fa-link text-lime-400 text-3xl"></i>
             </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-fuchsia-500">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-green-500">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-gray-500 text-sm">دارای محصول</p>
-                    <p class="text-2xl font-bold mt-1 text-gray-800">{{ items|selectattr('products')|list|length }}</p>
+                    <p class="text-gray-500 text-sm">محصولات دارای برچسب</p>
+                    <p class="text-2xl font-bold mt-1 text-gray-800">{{ items|map(attribute='product_id')|unique|list|length }}</p>
                 </div>
-                <i class="fas fa-boxes text-fuchsia-400 text-3xl"></i>
+                <i class="fas fa-box text-green-400 text-3xl"></i>
             </div>
         </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-teal-500">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 border-r-4 border-yellow-500">
             <div class="flex justify-between items-start">
                 <div>
-                    <p class="text-gray-500 text-sm">بدون محصول</p>
-                    <p class="text-2xl font-bold mt-1 text-gray-800">{{ items|rejectattr('products')|list|length }}</p>
+                    <p class="text-gray-500 text-sm">برچسب‌های استفاده‌شده</p>
+                    <p class="text-2xl font-bold mt-1 text-gray-800">{{ items|map(attribute='tag_id')|unique|list|length }}</p>
                 </div>
-                <i class="fas fa-box-open text-teal-400 text-3xl"></i>
+                <i class="fas fa-tags text-yellow-400 text-3xl"></i>
             </div>
         </div>
     </div>
@@ -47,45 +47,46 @@
     <div class="card">
         <div class="card-header flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <h3 class="font-semibold text-gray-700">لیست برندها</h3>
-                <span class="badge bg-gray-100 text-gray-500">{{ items|length }} برند</span>
+                <h3 class="font-semibold text-gray-700">برچسب محصولات</h3>
+                <span class="badge bg-gray-100 text-gray-500">{{ items|length }} ارتباط</span>
             </div>
             <div class="flex items-center gap-2">
-                <input id="brand-search" type="text" placeholder="جستجو در برندها..." class="form-input max-w-sm">
+                <input id="ptag-search" type="text" placeholder="جستجو در برچسب محصولات..." class="form-input max-w-sm">
             </div>
         </div>
         <div class="card-body">
             <div class="overflow-x-auto">
-                <table class="w-full text-sm" id="brand-table">
+                <table class="w-full text-sm" id="ptag-table">
                     <thead>
                         <tr class="text-gray-500 border-b bg-gray-50">
                             <th class="text-center py-3 px-2 w-12">#</th>
-                            <th class="text-right py-3 px-2">نام</th>
-                            <th class="text-center py-3 px-2 w-40">تعداد محصول</th>
+                            <th class="text-right py-3 px-2">محصول</th>
+                            <th class="text-right py-3 px-2">برچسب</th>
                             <th class="text-center py-3 px-2 w-56">عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in items %}
-                        <tr class="border-b hover:bg-gray-50 transition-colors" data-search="{{ item.name or '' }}">
-                            <td class="py-3 px-2 text-center text-gray-500 brand-index">{{ loop.index }}</td>
+                        <tr class="border-b hover:bg-gray-50 transition-colors" data-search="{{ item.product.name or '' }} {{ item.tag.name or '' }}">
+                            <td class="py-3 px-2 text-center text-gray-500 ptag-index">{{ loop.index }}</td>
                             <td class="py-3 px-2">
-                                <a href="/administration/brands/{{ item.id }}" class="font-medium text-gray-800 hover:text-violet-600 transition-colors">{{ item.name or '—' }}</a>
+                                <a href="/administration/product-tags/{{ item.id }}" class="font-medium text-gray-800 hover:text-lime-600 transition-colors">{{ item.product.name if item.product else item.product_id }}</a>
                             </td>
-                            <td class="py-3 px-2 text-center">
-                                <span class="inline-flex items-center gap-1.5 text-gray-600">
-                                    <i class="fas fa-box text-gray-300 text-xs"></i>{{ item.products|length }}
+                            <td class="py-3 px-2">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <i class="fas fa-tag text-gray-300 text-xs"></i>
+                                    <span class="text-gray-600">{{ item.tag.name if item.tag else item.tag_id }}</span>
                                 </span>
                             </td>
                             <td class="py-3 px-2">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="/administration/brands/{{ item.id }}/edit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium hover:bg-amber-200 transition-colors">
+                                    <a href="/administration/product-tags/{{ item.id }}/edit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium hover:bg-amber-200 transition-colors">
                                         <i class="fas fa-edit"></i> ویرایش
                                     </a>
-                                    <a href="/administration/brands/{{ item.id }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors">
+                                    <a href="/administration/product-tags/{{ item.id }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors">
                                         <i class="fas fa-eye"></i> جزییات
                                     </a>
-                                    <a href="#" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors delete-btn" data-id="{{ item.id }}" data-name="{{ item.name }}">
+                                    <a href="#" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors delete-btn" data-id="{{ item.id }}" data-name="{{ item.product.name if item.product else '' }}">
                                         <i class="fas fa-trash"></i> حذف
                                     </a>
                                 </div>
@@ -94,9 +95,9 @@
                         {% else %}
                         <tr>
                             <td colspan="4" class="py-12 text-center text-gray-400">
-                                <i class="fas fa-award text-3xl mb-3"></i>
-                                <p>برندی یافت نشد.</p>
-                                <a href="/administration/brands/new" class="text-violet-600 hover:underline mt-2 inline-block">ایجاد اولین برند</a>
+                                <i class="fas fa-link text-3xl mb-3"></i>
+                                <p>اطلاعاتی برای نمایش وجود ندارد.</p>
+                                <a href="/administration/product-tags/new" class="text-lime-600 hover:underline mt-2 inline-block">ایجاد اولین ارتباط</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -108,7 +109,7 @@
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
                 <div class="flex items-center gap-2 text-sm text-gray-500">
                     <span>نمایش</span>
-                    <select id="brand-page-size" class="form-input w-auto py-1.5">
+                    <select id="ptag-page-size" class="form-input w-auto py-1.5">
                         <option value="5">۵</option>
                         <option value="10" selected>۱۰</option>
                         <option value="20">۲۰</option>
@@ -119,11 +120,11 @@
                     <span>در هر صفحه</span>
                 </div>
                 <div class="flex items-center gap-1 text-sm">
-                    <button type="button" id="brand-prev" class="pagination-btn">
+                    <button type="button" id="ptag-prev" class="pagination-btn">
                         <i class="fas fa-chevron-right"></i> قبلی
                     </button>
-                    <span id="brand-page-info" class="px-3 py-1 text-gray-600">صفحه ۱</span>
-                    <button type="button" id="brand-next" class="pagination-btn">
+                    <span id="ptag-page-info" class="px-3 py-1 text-gray-600">صفحه ۱</span>
+                    <button type="button" id="ptag-next" class="pagination-btn">
                         بعدی <i class="fas fa-chevron-left"></i>
                     </button>
                 </div>
@@ -139,8 +140,8 @@
             <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-trash text-red-500 text-2xl"></i>
             </div>
-            <h3 class="text-lg font-bold text-gray-800 mb-2">حذف برند</h3>
-            <p class="text-sm text-gray-500 mb-6">آیا از حذف <span id="delete-name" class="font-semibold text-gray-700"></span> اطمینان دارید؟</p>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">حذف برچسب محصول</h3>
+            <p class="text-sm text-gray-500 mb-6">آیا از حذف برچسب محصول <span id="delete-name" class="font-semibold text-gray-700"></span> اطمینان دارید؟</p>
             <form id="delete-form" method="POST" action="">
                 <div class="flex items-center gap-3 justify-center">
                     <button type="button" id="delete-cancel" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
@@ -154,18 +155,18 @@
 {% block scripts %}
 <script>
 $(document).ready(function () {
-    var $allRows = $('#brand-table tbody tr').filter(function () {
+    var $allRows = $('#ptag-table tbody tr').filter(function () {
         return $(this).find('td').length > 1;
     });
-    var $pageSize = $('#brand-page-size');
-    var $pageInfo = $('#brand-page-info');
-    var $prevBtn = $('#brand-prev');
-    var $nextBtn = $('#brand-next');
+    var $pageSize = $('#ptag-page-size');
+    var $pageInfo = $('#ptag-page-info');
+    var $prevBtn = $('#ptag-prev');
+    var $nextBtn = $('#ptag-next');
     var currentPage = 1;
     var pageSize = parseInt($pageSize.val(), 10);
 
     function getFilteredRows() {
-        var q = $('#brand-search').val().toLowerCase();
+        var q = $('#ptag-search').val().toLowerCase();
         if (!q) return $allRows;
         return $allRows.filter(function () {
             return ($(this).data('search') || '').toLowerCase().indexOf(q) !== -1;
@@ -192,14 +193,14 @@ $(document).ready(function () {
         $allRows.hide();
         $filtered.slice(start, end).show();
         $filtered.each(function (i) {
-            $(this).find('.brand-index').text(start + i + 1);
+            $(this).find('.ptag-index').text(start + i + 1);
         });
         $pageInfo.text('صفحه ' + currentPage + ' از ' + (totalPages || 1));
         $prevBtn.prop('disabled', currentPage <= 1).toggleClass('opacity-50 cursor-not-allowed', currentPage <= 1);
         $nextBtn.prop('disabled', currentPage >= totalPages).toggleClass('opacity-50 cursor-not-allowed', currentPage >= totalPages);
     }
 
-    $('#brand-search').on('keyup', function () { currentPage = 1; applyPagination(); });
+    $('#ptag-search').on('keyup', function () { currentPage = 1; applyPagination(); });
     $pageSize.on('change', function () {
         pageSize = $(this).val() === 'all' ? NaN : parseInt($(this).val(), 10);
         currentPage = 1; applyPagination();
@@ -215,7 +216,7 @@ $(document).ready(function () {
         var id = $(this).data('id');
         var name = $(this).data('name');
         $('#delete-name').text(name);
-        $('#delete-form').attr('action', '/administration/brands/' + id + '/delete');
+        $('#delete-form').attr('action', '/administration/product-tags/' + id + '/delete');
         $modal.removeClass('hidden');
     });
     $('#delete-cancel').on('click', function () { $modal.addClass('hidden'); });

@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload, joinedload
 
 from app.models.product import (
     Product, Category, Brand, ProductType, ProductUnit,
-    Variety, ProductVariety, CategoryOption, ProductImage,
+    Variety, ProductVariety, CategoryOption,
     Tag, ProductTag, RelatedProduct, SimilarProduct,
     PriceHistory,
 )
@@ -21,6 +21,7 @@ from app.models.product_features import (
     TechnicalFeature, TechnicalFeatureValue, CategoryTechnicalFeature,
     TechnicalTable, TechnicalTableProduct,
 )
+from app.models.invoice import SupplierProduct, Supplier
 from app.models.identity import User
 from app.models.customer_content import Media
 from app.schemas.product import (
@@ -322,7 +323,7 @@ async def get_product_by_id(db: AsyncSession, product_id: uuid.UUID) -> Optional
             selectinload(Product.product_type),
             selectinload(Product.product_unit),
             selectinload(Product.currency),
-            selectinload(Product.product_images).order_by(ProductImage.picture_order),
+            selectinload(Product.product_images),
             selectinload(Product.varieties).selectinload(Variety.product_varieties).selectinload(ProductVariety.category_option),
             selectinload(Product.related_products).selectinload(RelatedProduct.relate_product),
             selectinload(Product.similar_products).selectinload(SimilarProduct.similar),
@@ -344,12 +345,50 @@ async def get_product_by_slug(db: AsyncSession, slug: str) -> Optional[Product]:
         .options(
             selectinload(Product.category),
             selectinload(Product.brand),
-            selectinload(Product.product_images).order_by(ProductImage.picture_order),
+            selectinload(Product.product_images),
             selectinload(Product.varieties),
             selectinload(Product.related_products).selectinload(RelatedProduct.relate_product),
             selectinload(Product.similar_products).selectinload(SimilarProduct.similar),
         )
         .where(Product.slug == slug, Product.is_removed == False, Product.no_display == False)
+    )
+    result = await db.execute(stmt)
+    return result.unique().scalar_one_or_none()
+
+
+async def get_product_full_details(db: AsyncSession, product_id: uuid.UUID) -> Optional[Product]:
+    """Full product graph for the admin details page.
+
+    Loads category, brand, type/unit/currency, images, datasheets,
+    supplier products (with supplier), and technical table products with
+    feature values + enums + technical table.
+    """
+    stmt = (
+        select(Product)
+        .options(
+            selectinload(Product.category),
+            selectinload(Product.brand),
+            selectinload(Product.product_type),
+            selectinload(Product.product_unit),
+            selectinload(Product.currency),
+            selectinload(Product.product_images),
+            selectinload(Product.menu_datasheets),
+            selectinload(Product.supplier_products).selectinload(SupplierProduct.supplier),
+            selectinload(Product.related_products).selectinload(RelatedProduct.relate_product),
+            selectinload(Product.similar_products).selectinload(SimilarProduct.similar),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_table),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_feature_values)
+            .selectinload(TechnicalFeatureValue.technical_feature),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_feature_values)
+            .selectinload(TechnicalFeatureValue.technical_feature_enum),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_feature_values)
+            .selectinload(TechnicalFeatureValue.technical_feature_enum1),
+        )
+        .where(Product.id == product_id, Product.is_removed == False)
     )
     result = await db.execute(stmt)
     return result.unique().scalar_one_or_none()

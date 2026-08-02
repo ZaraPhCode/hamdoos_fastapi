@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -13,10 +14,10 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.core.dependencies import get_admin_user, require_any_role
 from app.models.identity import User, Role, IdentityInformation, RoleClaim, UserRole
-from app.models.product import Product, Category, Brand, ProductType, ProductUnit, Currency, Tag, CategoryOption, PriceHistory, ProductTag, RelatedProduct, SimilarProduct
-from app.models.product_features import TechnicalFeature, TechnicalTable, CategoryTechnicalFeature, TechnicalTableProduct, TechnicalFeatureEnum
+from app.models.product import Product, Category, Brand, ProductType, ProductUnit, Currency, Tag, CategoryOption, PriceHistory, ProductTag, RelatedProduct, SimilarProduct, ProductImage, MenuDatasheet
+from app.models.product_features import TechnicalFeature, TechnicalTable, CategoryTechnicalFeature, TechnicalTableProduct, TechnicalFeatureEnum, TechnicalFeatureValue
 from app.models.order import OrderModel as Order, PayMethod, PostType, Discount
-from app.models.invoice import Invoice, Supplier, PurchaseOrder
+from app.models.invoice import Invoice, Supplier, SupplierProduct, PurchaseOrder
 from app.models.finance import Receipt, Wallet, CurrencyDetail, WarehouseMovement
 from app.models.customer_content import Comment, Media, NotifiedProduct
 from app.models.support import Ticket, Chat
@@ -232,16 +233,600 @@ async def admin_product_edit(
     db: AsyncSession = Depends(get_db),
 ):
     import uuid
+    import jdatetime
     pid = uuid.UUID(product_id)
     product = await product_service.get_product_by_id(db, pid)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    categories = await product_service.get_all_categories_flat(db)
+    tree = await product_service.get_admin_category_tree(db)
+    options = _flatten_category_options(tree)
     brands = await product_service.get_all_brands(db)
+    types = (await db.execute(select(ProductType).where(ProductType.is_removed == False))).scalars().all()
+    units = (await db.execute(select(ProductUnit).where(ProductUnit.is_removed == False))).scalars().all()
+    currencies = (await db.execute(select(Currency).where(Currency.is_removed == False))).scalars().all()
+    suppliers = (await db.execute(select(Supplier).where(Supplier.is_removed == False))).scalars().all()
+    purchase_date_str = ""
+    if product.purchase_date:
+        try:
+            dt = product.purchase_date
+            if dt.tzinfo is not None:
+                dt = dt.replace(tzinfo=None)
+            purchase_date_str = jdatetime.datetime.fromgregorian(datetime=dt).strftime("%Y/%m/%d")
+        except Exception:
+            purchase_date_str = product.purchase_date.strftime("%Y/%m/%d")
     return templates.TemplateResponse("admin/product_form.html", {
         "request": request, "current_user": current_user,
-        "product": product, "categories": categories, "brands": brands,
+        "product": product, "categories_tree": options,
+        "brands": brands, "product_types": types,
+        "product_units": units, "currencies": currencies, "suppliers": suppliers,
+        "purchase_date_str": purchase_date_str,
     })
+
+
+@router.post("/products/{product_id}/edit", response_class=HTMLResponse)
+async def admin_product_edit_submit(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    import jdatetime
+    from app.schemas.product import ProductUpdate
+    from app.services.product_service import update_product
+
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    form = await request.form()
+
+    purchase_date_str = form.get("purchase_date") or ""
+    purchase_date = product.purchase_date
+    if purchase_date_str:
+        try:
+            parts = purchase_date_str.replace("/", "-").split("-")
+            purchase_date = jdatetime.date(int(parts[0]), int(parts[1]), int(parts[2])).togregorian()
+        except Exception:
+            purchase_date = product.purchase_date
+
+    data = ProductUpdate(
+        name=(form.get("name") or "").strip(),
+        en_name=(form.get("en_name") or "").strip() or None,
+        slug=(form.get("slug") or "").strip() or None,
+        en_slug=(form.get("en_slug") or "").strip() or None,
+        part_number=(form.get("part_number") or "").strip() or None,
+        model=(form.get("model") or "").strip() or None,
+        short_description=form.get("short_description") or None,
+        introduction=form.get("introduction") or None,
+        keywords=(form.get("keywords") or "").strip() or None,
+        meta_description=form.get("meta_description") or None,
+        status=form.get("status") or "OutOfStock",
+        type=form.get("type") or "Product",
+        delivery_day=int(form.get("delivery_day") or 0) or None,
+        tax_unique_id=(form.get("tax_unique_id") or "").strip() or None,
+        taobao_choice_id=(form.get("taobao_choice_id") or "").strip() or None,
+        vat_rate=float(form.get("vat_rate") or 0) or None,
+        profit_rate=float(form.get("profit_rate") or 0) or None,
+        points_from_purchases=int(form.get("points_from_purchases") or 0),
+        max_number_of_purchases=int(form.get("max_number_of_purchases") or 0) or None,
+        default_variation=(form.get("default_variation") or "").strip() or None,
+        purchase_date=purchase_date,
+        price=float(form.get("price") or 0) or None,
+        stock_quantity=int(form.get("stock_quantity") or 0),
+        minimum_purchase=int(form.get("minimum_purchase") or 1),
+        category_id=uuid.UUID(form.get("category_id")) if form.get("category_id") else None,
+        brand_id=uuid.UUID(form.get("brand_id")) if form.get("brand_id") else None,
+        product_type_id=uuid.UUID(form.get("product_type_id")) if form.get("product_type_id") else None,
+        product_unit_id=uuid.UUID(form.get("product_unit_id")) if form.get("product_unit_id") else None,
+        currency_id=uuid.UUID(form.get("currency_id")) if form.get("currency_id") else None,
+        is_new=form.get("is_new") in ("1", "true", "on"),
+        is_special=form.get("is_special") in ("1", "true", "on"),
+        on_sale=form.get("on_sale") in ("1", "true", "on"),
+        suggested=form.get("suggested") in ("1", "true", "on"),
+        no_display=form.get("no_display") in ("1", "true", "on"),
+        is_bundle=form.get("is_bundle") in ("1", "true", "on"),
+        is_calibrated=form.get("is_calibrated") in ("1", "true", "on"),
+        restocked=form.get("restocked") in ("1", "true", "on"),
+    )
+    if not data.slug and data.name:
+        from app.utils.common_works import generate_slug
+        data.slug = generate_slug(data.name)
+    if not data.en_slug and data.en_name:
+        from app.utils.common_works import generate_slug
+        data.en_slug = generate_slug(data.en_name)
+
+    product = await update_product(db, product, data)
+    log_text = form.get("log") or f"ویرایش محصول: {product.name}"
+    db.add(Log(
+        record_id=product.id, table_name="products",
+        description=log_text, created_by_user_id=current_user.id,
+        type="Update",
+    ))
+    await db.commit()
+    return RedirectResponse(url="/administration/products", status_code=303)
+
+
+@router.get("/products/{product_id}/details", response_class=HTMLResponse)
+async def admin_product_details(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_full_details(db, pid)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    tech_feature_ids = {
+        value.technical_feature_id
+        for table_product in product.technical_table_products
+        for value in table_product.technical_feature_values
+    }
+
+    general_features = []
+    if product.category_id:
+        ctf_stmt = (
+            select(CategoryTechnicalFeature)
+            .options(selectinload(CategoryTechnicalFeature.technical_feature))
+            .where(
+                CategoryTechnicalFeature.category_id == product.category_id,
+                CategoryTechnicalFeature.is_removed == False,
+            )
+            .order_by(CategoryTechnicalFeature.insert_date)
+        )
+        ctf_rows = (await db.execute(ctf_stmt)).scalars().all()
+        for ctf in ctf_rows:
+            if ctf.technical_feature_id in tech_feature_ids:
+                continue
+            general_features.append({
+                "id": str(ctf.technical_feature_id),
+                "text": ctf.technical_feature.fa_name or ctf.technical_feature.name or "",
+            })
+
+    special_features = []
+    sp_stmt = (
+        select(TechnicalFeature)
+        .where(TechnicalFeature.is_removed == False)
+        .order_by(TechnicalFeature.fa_name)
+    )
+    sp_rows = (await db.execute(sp_stmt)).scalars().all()
+    for feat in sp_rows:
+        if feat.id in tech_feature_ids:
+            continue
+        special_features.append({
+            "id": str(feat.id),
+            "text": feat.fa_name or feat.name or "",
+        })
+
+    tecnical_tables = []
+    for table_product in product.technical_table_products:
+        if table_product.technical_table:
+            tecnical_tables.append({
+                "id": str(table_product.id),
+                "title": table_product.technical_table.title or "",
+            })
+
+    suppliers = (await db.execute(select(Supplier).where(Supplier.is_removed == False).order_by(Supplier.intermediary_name))).scalars().all()
+
+    technical_products = []
+    for table_product in product.technical_table_products:
+        headers = []
+        if table_product.technical_table and table_product.technical_table.header:
+            headers = [h for h in table_product.technical_table.header.split(";") if h.strip()]
+        column_count = table_product.technical_table.columns if table_product.technical_table else len(headers)
+        rows = []
+        for value in table_product.technical_feature_values:
+            fmt_headers = []
+            if value.technical_feature and value.technical_feature.display_format:
+                fmt_headers = [h for h in value.technical_feature.display_format.split(";") if h.strip()]
+            if column_count and len(fmt_headers) < column_count:
+                fmt_headers.extend([""] * (column_count - len(fmt_headers)))
+            elif column_count and len(fmt_headers) > column_count:
+                fmt_headers = fmt_headers[:column_count]
+            rows.append({
+                "value": value,
+                "feature": value.technical_feature,
+                "value_headers": fmt_headers,
+                "cells": [_format_tfv(value, f) for f in fmt_headers],
+            })
+        technical_products.append({
+            "table_product": table_product,
+            "technical_table": table_product.technical_table,
+            "headers": headers,
+            "rows": rows,
+        })
+
+    return templates.TemplateResponse("admin/product_details.html", {
+        "request": request, "current_user": current_user,
+        "product": product,
+        "general_features": general_features,
+        "special_features": special_features,
+        "tecnical_tables": tecnical_tables,
+        "technical_products": technical_products,
+        "suppliers": suppliers,
+        "insert_date_fa": _to_fa_datetime(product.insert_date),
+        "update_date_fa": _to_fa_datetime(product.update_date),
+        "purchase_date_fa": _to_fa_date(product.purchase_date),
+        "product_images": sorted(product.product_images, key=lambda i: i.picture_order or 0),
+    })
+
+
+# ── Product sub-resources (details page) ──
+
+@router.post("/products/{product_id}/images/new", response_class=HTMLResponse)
+async def admin_product_image_create(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    form = await request.form()
+    image = ProductImage(
+        id=uuid.uuid4(),
+        product_id=pid,
+        title=form.get("title") or None,
+        medium_image_url=form.get("medium_image_url") or None,
+        small_image_url=form.get("medium_image_url") or None,
+        large_image_url=form.get("medium_image_url") or None,
+        display_photo=form.get("display_photo") in ("1", "true", "on"),
+        picture_order=int(form.get("picture_order") or 0),
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(image)
+    db.add(Log(
+        record_id=image.id, table_name="product_images",
+        description=f"افزودن عکس به محصول: {product.name}",
+        created_by_user_id=current_user.id, type="Create",
+    ))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.post("/products/{product_id}/images/{image_id}/delete", response_class=HTMLResponse)
+async def admin_product_image_delete(
+    request: Request,
+    product_id: str,
+    image_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    image = (await db.execute(
+        select(ProductImage).where(ProductImage.id == uuid.UUID(image_id), ProductImage.is_removed == False)
+    )).scalar_one_or_none()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    image.is_removed = True
+    image.update_date = datetime.now(timezone.utc)
+    await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.post("/products/{product_id}/datasheets/new", response_class=HTMLResponse)
+async def admin_product_datasheet_create(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    form = await request.form()
+    datasheet = MenuDatasheet(
+        id=uuid.uuid4(),
+        product_id=pid,
+        type=form.get("type") or None,
+        file_url=form.get("file_url") or None,
+        complete_file_url=form.get("file_url") or None,
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(datasheet)
+    db.add(Log(
+        record_id=datasheet.id, table_name="menu_datasheets",
+        description=f"افزودن برگه اطلاعات به محصول: {product.name}",
+        created_by_user_id=current_user.id, type="Create",
+    ))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.post("/products/{product_id}/datasheets/{datasheet_id}/delete", response_class=HTMLResponse)
+async def admin_product_datasheet_delete(
+    request: Request,
+    product_id: str,
+    datasheet_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    datasheet = (await db.execute(
+        select(MenuDatasheet).where(MenuDatasheet.id == uuid.UUID(datasheet_id), MenuDatasheet.is_removed == False)
+    )).scalar_one_or_none()
+    if not datasheet:
+        raise HTTPException(status_code=404, detail="Datasheet not found")
+    datasheet.is_removed = True
+    datasheet.update_date = datetime.now(timezone.utc)
+    await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.post("/products/{product_id}/supplier-products/new", response_class=HTMLResponse)
+async def admin_product_supplier_create(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    form = await request.form()
+    supplier_id = form.get("supplier_id")
+    link = form.get("link")
+    if not supplier_id:
+        raise HTTPException(status_code=400, detail="Supplier is required")
+    supplier_product = SupplierProduct(
+        id=uuid.uuid4(),
+        product_id=pid,
+        supplier_id=uuid.UUID(supplier_id) if supplier_id else None,
+        link=link or None,
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(supplier_product)
+    db.add(Log(
+        record_id=supplier_product.id, table_name="supplier_products",
+        description=f"افزودن تامین‌کننده به محصول: {product.name}",
+        created_by_user_id=current_user.id, type="Create",
+    ))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.post("/products/{product_id}/supplier-products/{sp_id}/delete", response_class=HTMLResponse)
+async def admin_product_supplier_delete(
+    request: Request,
+    product_id: str,
+    sp_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    sp = (await db.execute(
+        select(SupplierProduct).where(SupplierProduct.id == uuid.UUID(sp_id), SupplierProduct.is_removed == False)
+    )).scalar_one_or_none()
+    if not sp:
+        raise HTTPException(status_code=404, detail="Supplier product not found")
+    sp.is_removed = True
+    sp.update_date = datetime.now(timezone.utc)
+    await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.post("/products/{product_id}/technical-values/set", response_class=HTMLResponse)
+async def admin_product_technical_value_set(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    form = await request.form()
+    feature_id = form.get("technical_feature_id")
+    table_product_id = form.get("table_product_id")
+    if not feature_id or not table_product_id:
+        raise HTTPException(status_code=400, detail="Feature and table are required")
+
+    table_product = (await db.execute(
+        select(TechnicalTableProduct).where(
+            TechnicalTableProduct.id == uuid.UUID(table_product_id),
+            TechnicalTableProduct.product_id == pid,
+            TechnicalTableProduct.is_removed == False,
+        )
+    )).scalar_one_or_none()
+    if not table_product:
+        raise HTTPException(status_code=404, detail="Technical table product not found")
+
+    existing = (await db.execute(
+        select(TechnicalFeatureValue).where(
+            TechnicalFeatureValue.technical_table_product_id == table_product.id,
+            TechnicalFeatureValue.technical_feature_id == uuid.UUID(feature_id),
+            TechnicalFeatureValue.is_removed == False,
+        )
+    )).scalar_one_or_none()
+
+    def _num(key):
+        val = form.get(key)
+        if val is None or val == "":
+            return None
+        try:
+            return str(float(val))
+        except Exception:
+            return None
+
+    payload = dict(
+        technical_feature_id=uuid.UUID(feature_id),
+        technical_table_product_id=table_product.id,
+        min_value=_num("min_value"),
+        max_value=_num("max_value"),
+        min_unit=form.get("min_unit") or None,
+        max_unit=form.get("max_unit") or None,
+        d_value=_num("d_value"),
+        unit=form.get("unit") or None,
+        s_value=form.get("s_value") or None,
+        b_value=form.get("b_value") in ("1", "true", "on"),
+        x_value=_num("x_value"),
+        x_unit=form.get("x_unit") or None,
+        y_value=_num("y_value"),
+        y_unit=form.get("y_unit") or None,
+        z_value=_num("z_value"),
+        z_unit=form.get("z_unit") or None,
+        general_feature=form.get("general_feature") in ("1", "true", "on"),
+        created_by_user_id=current_user.id,
+    )
+    if existing:
+        for key, value in payload.items():
+            setattr(existing, key, value)
+        existing.update_date = datetime.now(timezone.utc)
+        db.add(Log(
+            record_id=existing.id, table_name="technical_feature_values",
+            description=f"به‌روزرسانی ویژگی فنی محصول: {product.name}",
+            created_by_user_id=current_user.id, type="Update",
+        ))
+    else:
+        new_value = TechnicalFeatureValue(id=uuid.uuid4(), **payload)
+        db.add(new_value)
+        db.add(Log(
+            record_id=new_value.id, table_name="technical_feature_values",
+            description=f"افزودن ویژگی فنی به محصول: {product.name}",
+            created_by_user_id=current_user.id, type="Create",
+        ))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.post("/products/{product_id}/technical-values/{value_id}/delete", response_class=HTMLResponse)
+async def admin_product_technical_value_delete(
+    request: Request,
+    product_id: str,
+    value_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    value = (await db.execute(
+        select(TechnicalFeatureValue).where(TechnicalFeatureValue.id == uuid.UUID(value_id), TechnicalFeatureValue.is_removed == False)
+    )).scalar_one_or_none()
+    if not value:
+        raise HTTPException(status_code=404, detail="Feature value not found")
+    value.is_removed = True
+    value.update_date = datetime.now(timezone.utc)
+    await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.get("/products/{product_id}/delete", response_class=HTMLResponse)
+async def admin_product_delete(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return templates.TemplateResponse("admin/product_delete.html", {
+        "request": request, "current_user": current_user, "product": product,
+    })
+
+
+@router.post("/products/{product_id}/delete", response_class=HTMLResponse)
+async def admin_product_delete_confirm(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    name = product.name
+    category = product.category
+    await product_service.delete_product(db, product)
+    if category is not None:
+        category.product_count = max((category.product_count or 0) - 1, 0)
+    db.add(Log(
+        record_id=pid,
+        table_name="products",
+        description=f"حذف محصول: {name}",
+        created_by_user_id=current_user.id,
+    ))
+    await db.commit()
+    return RedirectResponse(url="/administration/products", status_code=303)
+
+
+def _format_tfv(value: TechnicalFeatureValue, display_format: str) -> str:
+    """Render a technical feature value cell — mirrors the .NET
+    TechnicalFeatureValue.Value(displayFormat) string.Format call."""
+    if not display_format:
+        return ""
+    def _enum_name(enum):
+        return enum.persian_name if enum else None
+    args = (
+        value.d_value if value.d_value is not None else "-",
+        value.unit or "",
+        value.s_value or "",
+        _enum_name(value.technical_feature_enum) or value.e_value or "",
+        str(value.b_value) if value.b_value is not None else "",
+        value.min_value if value.min_value is not None else "-",
+        value.min_unit or "",
+        value.max_value if value.max_value is not None else "-",
+        value.max_unit or "",
+        value.x_value if value.x_value is not None else "-",
+        value.x_unit or "",
+        value.y_value if value.y_value is not None else "-",
+        value.y_unit or "",
+        value.z_value if value.z_value is not None else "-",
+        value.z_unit or "",
+        _enum_name(value.technical_feature_enum1) or value.e_value1 or "",
+    )
+    try:
+        return display_format.format(*args)
+    except Exception:
+        return display_format
+
+
+def _to_fa_datetime(value):
+    """Convert an aware/naive datetime to a Persian (jalali) datetime string."""
+    import jdatetime
+    if not value:
+        return "—"
+    try:
+        dt = value
+        if dt.tzinfo is not None:
+            dt = dt.replace(tzinfo=None)
+        return jdatetime.datetime.fromgregorian(datetime=dt).strftime("%Y/%m/%d - %H:%M")
+    except Exception:
+        return "—"
+
+
+def _to_fa_date(value):
+    """Convert an aware/naive date to a Persian (jalali) date string."""
+    import jdatetime
+    if not value:
+        return "—"
+    try:
+        dt = value
+        if dt.tzinfo is not None:
+            dt = dt.replace(tzinfo=None)
+        return jdatetime.datetime.fromgregorian(datetime=dt).strftime("%Y/%m/%d")
+    except Exception:
+        return "—"
 
 
 # ── Categories ──
@@ -523,9 +1108,15 @@ async def admin_brands(
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    brands = await product_service.get_all_brands(db)
+    stmt = (
+        select(Brand)
+        .options(selectinload(Brand.products))
+        .where(Brand.is_removed == False)
+        .order_by(Brand.insert_date.desc())
+    )
+    brands = (await db.execute(stmt)).unique().scalars().all()
     return templates.TemplateResponse("admin/brands.html", {
-        "request": request, "current_user": current_user, "brands": brands,
+        "request": request, "current_user": current_user, "items": brands,
     })
 
 
@@ -536,8 +1127,110 @@ async def admin_brand_create(
     db: AsyncSession = Depends(get_db),
 ):
     return templates.TemplateResponse("admin/brand_form.html", {
-        "request": request, "current_user": current_user,
+        "request": request, "current_user": current_user, "brand": None,
     })
+
+
+@router.post("/brands/new", response_class=HTMLResponse)
+async def admin_brand_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+
+    brand = Brand(name=name, created_by_user_id=current_user.id)
+    db.add(brand)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=brand.id,
+            table_name="brands",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/brands", status_code=303)
+
+
+@router.get("/brands/{brand_id}/edit", response_class=HTMLResponse)
+async def admin_brand_edit(
+    request: Request,
+    brand_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    brand = await db.get(Brand, uuid.UUID(brand_id))
+    if brand is None or brand.is_removed:
+        raise HTTPException(status_code=404, detail="Brand not found")
+    return templates.TemplateResponse("admin/brand_form.html", {
+        "request": request, "current_user": current_user, "brand": brand,
+    })
+
+
+@router.post("/brands/{brand_id}/edit", response_class=HTMLResponse)
+async def admin_brand_edit_submit(
+    request: Request,
+    brand_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    brand = await db.get(Brand, uuid.UUID(brand_id))
+    if brand is None or brand.is_removed:
+        raise HTTPException(status_code=404, detail="Brand not found")
+
+    form = await request.form()
+    brand.name = (form.get("name") or "").strip()
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=brand.id,
+            table_name="brands",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/brands", status_code=303)
+
+
+@router.get("/brands/{brand_id}", response_class=HTMLResponse)
+async def admin_brand_detail(
+    request: Request,
+    brand_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    brand = await db.get(Brand, uuid.UUID(brand_id))
+    if brand is None or brand.is_removed:
+        raise HTTPException(status_code=404, detail="Brand not found")
+    return templates.TemplateResponse("admin/brand_detail.html", {
+        "request": request, "current_user": current_user, "brand": brand,
+    })
+
+
+@router.post("/brands/{brand_id}/delete", response_class=HTMLResponse)
+async def admin_brand_delete(
+    request: Request,
+    brand_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    brand = await db.get(Brand, uuid.UUID(brand_id))
+    if brand is None or brand.is_removed:
+        raise HTTPException(status_code=404, detail="Brand not found")
+    name = brand.name
+    brand.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=brand.id,
+        table_name="brands",
+        description=f"حذف برند: {name}",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/brands", status_code=303)
 
 
 # ── Orders ──
@@ -998,16 +1691,133 @@ async def admin_product_units(
     db: AsyncSession = Depends(get_db),
 ):
     items = (await db.execute(
-        select(ProductUnit).where(ProductUnit.is_removed == False).order_by(ProductUnit.insert_date.desc()).limit(100)
+        select(ProductUnit).where(ProductUnit.is_removed == False).order_by(ProductUnit.insert_date.desc())
     )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "واحدهای محصول", "items": items,
-        "columns": [
-            {"key": "name", "label": "نام"},
-            {"key": "abbreviation", "label": "مخفف"},
-        ],
+    return templates.TemplateResponse("admin/product_units.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
+
+
+@router.get("/product-units/new", response_class=HTMLResponse)
+async def admin_product_unit_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    return templates.TemplateResponse("admin/product_unit_form.html", {
+        "request": request, "current_user": current_user, "product_unit": None,
+    })
+
+
+@router.post("/product-units/new", response_class=HTMLResponse)
+async def admin_product_unit_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    abbreviation = (form.get("abbreviation") or "").strip()
+    product_unit_tax_id = (form.get("product_unit_tax_id") or "").strip()
+
+    pu = ProductUnit(
+        name=name or None,
+        abbreviation=abbreviation or None,
+        product_unit_tax_id=product_unit_tax_id or None,
+        created_by_user_id=current_user.id,
+    )
+    db.add(pu)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=pu.id,
+            table_name="product_units",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/product-units", status_code=303)
+
+
+@router.get("/product-units/{product_unit_id}/edit", response_class=HTMLResponse)
+async def admin_product_unit_edit(
+    request: Request,
+    product_unit_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pu = await db.get(ProductUnit, uuid.UUID(product_unit_id))
+    if pu is None or pu.is_removed:
+        raise HTTPException(status_code=404, detail="Product unit not found")
+    return templates.TemplateResponse("admin/product_unit_form.html", {
+        "request": request, "current_user": current_user, "product_unit": pu,
+    })
+
+
+@router.post("/product-units/{product_unit_id}/edit", response_class=HTMLResponse)
+async def admin_product_unit_edit_submit(
+    request: Request,
+    product_unit_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pu = await db.get(ProductUnit, uuid.UUID(product_unit_id))
+    if pu is None or pu.is_removed:
+        raise HTTPException(status_code=404, detail="Product unit not found")
+
+    form = await request.form()
+    pu.name = (form.get("name") or "").strip() or None
+    pu.abbreviation = (form.get("abbreviation") or "").strip() or None
+    pu.product_unit_tax_id = (form.get("product_unit_tax_id") or "").strip() or None
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=pu.id,
+            table_name="product_units",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/product-units", status_code=303)
+
+
+@router.get("/product-units/{product_unit_id}", response_class=HTMLResponse)
+async def admin_product_unit_detail(
+    request: Request,
+    product_unit_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pu = await db.get(ProductUnit, uuid.UUID(product_unit_id))
+    if pu is None or pu.is_removed:
+        raise HTTPException(status_code=404, detail="Product unit not found")
+    return templates.TemplateResponse("admin/product_unit_detail.html", {
+        "request": request, "current_user": current_user, "product_unit": pu,
+    })
+
+
+@router.post("/product-units/{product_unit_id}/delete", response_class=HTMLResponse)
+async def admin_product_unit_delete(
+    request: Request,
+    product_unit_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pu = await db.get(ProductUnit, uuid.UUID(product_unit_id))
+    if pu is None or pu.is_removed:
+        raise HTTPException(status_code=404, detail="Product unit not found")
+    name = pu.name or pu.abbreviation or ""
+    pu.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=pu.id,
+        table_name="product_units",
+        description=f"حذف واحد اندازه‌گیری: {name}",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/product-units", status_code=303)
 
 
 # ── Tags ──
@@ -1018,15 +1828,15 @@ async def admin_tags(
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(Tag).where(Tag.is_removed == False).order_by(Tag.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "برچسب‌ها", "items": items,
-        "columns": [{"key": "name", "label": "نام"}],
-        "create_url": "/administration/tags/new", "create_label": "برچسب جدید",
-        "edit_url": "/administration/tags",
+    stmt = (
+        select(Tag)
+        .options(selectinload(Tag.product_tags))
+        .where(Tag.is_removed == False)
+        .order_by(Tag.insert_date.desc())
+    )
+    items = (await db.execute(stmt)).unique().scalars().all()
+    return templates.TemplateResponse("admin/tags.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
 
 
@@ -1036,13 +1846,111 @@ async def admin_tag_create(
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    return templates.TemplateResponse("admin/generic_form.html", {
-        "request": request, "current_user": current_user,
-        "title": "برچسب جدید",
-        "fields": [
-            {"name": "name", "label": "نام برچسب", "type": "text", "required": True},
-        ],
+    return templates.TemplateResponse("admin/tag_form.html", {
+        "request": request, "current_user": current_user, "tag": None,
     })
+
+
+@router.post("/tags/new", response_class=HTMLResponse)
+async def admin_tag_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+
+    tag = Tag(name=name, created_by_user_id=current_user.id)
+    db.add(tag)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=tag.id,
+            table_name="tags",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/tags", status_code=303)
+
+
+@router.get("/tags/{tag_id}/edit", response_class=HTMLResponse)
+async def admin_tag_edit(
+    request: Request,
+    tag_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    tag = await db.get(Tag, uuid.UUID(tag_id))
+    if tag is None or tag.is_removed:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    return templates.TemplateResponse("admin/tag_form.html", {
+        "request": request, "current_user": current_user, "tag": tag,
+    })
+
+
+@router.post("/tags/{tag_id}/edit", response_class=HTMLResponse)
+async def admin_tag_edit_submit(
+    request: Request,
+    tag_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    tag = await db.get(Tag, uuid.UUID(tag_id))
+    if tag is None or tag.is_removed:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    form = await request.form()
+    tag.name = (form.get("name") or "").strip()
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=tag.id,
+            table_name="tags",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/tags", status_code=303)
+
+
+@router.get("/tags/{tag_id}", response_class=HTMLResponse)
+async def admin_tag_detail(
+    request: Request,
+    tag_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    tag = await db.get(Tag, uuid.UUID(tag_id))
+    if tag is None or tag.is_removed:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    return templates.TemplateResponse("admin/tag_detail.html", {
+        "request": request, "current_user": current_user, "tag": tag,
+    })
+
+
+@router.post("/tags/{tag_id}/delete", response_class=HTMLResponse)
+async def admin_tag_delete(
+    request: Request,
+    tag_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    tag = await db.get(Tag, uuid.UUID(tag_id))
+    if tag is None or tag.is_removed:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    name = tag.name
+    tag.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=tag.id,
+        table_name="tags",
+        description=f"حذف برچسب: {name}",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/tags", status_code=303)
 
 
 # ── Discounts ──
@@ -1449,17 +2357,165 @@ async def admin_similar_products(
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(SimilarProduct).where(SimilarProduct.is_removed == False).order_by(SimilarProduct.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "محصولات مشابه", "items": items,
-        "columns": [
-            {"key": "product_id", "label": "شناسه محصول"},
-            {"key": "similar_product_id", "label": "شناسه محصول مشابه"},
-        ],
+    stmt = (
+        select(SimilarProduct)
+        .options(selectinload(SimilarProduct.product), selectinload(SimilarProduct.similar))
+        .where(SimilarProduct.is_removed == False)
+        .order_by(SimilarProduct.insert_date.desc())
+    )
+    items = (await db.execute(stmt)).unique().scalars().all()
+    return templates.TemplateResponse("admin/similar_products.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
+
+
+@router.get("/similar-products/new", response_class=HTMLResponse)
+async def admin_similar_product_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    products = (await db.execute(
+        select(Product).where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/similar_product_form.html", {
+        "request": request, "current_user": current_user,
+        "similar_product": None, "products": products,
+    })
+
+
+@router.post("/similar-products/new", response_class=HTMLResponse)
+async def admin_similar_product_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    product_id_raw = form.get("product_id")
+    similar_product_id_raw = form.get("similar_product_id")
+    if not product_id_raw or not similar_product_id_raw:
+        raise HTTPException(status_code=400, detail="Product and similar product are required")
+    if product_id_raw == similar_product_id_raw:
+        raise HTTPException(status_code=400, detail="محصول و محصول مشابه نمی‌توانند یکسان باشند")
+
+    existing = (await db.execute(
+        select(SimilarProduct).where(
+            SimilarProduct.product_id == uuid.UUID(product_id_raw),
+            SimilarProduct.similar_product_id == uuid.UUID(similar_product_id_raw),
+            SimilarProduct.is_removed == False,
+        )
+    )).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=400, detail="این ارتباط از قبل وجود دارد")
+
+    sp = SimilarProduct(
+        product_id=uuid.UUID(product_id_raw),
+        similar_product_id=uuid.UUID(similar_product_id_raw),
+        created_by_user_id=current_user.id,
+    )
+    db.add(sp)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=sp.id,
+            table_name="similar_products",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/similar-products", status_code=303)
+
+
+@router.get("/similar-products/{similar_product_id}/edit", response_class=HTMLResponse)
+async def admin_similar_product_edit(
+    request: Request,
+    similar_product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    sp = await db.get(SimilarProduct, uuid.UUID(similar_product_id))
+    if sp is None or sp.is_removed:
+        raise HTTPException(status_code=404, detail="Similar product not found")
+    products = (await db.execute(
+        select(Product).where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/similar_product_form.html", {
+        "request": request, "current_user": current_user,
+        "similar_product": sp, "products": products,
+    })
+
+
+@router.post("/similar-products/{similar_product_id}/edit", response_class=HTMLResponse)
+async def admin_similar_product_edit_submit(
+    request: Request,
+    similar_product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    sp = await db.get(SimilarProduct, uuid.UUID(similar_product_id))
+    if sp is None or sp.is_removed:
+        raise HTTPException(status_code=404, detail="Similar product not found")
+
+    form = await request.form()
+    product_id_raw = form.get("product_id")
+    similar_product_id_raw = form.get("similar_product_id")
+    if product_id_raw:
+        sp.product_id = uuid.UUID(product_id_raw)
+    if similar_product_id_raw:
+        sp.similar_product_id = uuid.UUID(similar_product_id_raw)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=sp.id,
+            table_name="similar_products",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/similar-products", status_code=303)
+
+
+@router.get("/similar-products/{similar_product_id}", response_class=HTMLResponse)
+async def admin_similar_product_detail(
+    request: Request,
+    similar_product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(SimilarProduct)
+        .options(selectinload(SimilarProduct.product), selectinload(SimilarProduct.similar))
+        .where(SimilarProduct.id == uuid.UUID(similar_product_id), SimilarProduct.is_removed == False)
+    )
+    sp = (await db.execute(stmt)).unique().scalar_one_or_none()
+    if sp is None:
+        raise HTTPException(status_code=404, detail="Similar product not found")
+    return templates.TemplateResponse("admin/similar_product_detail.html", {
+        "request": request, "current_user": current_user, "similar_product": sp,
+    })
+
+
+@router.post("/similar-products/{similar_product_id}/delete", response_class=HTMLResponse)
+async def admin_similar_product_delete(
+    request: Request,
+    similar_product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    sp = await db.get(SimilarProduct, uuid.UUID(similar_product_id))
+    if sp is None or sp.is_removed:
+        raise HTTPException(status_code=404, detail="Similar product not found")
+    sp.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=sp.id,
+        table_name="similar_products",
+        description="حذف محصول مشابه",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/similar-products", status_code=303)
 
 
 # ── Related Products ──
@@ -1470,17 +2526,155 @@ async def admin_related_products(
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(RelatedProduct).where(RelatedProduct.is_removed == False).order_by(RelatedProduct.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "محصولات مرتبط", "items": items,
-        "columns": [
-            {"key": "product_id", "label": "شناسه محصول"},
-            {"key": "relate_product_id", "label": "شناسه محصول مرتبط"},
-        ],
+    stmt = (
+        select(RelatedProduct)
+        .options(selectinload(RelatedProduct.product), selectinload(RelatedProduct.relate_product))
+        .where(RelatedProduct.is_removed == False)
+        .order_by(RelatedProduct.insert_date.desc())
+    )
+    items = (await db.execute(stmt)).unique().scalars().all()
+    return templates.TemplateResponse("admin/related_products.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
+
+
+@router.get("/related-products/new", response_class=HTMLResponse)
+async def admin_related_product_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    products = (await db.execute(
+        select(Product).where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/related_product_form.html", {
+        "request": request, "current_user": current_user,
+        "related_product": None, "products": products,
+    })
+
+
+@router.post("/related-products/new", response_class=HTMLResponse)
+async def admin_related_product_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    product_id_raw = form.get("product_id")
+    relate_product_id_raw = form.get("relate_product_id")
+    if not product_id_raw or not relate_product_id_raw:
+        raise HTTPException(status_code=400, detail="Product and related product are required")
+    if product_id_raw == relate_product_id_raw:
+        raise HTTPException(status_code=400, detail="محصول و محصول مرتبط نمی‌توانند یکسان باشند")
+
+    rp = RelatedProduct(
+        product_id=uuid.UUID(product_id_raw),
+        relate_product_id=uuid.UUID(relate_product_id_raw),
+        created_by_user_id=current_user.id,
+    )
+    db.add(rp)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=rp.id,
+            table_name="related_products",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/related-products", status_code=303)
+
+
+@router.get("/related-products/{related_product_id}/edit", response_class=HTMLResponse)
+async def admin_related_product_edit(
+    request: Request,
+    related_product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    rp = await db.get(RelatedProduct, uuid.UUID(related_product_id))
+    if rp is None or rp.is_removed:
+        raise HTTPException(status_code=404, detail="Related product not found")
+    products = (await db.execute(
+        select(Product).where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/related_product_form.html", {
+        "request": request, "current_user": current_user,
+        "related_product": rp, "products": products,
+    })
+
+
+@router.post("/related-products/{related_product_id}/edit", response_class=HTMLResponse)
+async def admin_related_product_edit_submit(
+    request: Request,
+    related_product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    rp = await db.get(RelatedProduct, uuid.UUID(related_product_id))
+    if rp is None or rp.is_removed:
+        raise HTTPException(status_code=404, detail="Related product not found")
+
+    form = await request.form()
+    product_id_raw = form.get("product_id")
+    relate_product_id_raw = form.get("relate_product_id")
+    if product_id_raw:
+        rp.product_id = uuid.UUID(product_id_raw)
+    if relate_product_id_raw:
+        rp.relate_product_id = uuid.UUID(relate_product_id_raw)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=rp.id,
+            table_name="related_products",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/related-products", status_code=303)
+
+
+@router.get("/related-products/{related_product_id}", response_class=HTMLResponse)
+async def admin_related_product_detail(
+    request: Request,
+    related_product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(RelatedProduct)
+        .options(selectinload(RelatedProduct.product), selectinload(RelatedProduct.relate_product))
+        .where(RelatedProduct.id == uuid.UUID(related_product_id), RelatedProduct.is_removed == False)
+    )
+    rp = (await db.execute(stmt)).unique().scalar_one_or_none()
+    if rp is None:
+        raise HTTPException(status_code=404, detail="Related product not found")
+    return templates.TemplateResponse("admin/related_product_detail.html", {
+        "request": request, "current_user": current_user, "related_product": rp,
+    })
+
+
+@router.post("/related-products/{related_product_id}/delete", response_class=HTMLResponse)
+async def admin_related_product_delete(
+    request: Request,
+    related_product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    rp = await db.get(RelatedProduct, uuid.UUID(related_product_id))
+    if rp is None or rp.is_removed:
+        raise HTTPException(status_code=404, detail="Related product not found")
+    rp.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=rp.id,
+        table_name="related_products",
+        description="حذف محصول مرتبط",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/related-products", status_code=303)
 
 
 # ── Product Tags ──
@@ -1491,17 +2685,169 @@ async def admin_product_tags(
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(ProductTag).where(ProductTag.is_removed == False).order_by(ProductTag.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "برچسب محصولات", "items": items,
-        "columns": [
-            {"key": "product_id", "label": "شناسه محصول"},
-            {"key": "tag_id", "label": "شناسه برچسب"},
-        ],
+    stmt = (
+        select(ProductTag)
+        .options(selectinload(ProductTag.product), selectinload(ProductTag.tag))
+        .where(ProductTag.is_removed == False)
+        .order_by(ProductTag.insert_date.desc())
+    )
+    items = (await db.execute(stmt)).unique().scalars().all()
+    return templates.TemplateResponse("admin/product_tags.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
+
+
+@router.get("/product-tags/new", response_class=HTMLResponse)
+async def admin_product_tag_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    products = (await db.execute(
+        select(Product).where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    tags = (await db.execute(
+        select(Tag).where(Tag.is_removed == False).order_by(Tag.name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/product_tag_form.html", {
+        "request": request, "current_user": current_user,
+        "product_tag": None, "products": products, "tags": tags,
+    })
+
+
+@router.post("/product-tags/new", response_class=HTMLResponse)
+async def admin_product_tag_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    product_id_raw = form.get("product_id")
+    tag_id_raw = form.get("tag_id")
+    if not product_id_raw or not tag_id_raw:
+        raise HTTPException(status_code=400, detail="Product and tag are required")
+
+    existing = (await db.execute(
+        select(ProductTag).where(
+            ProductTag.product_id == uuid.UUID(product_id_raw),
+            ProductTag.tag_id == uuid.UUID(tag_id_raw),
+            ProductTag.is_removed == False,
+        )
+    )).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=400, detail="این ارتباط از قبل وجود دارد")
+
+    pt = ProductTag(
+        product_id=uuid.UUID(product_id_raw),
+        tag_id=uuid.UUID(tag_id_raw),
+        created_by_user_id=current_user.id,
+    )
+    db.add(pt)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=pt.id,
+            table_name="product_tags",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/product-tags", status_code=303)
+
+
+@router.get("/product-tags/{product_tag_id}/edit", response_class=HTMLResponse)
+async def admin_product_tag_edit(
+    request: Request,
+    product_tag_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pt = await db.get(ProductTag, uuid.UUID(product_tag_id))
+    if pt is None or pt.is_removed:
+        raise HTTPException(status_code=404, detail="Product tag not found")
+    products = (await db.execute(
+        select(Product).where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    tags = (await db.execute(
+        select(Tag).where(Tag.is_removed == False).order_by(Tag.name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/product_tag_form.html", {
+        "request": request, "current_user": current_user,
+        "product_tag": pt, "products": products, "tags": tags,
+    })
+
+
+@router.post("/product-tags/{product_tag_id}/edit", response_class=HTMLResponse)
+async def admin_product_tag_edit_submit(
+    request: Request,
+    product_tag_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pt = await db.get(ProductTag, uuid.UUID(product_tag_id))
+    if pt is None or pt.is_removed:
+        raise HTTPException(status_code=404, detail="Product tag not found")
+
+    form = await request.form()
+    product_id_raw = form.get("product_id")
+    tag_id_raw = form.get("tag_id")
+    if product_id_raw:
+        pt.product_id = uuid.UUID(product_id_raw)
+    if tag_id_raw:
+        pt.tag_id = uuid.UUID(tag_id_raw)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=pt.id,
+            table_name="product_tags",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/product-tags", status_code=303)
+
+
+@router.get("/product-tags/{product_tag_id}", response_class=HTMLResponse)
+async def admin_product_tag_detail(
+    request: Request,
+    product_tag_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(ProductTag)
+        .options(selectinload(ProductTag.product), selectinload(ProductTag.tag))
+        .where(ProductTag.id == uuid.UUID(product_tag_id), ProductTag.is_removed == False)
+    )
+    pt = (await db.execute(stmt)).unique().scalar_one_or_none()
+    if pt is None:
+        raise HTTPException(status_code=404, detail="Product tag not found")
+    return templates.TemplateResponse("admin/product_tag_detail.html", {
+        "request": request, "current_user": current_user, "product_tag": pt,
+    })
+
+
+@router.post("/product-tags/{product_tag_id}/delete", response_class=HTMLResponse)
+async def admin_product_tag_delete(
+    request: Request,
+    product_tag_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pt = await db.get(ProductTag, uuid.UUID(product_tag_id))
+    if pt is None or pt.is_removed:
+        raise HTTPException(status_code=404, detail="Product tag not found")
+    pt.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=pt.id,
+        table_name="product_tags",
+        description="حذف برچسب محصول",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/product-tags", status_code=303)
 
 
 # ── Technical Table Products ──

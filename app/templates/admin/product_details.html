@@ -1,0 +1,778 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات محصول{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">جزئیات محصول</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ product.name }}</p>
+                </div>
+            </div>
+            <a href="/administration/products" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <!-- Overview card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fas fa-info"></i></div>
+                <div><h2 class="font-semibold text-gray-800">جزئیات محصول</h2><p class="text-xs text-gray-500">مشخصات کامل این محصول</p></div>
+            </div>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-5">
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">نام</dt>
+                    <dd class="text-sm text-gray-800 font-medium">
+                        <a href="/products/{{ product.slug or product.id }}" target="_blank" class="text-indigo-600 hover:underline">{{ product.name }}</a>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">نام انگلیسی</dt>
+                    <dd class="text-sm text-gray-800" dir="ltr">{{ product.en_name or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">اسلاگ انگلیسی</dt>
+                    <dd class="text-sm text-gray-800" dir="ltr">{{ product.en_slug or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">کلید واژه‌ها</dt>
+                    <dd class="text-sm text-gray-800">{{ product.keywords or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">شماره قطعه</dt>
+                    <dd class="text-sm text-gray-800 font-mono" dir="ltr">{{ product.part_number or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">قیمت</dt>
+                    <dd class="text-sm text-gray-800 font-medium">{{ "{:,.0f}".format(product.price or 0) }} <span class="text-xs text-gray-400">تومان</span></dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">قیمت بعد از تخفیف</dt>
+                    <dd class="text-sm text-gray-800 font-medium">{{ "{:,.0f}".format(product.price_after_discount or 0) }} <span class="text-xs text-gray-400">تومان</span></dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">مبلغ تخفیف</dt>
+                    <dd class="text-sm text-gray-800 font-medium">{{ "{:,.0f}".format(product.discount_amount or 0) }} <span class="text-xs text-gray-400">تومان</span></dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">حداکثر قیمت</dt>
+                    <dd class="text-sm text-gray-800 font-medium">{{ "{:,.0f}".format(product.max_price or 0) }} <span class="text-xs text-gray-400">تومان</span></dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">قیمت ارزی</dt>
+                    <dd class="text-sm text-gray-800 font-medium" dir="ltr">{{ "{:,.0f}".format(product.currency_price or 0) }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">ارز</dt>
+                    <dd class="text-sm text-gray-800">{{ product.currency.name if product.currency else '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">تاریخ خرید</dt>
+                    <dd class="text-sm text-gray-800">{{ purchase_date_fa }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">نرخ سود</dt>
+                    <dd class="text-sm text-gray-800">{{ product.profit_rate or '—' }}%</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">نرخ مالیات بر ارزش افزوده</dt>
+                    <dd class="text-sm text-gray-800">{{ product.vat_rate or '—' }}%</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">محاسبه قیمت خودکار</dt>
+                    <dd class="text-sm">
+                        {% if product.automatic_price_calculation %}
+                        <span class="badge bg-green-100 text-green-700"><i class="fas fa-check mr-1"></i> فعال</span>
+                        {% else %}
+                        <span class="badge bg-gray-100 text-gray-500"><i class="fas fa-times mr-1"></i> غیرفعال</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">روز تحویل</dt>
+                    <dd class="text-sm text-gray-800">{{ product.delivery_day or '—' }} روز</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">نوع محصول</dt>
+                    <dd class="text-sm text-gray-800">{{ product.product_type.fa_name if product.product_type else '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">مدل</dt>
+                    <dd class="text-sm text-gray-800" dir="ltr">{{ product.model or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">تعداد تنوع‌ها</dt>
+                    <dd class="text-sm text-gray-800">{{ product.number_of_variations }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">موجودی انبار</dt>
+                    <dd class="text-sm text-gray-800 font-medium">{{ "{:,}".format(product.stock_quantity) }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">حداکثر تعداد خرید</dt>
+                    <dd class="text-sm text-gray-800">{{ product.max_number_of_purchases or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">حداقل خرید</dt>
+                    <dd class="text-sm text-gray-800">{{ product.minimum_purchase }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">دسته‌بندی</dt>
+                    <dd class="text-sm text-gray-800">
+                        {% if product.category %}
+                        <a href="/administration/categories/{{ product.category_id }}/details" class="text-indigo-600 hover:underline">{{ product.category.title }}</a>
+                        {% else %}—{% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">وضعیت</dt>
+                    <dd class="text-sm">
+                        {% set status_map = {
+                            'InStock': ('موجود در انبار', 'bg-green-100 text-green-700'),
+                            'OutOfStock': ('ناموجود', 'bg-red-100 text-red-700'),
+                            'Ordering': ('در حال تامین', 'bg-amber-100 text-amber-700'),
+                            'Importing': ('در حال تولید', 'bg-blue-100 text-blue-700'),
+                            'CustomSupply': ('تامین سفارشی', 'bg-purple-100 text-purple-700'),
+                            'Obsolete': ('منسوخ شده', 'bg-gray-100 text-gray-600'),
+                        } %}
+                        {% set st = status_map.get(product.status, ('نامشخص', 'bg-gray-100 text-gray-600')) %}
+                        <span class="badge {{ st[1] }}">{{ st[0] }}</span>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">نوع</dt>
+                    <dd class="text-sm text-gray-800">{{ 'محصول' if product.type == 'Product' else ('خدمات' if product.type == 'Service' else (product.type or '—')) }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">شناسه یکتای مالیاتی</dt>
+                    <dd class="text-sm text-gray-800 font-mono" dir="ltr">{{ product.tax_unique_id or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">امتیاز از خرید</dt>
+                    <dd class="text-sm text-gray-800">{{ product.points_from_purchases }}</dd>
+                </div>
+            </dl>
+
+            <!-- Flags -->
+            <div class="mt-6 pt-5 border-t border-gray-100">
+                <p class="text-xs text-gray-500 mb-3">وضعیت‌ها و نشان‌ها</p>
+                <div class="flex flex-wrap gap-2">
+                    {% set flags = [
+                        (product.is_new, 'جدید', 'bg-blue-100 text-blue-700'),
+                        (product.is_special, 'ویژه', 'bg-purple-100 text-purple-700'),
+                        (product.is_calibrated, 'کالیبره شده', 'bg-cyan-100 text-cyan-700'),
+                        (product.suggested, 'پیشنهادی', 'bg-emerald-100 text-emerald-700'),
+                        (product.restocked, 'تجدید موجودی', 'bg-amber-100 text-amber-700'),
+                        (product.is_bundle, 'مجموعه', 'bg-orange-100 text-orange-700'),
+                        (product.on_sale, 'تخفیف دار', 'bg-rose-100 text-rose-700'),
+                        (product.no_display, 'عدم نمایش', 'bg-gray-100 text-gray-600'),
+                    ] %}
+                    {% for on, label, cls in flags %}
+                    {% if on %}
+                    <span class="badge {{ cls }}"><i class="fas fa-check-circle mr-1"></i> {{ label }}</span>
+                    {% endif %}
+                    {% endfor %}
+                    {% if not (product.is_new or product.is_special or product.is_calibrated or product.suggested or product.restocked or product.is_bundle or product.on_sale or product.no_display) %}
+                    <span class="text-sm text-gray-400">—</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dates -->
+            <div class="mt-6 pt-5 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">تاریخ ایجاد</dt>
+                    <dd class="text-sm text-gray-800">{{ insert_date_fa }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">آخرین بروزرسانی</dt>
+                    <dd class="text-sm text-gray-800">{{ update_date_fa }}</dd>
+                </div>
+            </div>
+
+            <!-- Descriptions -->
+            <div class="mt-6 pt-5 border-t border-gray-100 grid grid-cols-1 gap-5">
+                {% if product.introduction %}
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">معرفی</dt>
+                    <dd class="text-sm text-gray-700 prose prose-sm max-w-none">{{ product.introduction|safe }}</dd>
+                </div>
+                {% endif %}
+                {% if product.short_description %}
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">توضیح کوتاه</dt>
+                    <dd class="text-sm text-gray-700 prose prose-sm max-w-none">{{ product.short_description|safe }}</dd>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical table (جدول فنی) -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center"><i class="fas fa-table"></i></div>
+                <div><h2 class="font-semibold text-gray-800">جدول فنی</h2><p class="text-xs text-gray-500">مشخصات فنی محصول</p></div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="form-label">جدول فنی</label>
+                    <select id="TechnicalTable" class="form-input">
+                        <option value="">انتخاب جدول</option>
+                        {% for t in tecnical_tables %}
+                        <option value="{{ t.id }}">{{ t.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">ویژگی عمومی</label>
+                    <select id="GeneralFeature" class="form-input">
+                        <option value="">انتخاب</option>
+                        {% for f in general_features %}
+                        <option value="{{ f.id }}">{{ f.text }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="button" onclick="setValue(true)" class="btn-warning flex items-center gap-2 w-full justify-center">
+                        <i class="fas fa-plus"></i> ایجاد ویژگی عمومی
+                    </button>
+                </div>
+                <div>
+                    <label class="form-label">ویژگی خاص</label>
+                    <select id="SpecialFeature" class="form-input">
+                        <option value="">انتخاب</option>
+                        {% for f in special_features %}
+                        <option value="{{ f.id }}">{{ f.text }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="button" onclick="setValue(false)" class="btn-warning flex items-center gap-2 w-full justify-center">
+                        <i class="fas fa-plus"></i> ایجاد ویژگی خاص
+                    </button>
+                </div>
+                {% if tecnical_tables|length == 0 %}
+                <div class="md:col-span-3">
+                    <p class="text-sm text-gray-400 bg-gray-50 rounded-lg p-3 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-teal-400"></i>
+                        هنوز جدول فنی برای این محصول تعریف نشده است. ابتدا از بخش «جدول‌های فنی» یک جدول ایجاد و به محصول متصل کنید.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical feature values tables (one per technical table product) -->
+    {% for tp in technical_products %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-cyan-50 to-sky-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center"><i class="fas fa-list-ul"></i></div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">لیست ویژگی‌های فنی {{ tp.technical_table.title if tp.technical_table else '' }}</h2>
+                        <p class="text-xs text-gray-500" dir="ltr">{{ tp.technical_table.header if tp.technical_table else '' }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="tf-search-{{ loop.index }}" type="text" placeholder="جستجو..." class="form-input w-auto max-w-xs">
+                    <select id="tf-page-size-{{ loop.index }}" class="form-input w-auto py-1.5">
+                        <option value="10" selected>۱۰</option>
+                        <option value="25">۲۵</option>
+                        <option value="50">۵۰</option>
+                        <option value="100">۱۰۰</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="tf-table-{{ loop.index }}">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2">نام ویژگی</th>
+                            <th class="text-right py-3 px-2">نمایش خطی</th>
+                            {% for h in tp.headers %}
+                            <th class="text-right py-3 px-2">{{ h }}</th>
+                            {% endfor %}
+                            <th class="text-center py-3 px-2 w-32">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in tp.rows %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors" data-search="{{ row.feature.fa_name if row.feature else '' }} {{ row.feature.name if row.feature else '' }}">
+                            <td class="py-3 px-2 text-center text-gray-500 tf-index">{{ loop.index }}</td>
+                            <td class="py-3 px-2 font-medium text-gray-800">{{ row.feature.fa_name if row.feature else row.value.technical_feature_id }}</td>
+                            <td class="py-3 px-2 text-gray-600" dir="ltr">{{ 'بله' if row.feature.linear_display else 'خیر' }}</td>
+                            {% for cell in row.cells %}
+                            <td class="py-3 px-2 text-gray-600" dir="ltr">{{ cell }}</td>
+                            {% endfor %}
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <a href="#" onclick="editTfv('{{ row.value.id }}'); return false;" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium hover:bg-amber-200 transition-colors">
+                                        <i class="fas fa-edit"></i> ویرایش
+                                    </a>
+                                    <form method="POST" action="/administration/products/{{ product.id }}/technical-values/{{ row.value.id }}/delete" onsubmit="return confirm('آیا از حذف این ویژگی فنی اطمینان دارید؟');">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors">
+                                            <i class="fas fa-trash"></i> حذف
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="{{ 4 + tp.headers|length }}" class="py-12 text-center text-gray-400">
+                                <i class="fas fa-table text-3xl mb-3"></i>
+                                <p>اطلاعاتی برای نمایش وجود ندارد.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                <div class="flex items-center gap-2 text-sm text-gray-500">
+                    <span>نمایش</span>
+                    <span id="tf-info-{{ loop.index }}">۰ تا ۰ از {{ tp.rows|length }} رکورد</span>
+                </div>
+                <div class="flex items-center gap-1 text-sm">
+                    <button type="button" id="tf-prev-{{ loop.index }}" class="pagination-btn"><i class="fas fa-chevron-right"></i> قبلی</button>
+                    <span id="tf-page-info-{{ loop.index }}" class="px-3 py-1 text-gray-600">صفحه ۱</span>
+                    <button type="button" id="tf-next-{{ loop.index }}" class="pagination-btn">بعدی <i class="fas fa-chevron-left"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Product images -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center"><i class="fas fa-images"></i></div>
+                    <div><h2 class="font-semibold text-gray-800">لیست عکس‌های {{ product.name }}</h2><p class="text-xs text-gray-500">تصاویر محصول</p></div>
+                </div>
+                <button type="button" onclick="openModal('image-modal')" class="btn-success flex items-center gap-2">
+                    <i class="fas fa-plus"></i> افزودن عکس
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2 w-24">عکس</th>
+                            <th class="text-right py-3 px-2">عنوان</th>
+                            <th class="text-right py-3 px-2">عکس اصلی</th>
+                            <th class="text-right py-3 px-2">ترتیب عکس</th>
+                            <th class="text-center py-3 px-2 w-32">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for img in product_images %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500">{{ loop.index }}</td>
+                            <td class="py-3 px-2">
+                                {% if img.medium_image_url %}
+                                <img src="{{ img.medium_image_url }}" class="w-14 h-14 object-cover rounded-lg border border-gray-200" alt="{{ img.title or '' }}">
+                                {% else %}
+                                <div class="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300"><i class="fas fa-image"></i></div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-gray-700">{{ img.title or '—' }}</td>
+                            <td class="py-3 px-2">
+                                {% if img.display_photo %}
+                                <span class="badge bg-green-100 text-green-700"><i class="fas fa-check mr-1"></i> بله</span>
+                                {% else %}
+                                <span class="badge bg-gray-100 text-gray-500">خیر</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-gray-600">{{ img.picture_order }}</td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <form method="POST" action="/administration/products/{{ product.id }}/images/{{ img.id }}/delete" onsubmit="return confirm('آیا از حذف این عکس اطمینان دارید؟');">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors">
+                                            <i class="fas fa-trash"></i> حذف
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="py-12 text-center text-gray-400">
+                                <i class="fas fa-images text-3xl mb-3"></i>
+                                <p>اطلاعاتی برای نمایش وجود ندارد.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu datasheets -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center"><i class="fas fa-file-pdf"></i></div>
+                    <div><h2 class="font-semibold text-gray-800">لیست برگه‌های اطلاعات {{ product.name }}</h2><p class="text-xs text-gray-500">دیتاشیت‌ها و مستندات محصول</p></div>
+                </div>
+                <button type="button" onclick="openModal('datasheet-modal')" class="btn-success flex items-center gap-2">
+                    <i class="fas fa-plus"></i> ایجاد برگه اطلاعات
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2">نوع</th>
+                            <th class="text-center py-3 px-2 w-32">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ds in product.menu_datasheets %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500">{{ loop.index }}</td>
+                            <td class="py-3 px-2">
+                                {% if ds.file_url %}
+                                <a href="{{ ds.file_url }}" target="_blank" class="inline-flex items-center gap-2 text-violet-600 hover:underline">
+                                    <i class="fas fa-file-pdf"></i> {{ ds.type or 'برگه اطلاعات' }}
+                                </a>
+                                {% else %}
+                                <span class="text-gray-700">{{ ds.type or '—' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <form method="POST" action="/administration/products/{{ product.id }}/datasheets/{{ ds.id }}/delete" onsubmit="return confirm('آیا از حذف این برگه اطلاعات اطمینان دارید؟');">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors">
+                                            <i class="fas fa-trash"></i> حذف
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="py-12 text-center text-gray-400">
+                                <i class="fas fa-file-pdf text-3xl mb-3"></i>
+                                <p>اطلاعاتی برای نمایش وجود ندارد.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supplier products -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-rose-50 to-pink-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center"><i class="fas fa-truck"></i></div>
+                    <div><h2 class="font-semibold text-gray-800">تامین‌کننده-محصول</h2><p class="text-xs text-gray-500">تامین‌کنندگان این محصول</p></div>
+                </div>
+                <button type="button" onclick="openModal('supplier-modal')" class="btn-success flex items-center gap-2">
+                    <i class="fas fa-plus"></i> ایجاد تامین‌کننده-محصول
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2">لینک</th>
+                            <th class="text-right py-3 px-2">تامین‌کننده</th>
+                            <th class="text-center py-3 px-2 w-32">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sp in product.supplier_products %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500">{{ loop.index }}</td>
+                            <td class="py-3 px-2">
+                                {% if sp.link %}
+                                <a href="{{ sp.link }}" target="_blank" class="text-rose-600 hover:underline text-xs" dir="ltr">{{ sp.link[:60] }}{% if sp.link|length > 60 %}...{% endif %}</a>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-gray-700">{{ sp.supplier.intermediary_name if sp.supplier else '—' }}</td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <form method="POST" action="/administration/products/{{ product.id }}/supplier-products/{{ sp.id }}/delete" onsubmit="return confirm('آیا از حذف این تامین‌کننده اطمینان دارید؟');">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors">
+                                            <i class="fas fa-trash"></i> حذف
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="py-12 text-center text-gray-400">
+                                <i class="fas fa-truck text-3xl mb-3"></i>
+                                <p>اطلاعاتی برای نمایش وجود ندارد.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-2">
+                <a href="/administration/products/{{ product.id }}/edit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium transition-colors">
+                    <i class="fas fa-edit"></i> ویرایش
+                </a>
+                <a href="/administration/logs/{{ product.id }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-history"></i> سوابق
+                </a>
+                <a href="/administration/products/{{ product.id }}/varieties" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-layer-group"></i> تنوع‌ها
+                </a>
+            </div>
+            <a href="/administration/products" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Add image modal -->
+<div id="image-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-images text-green-500 ml-2"></i> افزودن عکس</h3>
+            <button type="button" onclick="closeModal('image-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="POST" action="/administration/products/{{ product.id }}/images/new" class="space-y-4">
+            <div><label class="form-label">آدرس تصویر</label><input type="text" name="medium_image_url" class="form-input" dir="ltr" placeholder="/Media/..."></div>
+            <div><label class="form-label">عنوان</label><input type="text" name="title" class="form-input" placeholder="عنوان عکس"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="form-label">ترتیب عکس</label><input type="number" name="picture_order" value="0" class="form-input"></div>
+                <div class="flex items-end">
+                    <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input type="checkbox" name="display_photo" value="1" class="w-4 h-4 rounded border-gray-300">
+                        عکس اصلی
+                    </label>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 justify-end pt-2">
+                <button type="button" onclick="closeModal('image-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
+                <button type="submit" class="btn-success">افزودن</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add datasheet modal -->
+<div id="datasheet-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-file-pdf text-violet-500 ml-2"></i> ایجاد برگه اطلاعات</h3>
+            <button type="button" onclick="closeModal('datasheet-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="POST" action="/administration/products/{{ product.id }}/datasheets/new" class="space-y-4">
+            <div><label class="form-label">نوع</label><input type="text" name="type" class="form-input" placeholder="مثلا: Datasheet / Manual"></div>
+            <div><label class="form-label">آدرس فایل</label><input type="text" name="file_url" class="form-input" dir="ltr" placeholder="/Media/..."></div>
+            <div class="flex items-center gap-3 justify-end pt-2">
+                <button type="button" onclick="closeModal('datasheet-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
+                <button type="submit" class="btn-success">ایجاد</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add supplier-product modal -->
+<div id="supplier-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-truck text-rose-500 ml-2"></i> ایجاد تامین‌کننده-محصول</h3>
+            <button type="button" onclick="closeModal('supplier-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="POST" action="/administration/products/{{ product.id }}/supplier-products/new" class="space-y-4">
+            <div>
+                <label class="form-label">تامین‌کننده</label>
+                <select name="supplier_id" class="form-input">
+                    <option value="">انتخاب تامین‌کننده</option>
+                    {% for s in suppliers %}
+                    <option value="{{ s.id }}">{{ s.intermediary_name or s.site or s.id }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div><label class="form-label">لینک</label><input type="text" name="link" class="form-input" dir="ltr" placeholder="https://..."></div>
+            <div class="flex items-center gap-3 justify-end pt-2">
+                <button type="button" onclick="closeModal('supplier-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
+                <button type="submit" class="btn-success">ایجاد</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Set technical feature value modal -->
+<div id="tfv-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-sliders-h text-teal-500 ml-2"></i> تنظیم مقدار ویژگی فنی</h3>
+            <button type="button" onclick="closeModal('tfv-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="POST" action="/administration/products/{{ product.id }}/technical-values/set" class="space-y-4">
+            <input type="hidden" name="technical_feature_id" id="tfv-feature-id">
+            <input type="hidden" name="table_product_id" id="tfv-table-id">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div><label class="form-label">D Value</label><input type="text" name="d_value" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Unit</label><input type="text" name="unit" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">S Value</label><input type="text" name="s_value" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Min Value</label><input type="text" name="min_value" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Min Unit</label><input type="text" name="min_unit" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Max Value</label><input type="text" name="max_value" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Max Unit</label><input type="text" name="max_unit" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">X Value</label><input type="text" name="x_value" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">X Unit</label><input type="text" name="x_unit" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Y Value</label><input type="text" name="y_value" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Y Unit</label><input type="text" name="y_unit" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Z Value</label><input type="text" name="z_value" class="form-input" dir="ltr"></div>
+                <div><label class="form-label">Z Unit</label><input type="text" name="z_unit" class="form-input" dir="ltr"></div>
+            </div>
+            <div class="flex items-center gap-3 justify-end pt-2">
+                <button type="button" onclick="closeModal('tfv-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
+                <button type="submit" class="btn-success"><i class="fas fa-check"></i> ذخیره</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function openModal(id) {
+    $('#' + id).removeClass('hidden');
+}
+function closeModal(id) {
+    $('#' + id).addClass('hidden');
+}
+$('.fixed').on('click', function (e) {
+    if (e.target === this) $(this).addClass('hidden');
+});
+
+function setValue(general) {
+    var tableId = $('#TechnicalTable').val();
+    if (!tableId) {
+        alert('ابتدا یک جدول فنی انتخاب کنید.');
+        return;
+    }
+    var featureId = general ? $('#GeneralFeature').val() : $('#SpecialFeature').val();
+    if (!featureId) {
+        alert('ابتدا یک ویژگی انتخاب کنید.');
+        return;
+    }
+    $('#tfv-feature-id').val(featureId);
+    $('#tfv-table-id').val(tableId);
+    openModal('tfv-modal');
+}
+
+function editTfv(valueId) {
+    // Pre-fill modal with the row's existing values via a simple GET (values passed through data attrs).
+    // For now open the modal without prefill; the row id could be wired to a set-value with existing data.
+    alert('ویرایش مقادیر این ویژگی: ابتدا مقادیر را دوباره وارد کنید.');
+    return false;
+}
+
+$(document).ready(function () {
+    // Client-side pagination for each technical feature table
+    {% for tp in technical_products %}
+    (function () {
+        var idx = {{ loop.index }};
+        var $table = $('#tf-table-' + idx);
+        var $allRows = $table.find('tbody tr').filter(function () { return $(this).find('td').length > 1; });
+        var $search = $('#tf-search-' + idx);
+        var $pageSize = $('#tf-page-size-' + idx);
+        var $info = $('#tf-info-' + idx);
+        var $pageInfo = $('#tf-page-info-' + idx);
+        var $prev = $('#tf-prev-' + idx);
+        var $next = $('#tf-next-' + idx);
+        var currentPage = 1;
+        var pageSize = parseInt($pageSize.val(), 10);
+
+        function getFiltered() {
+            var q = $search.val().toLowerCase();
+            if (!q) return $allRows;
+            return $allRows.filter(function () {
+                return ($(this).data('search') || '').toLowerCase().indexOf(q) !== -1;
+            });
+        }
+        function apply() {
+            var $f = getFiltered();
+            var total = $f.length;
+            if (isNaN(pageSize) || total === 0) {
+                $allRows.hide(); $f.show(); currentPage = 1;
+                $info.text('۰ تا ۰ از ' + total + ' رکورد');
+                $pageInfo.text('صفحه ۱');
+                $prev.prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+                $next.prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+                return;
+            }
+            var totalPages = Math.ceil(total / pageSize);
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+            var start = (currentPage - 1) * pageSize;
+            var end = Math.min(start + pageSize, total);
+            $allRows.hide();
+            $f.slice(start, end).show();
+            $f.each(function (i) { $(this).find('.tf-index').text(start + i + 1); });
+            var fa = toFaDigits(start + 1);
+            var fb = toFaDigits(end);
+            var ft = toFaDigits(total);
+            $info.text('نمایش ' + fa + ' تا ' + fb + ' از ' + ft + ' رکورد');
+            $pageInfo.text('صفحه ' + toFaDigits(currentPage) + ' از ' + toFaDigits(totalPages));
+            $prev.prop('disabled', currentPage <= 1).toggleClass('opacity-50 cursor-not-allowed', currentPage <= 1);
+            $next.prop('disabled', currentPage >= totalPages).toggleClass('opacity-50 cursor-not-allowed', currentPage >= totalPages);
+        }
+        $search.on('keyup', function () { currentPage = 1; apply(); });
+        $pageSize.on('change', function () { pageSize = parseInt($pageSize.val(), 10); currentPage = 1; apply(); });
+        $prev.on('click', function () { if (currentPage > 1) { currentPage--; apply(); } });
+        $next.on('click', function () { currentPage++; apply(); });
+        apply();
+    })();
+    {% endfor %}
+});
+
+function toFaDigits(str) {
+    var fa = '۰۱۲۳۴۵۶۷۸۹';
+    return String(str).replace(/\d/g, function (d) { return fa[d]; });
+}
+</script>
+{% endblock %}
