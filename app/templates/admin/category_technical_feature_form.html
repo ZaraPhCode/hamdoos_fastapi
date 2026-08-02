@@ -1,0 +1,81 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش ویژگی دسته بندی" if ctf else "ایجاد دسته بندی ویژگی فنی" }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-emerald-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-200">
+                    <i class="fas fa-boxes-stacked"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویژگی های دسته بندی" if ctf else "ایجاد دسته بندی ویژگی فنی" }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ "ویرایش" if ctf else "ایجاد" }}</p>
+                </div>
+            </div>
+            <a href="/administration/category-technical-features" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ '/administration/category-technical-features/' ~ ctf.id ~ '/edit' if ctf else '/administration/category-technical-features/new' }}" class="space-y-6">
+        <input type="hidden" name="log" id="Log">
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-boxes-stacked"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">بهسازی و ویژگی فنی</h2>
+                        <p class="text-xs text-gray-500">دسته بندی و ویژگی فنی مرتبط را انتخاب کنید</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div>
+                        <label class="form-label" for="category_id">دسته بندی <span class="text-red-500">*</span></label>
+                        <select id="category_id" name="category_id" class="form-input" required>
+                            <option value="">— انتخاب دسته بندی —</option>
+                            {% for c in categories %}
+                            <option value="{{ c.id }}" {{ 'selected' if ctf and ctf.category_id == c.id else '' }}>{{ c.title or c.en_title or c.id }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="technical_feature_id">ویژگی فنی <span class="text-red-500">*</span></label>
+                        <select id="technical_feature_id" name="technical_feature_id" class="form-input" required>
+                            <option value="">— انتخاب ویژگی فنی —</option>
+                            {% for f in technical_features %}
+                            <option value="{{ f.id }}" {{ 'selected' if ctf and ctf.technical_feature_id == f.id else '' }}>{{ f.fa_name or f.name or f.id }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-gray-300"></i>
+                    {{ "ویرایش دسته بندی ویژگی فنی" if ctf else "ایجاد دسته بندی ویژگی فنی" }}
+                </p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/category-technical-features" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-times"></i> انصراف
+                    </a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-check"></i> {{ "ذخیره" if ctf else "ایجاد" }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش انوم ویژگی فنی" if feature_enum else "ایجاد انوم ویژگی فنی" }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-emerald-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-200">
+                    <i class="fas fa-align-left"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش انوم ویژگی فنی" if feature_enum else "ایجاد انوم ویژگی فنی" }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ "ویرایش اطلاعات انوم ویژگی فنی" if feature_enum else "ثبت انوم ویژگی فنی جدید" }}</p>
+                </div>
+            </div>
+            <a href="/administration/technical-feature-enums" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ '/administration/technical-feature-enums/' ~ feature_enum.id ~ '/edit' if feature_enum else '/administration/technical-feature-enums/new' }}" class="space-y-6" id="fe-form">
+        <input type="hidden" name="log" id="Log">
+
+        <!-- Main info -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-align-left"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">انواع ویژگی فنی</h2>
+                        <p class="text-xs text-gray-500">مشخصات پایه انوم ویژگی فنی را وارد کنید</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div>
+                        <label class="form-label" for="persian_name">نام فارسی <span class="text-red-500">*</span></label>
+                        <input type="text" id="persian_name" name="persian_name" value="{{ feature_enum.persian_name if feature_enum else '' }}" class="form-input" required placeholder="مثال: لایه ضدبازتاب 700 تا 1100 نانومتر">
+                    </div>
+                    <div>
+                        <label class="form-label" for="name">نام</label>
+                        <input type="text" id="name" name="name" value="{{ feature_enum.name if feature_enum else '' }}" class="form-input ltr-input" dir="ltr" placeholder="AR 700-1100">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-gray-300"></i>
+                    {{ "ویرایش انوم ویژگی فنی" if feature_enum else "ایجاد انوم ویژگی فنی" }}
+                </p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/technical-feature-enums" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-times"></i> انصراف
+                    </a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-check"></i> {{ "ذخیره" if feature_enum else "ایجاد" }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(function () {
+    $('#fe-form').on('submit', function () {
+        var log = '';
+        $('#fe-form :input').not('[type="submit"], [type="button"], [type="hidden"]').each(function () {
+            var name = $(this).attr('name') || '';
+            var val = $(this).val() || '';
+            log += name + ': ' + val + '; ';
+        });
+        $('#Log').val(log);
+        return true;
+    });
+});
+</script>
+{% endblock %}

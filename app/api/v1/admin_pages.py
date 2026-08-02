@@ -2040,68 +2040,6 @@ async def admin_post_types(
     })
 
 
-# ── Technical Features ──
-
-@router.get("/technical-features", response_class=HTMLResponse)
-async def admin_technical_features(
-    request: Request,
-    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
-    db: AsyncSession = Depends(get_db),
-):
-    items = (await db.execute(
-        select(TechnicalFeature).where(TechnicalFeature.is_removed == False).order_by(TechnicalFeature.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "ویژگی‌های فنی", "items": items,
-        "columns": [
-            {"key": "name", "label": "نام"},
-            {"key": "fa_name", "label": "نام فارسی"},
-            {"key": "priority", "label": "اولویت"},
-        ],
-    })
-
-
-# ── Technical Tables ──
-
-@router.get("/technical-tables", response_class=HTMLResponse)
-async def admin_technical_tables(
-    request: Request,
-    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
-    db: AsyncSession = Depends(get_db),
-):
-    items = (await db.execute(
-        select(TechnicalTable).where(TechnicalTable.is_removed == False).order_by(TechnicalTable.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "جدول‌های فنی", "items": items,
-        "columns": [
-            {"key": "title", "label": "عنوان"},
-            {"key": "en_title", "label": "عنوان انگلیسی"},
-            {"key": "columns", "label": "ستون‌ها"},
-        ],
-    })
-
-
-# ── Category Options ──
-
-@router.get("/category-options", response_class=HTMLResponse)
-async def admin_category_options(
-    request: Request,
-    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
-    db: AsyncSession = Depends(get_db),
-):
-    items = (await db.execute(
-        select(CategoryOption).where(CategoryOption.is_removed == False).order_by(CategoryOption.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "گزینه‌های دسته‌بندی", "items": items,
-        "columns": [{"key": "name", "label": "نام"}],
-    })
-
-
 # ── Media ──
 
 @router.get("/media", response_class=HTMLResponse)
@@ -2850,25 +2788,141 @@ async def admin_product_tag_delete(
     return RedirectResponse(url="/administration/product-tags", status_code=303)
 
 
-# ── Technical Table Products ──
+# ── Technical Feature Enums ──
 
-@router.get("/technical-table-products", response_class=HTMLResponse)
-async def admin_technical_table_products(
+@router.get("/technical-feature-enums", response_class=HTMLResponse)
+async def admin_technical_feature_enums(
     request: Request,
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
     items = (await db.execute(
-        select(TechnicalTableProduct).where(TechnicalTableProduct.is_removed == False).order_by(TechnicalTableProduct.insert_date.desc()).limit(100)
+        select(TechnicalFeatureEnum)
+        .where(TechnicalFeatureEnum.is_removed == False)
+        .order_by(TechnicalFeatureEnum.persian_name)
     )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "جدول‌های فنی محصول", "items": items,
-        "columns": [
-            {"key": "product_id", "label": "شناسه محصول"},
-            {"key": "technical_table_id", "label": "شناسه جدول فنی"},
-        ],
+    return templates.TemplateResponse("admin/technical_feature_enums.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
+
+
+@router.get("/technical-feature-enums/new", response_class=HTMLResponse)
+async def admin_technical_feature_enum_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    return templates.TemplateResponse("admin/technical_feature_enum_form.html", {
+        "request": request, "current_user": current_user, "feature_enum": None,
+    })
+
+
+@router.post("/technical-feature-enums/new", response_class=HTMLResponse)
+async def admin_technical_feature_enum_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    persian_name = (form.get("persian_name") or "").strip()
+    name = (form.get("name") or "").strip()
+
+    fe = TechnicalFeatureEnum(
+        persian_name=persian_name or None,
+        name=name or None,
+        created_by_user_id=current_user.id,
+    )
+    db.add(fe)
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=fe.id,
+            table_name="technical_feature_enums",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/technical-feature-enums", status_code=303)
+
+
+@router.get("/technical-feature-enums/{enum_id}/edit", response_class=HTMLResponse)
+async def admin_technical_feature_enum_edit(
+    request: Request,
+    enum_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    fe = await db.get(TechnicalFeatureEnum, uuid.UUID(enum_id))
+    if fe is None or fe.is_removed:
+        raise HTTPException(status_code=404, detail="Technical feature enum not found")
+    return templates.TemplateResponse("admin/technical_feature_enum_form.html", {
+        "request": request, "current_user": current_user, "feature_enum": fe,
+    })
+
+
+@router.post("/technical-feature-enums/{enum_id}/edit", response_class=HTMLResponse)
+async def admin_technical_feature_enum_edit_submit(
+    request: Request,
+    enum_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    fe = await db.get(TechnicalFeatureEnum, uuid.UUID(enum_id))
+    if fe is None or fe.is_removed:
+        raise HTTPException(status_code=404, detail="Technical feature enum not found")
+
+    form = await request.form()
+    fe.persian_name = (form.get("persian_name") or "").strip() or None
+    fe.name = (form.get("name") or "").strip() or None
+    await db.flush()
+
+    log_text = form.get("log") or ""
+    if log_text:
+        db.add(Log(
+            record_id=fe.id,
+            table_name="technical_feature_enums",
+            description=log_text,
+            created_by_user_id=current_user.id,
+        ))
+    return RedirectResponse(url="/administration/technical-feature-enums", status_code=303)
+
+
+@router.get("/technical-feature-enums/{enum_id}", response_class=HTMLResponse)
+async def admin_technical_feature_enum_detail(
+    request: Request,
+    enum_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    fe = await db.get(TechnicalFeatureEnum, uuid.UUID(enum_id))
+    if fe is None or fe.is_removed:
+        raise HTTPException(status_code=404, detail="Technical feature enum not found")
+    return templates.TemplateResponse("admin/technical_feature_enum_detail.html", {
+        "request": request, "current_user": current_user, "feature_enum": fe,
+    })
+
+
+@router.post("/technical-feature-enums/{enum_id}/delete", response_class=HTMLResponse)
+async def admin_technical_feature_enum_delete(
+    request: Request,
+    enum_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    fe = await db.get(TechnicalFeatureEnum, uuid.UUID(enum_id))
+    if fe is None or fe.is_removed:
+        raise HTTPException(status_code=404, detail="Technical feature enum not found")
+    name = fe.name or fe.persian_name or ""
+    fe.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=fe.id,
+        table_name="technical_feature_enums",
+        description=f"حذف انوم ویژگی فنی: {name}",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-feature-enums", status_code=303)
 
 
 # ── Category Technical Features ──
@@ -2880,37 +2934,776 @@ async def admin_category_technical_features(
     db: AsyncSession = Depends(get_db),
 ):
     items = (await db.execute(
-        select(CategoryTechnicalFeature).where(CategoryTechnicalFeature.is_removed == False).order_by(CategoryTechnicalFeature.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "دسته‌بندی ویژگی فنی", "items": items,
-        "columns": [
-            {"key": "category_id", "label": "شناسه دسته‌بندی"},
-            {"key": "technical_feature_id", "label": "شناسه ویژگی فنی"},
-        ],
+        select(CategoryTechnicalFeature)
+        .options(selectinload(CategoryTechnicalFeature.category), selectinload(CategoryTechnicalFeature.technical_feature))
+        .where(CategoryTechnicalFeature.is_removed == False)
+        .order_by(CategoryTechnicalFeature.insert_date.desc())
+    )).unique().scalars().all()
+    return templates.TemplateResponse("admin/category_technical_features.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
 
 
-# ── Technical Feature Enums ──
+async def _ctf_dropdowns(db: AsyncSession):
+    categories = (await db.execute(
+        select(Category).where(Category.is_removed == False).order_by(Category.title)
+    )).scalars().all()
+    technical_features = (await db.execute(
+        select(TechnicalFeature).where(TechnicalFeature.is_removed == False).order_by(TechnicalFeature.fa_name)
+    )).scalars().all()
+    return categories, technical_features
 
-@router.get("/technical-feature-enums", response_class=HTMLResponse)
-async def admin_technical_feature_enums(
+
+@router.get("/category-technical-features/new", response_class=HTMLResponse)
+async def admin_category_technical_feature_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    categories, technical_features = await _ctf_dropdowns(db)
+    return templates.TemplateResponse("admin/category_technical_feature_form.html", {
+        "request": request, "current_user": current_user, "ctf": None,
+        "categories": categories, "technical_features": technical_features,
+    })
+
+
+@router.post("/category-technical-features/new", response_class=HTMLResponse)
+async def admin_category_technical_feature_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    category_id = form.get("category_id")
+    technical_feature_id = form.get("technical_feature_id")
+    if not category_id or not technical_feature_id:
+        raise HTTPException(status_code=400, detail="Category and feature are required")
+
+    exists = (await db.execute(
+        select(CategoryTechnicalFeature.id).where(
+            CategoryTechnicalFeature.is_removed == False,
+            CategoryTechnicalFeature.category_id == uuid.UUID(category_id),
+            CategoryTechnicalFeature.technical_feature_id == uuid.UUID(technical_feature_id),
+        )
+    )).scalar_one_or_none()
+    if exists:
+        raise HTTPException(status_code=400, detail="این دسته‌بندی و ویژگی فنی قبلاً تعریف شده")
+
+    ctf = CategoryTechnicalFeature(
+        category_id=uuid.UUID(category_id),
+        technical_feature_id=uuid.UUID(technical_feature_id),
+        created_by_user_id=current_user.id,
+    )
+    db.add(ctf)
+    await db.flush()
+    db.add(Log(
+        record_id=ctf.id,
+        table_name="category_technical_features",
+        description="ایجاد دسته‌بندی ویژگی فنی",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/category-technical-features", status_code=303)
+
+
+@router.get("/category-technical-features/{ctf_id}/edit", response_class=HTMLResponse)
+async def admin_category_technical_feature_edit(
+    request: Request,
+    ctf_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    ctf = (await db.execute(
+        select(CategoryTechnicalFeature)
+        .options(selectinload(CategoryTechnicalFeature.category), selectinload(CategoryTechnicalFeature.technical_feature))
+        .where(CategoryTechnicalFeature.id == uuid.UUID(ctf_id), CategoryTechnicalFeature.is_removed == False)
+    )).scalar_one_or_none()
+    if ctf is None:
+        raise HTTPException(status_code=404, detail="Category technical feature not found")
+    categories, technical_features = await _ctf_dropdowns(db)
+    return templates.TemplateResponse("admin/category_technical_feature_form.html", {
+        "request": request, "current_user": current_user, "ctf": ctf,
+        "categories": categories, "technical_features": technical_features,
+    })
+
+
+@router.post("/category-technical-features/{ctf_id}/edit", response_class=HTMLResponse)
+async def admin_category_technical_feature_edit_submit(
+    request: Request,
+    ctf_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    ctf = (await db.execute(
+        select(CategoryTechnicalFeature)
+        .where(CategoryTechnicalFeature.id == uuid.UUID(ctf_id), CategoryTechnicalFeature.is_removed == False)
+    )).scalar_one_or_none()
+    if ctf is None:
+        raise HTTPException(status_code=404, detail="Category technical feature not found")
+
+    form = await request.form()
+    category_id = form.get("category_id")
+    technical_feature_id = form.get("technical_feature_id")
+    if not category_id or not technical_feature_id:
+        raise HTTPException(status_code=400, detail="Category and Technical Feature are required")
+
+    ctf.category_id = uuid.UUID(category_id)
+    ctf.technical_feature_id = uuid.UUID(technical_feature_id)
+    await db.flush()
+
+    db.add(Log(
+        record_id=ctf.id,
+        table_name="category_technical_features",
+        description="ویرایش دسته‌بندی ویژگی فنی",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/category-technical-features", status_code=303)
+
+
+@router.post("/category-technical-features/{ctf_id}/delete", response_class=HTMLResponse)
+async def admin_category_technical_feature_delete(
+    request: Request,
+    ctf_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    ctf = (await db.execute(
+        select(CategoryTechnicalFeature)
+        .where(CategoryTechnicalFeature.id == uuid.UUID(ctf_id), CategoryTechnicalFeature.is_removed == False)
+    )).scalar_one_or_none()
+    if ctf is None:
+        raise HTTPException(status_code=404, detail="Category technical feature not found")
+    ctf.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=ctf.id,
+        table_name="category_technical_features",
+        description="حذف دسته‌بندی ویژگی فنی",
+        created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/category-technical-features", status_code=303)
+
+
+# ── Technical Tables ──
+
+@router.get("/technical-tables", response_class=HTMLResponse)
+async def admin_technical_tables(
     request: Request,
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
     items = (await db.execute(
-        select(TechnicalFeatureEnum).where(TechnicalFeatureEnum.is_removed == False).order_by(TechnicalFeatureEnum.insert_date.desc()).limit(100)
+        select(TechnicalTable).where(TechnicalTable.is_removed == False).order_by(TechnicalTable.title)
     )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "انوم ویژگی فنی", "items": items,
-        "columns": [
-            {"key": "name", "label": "نام"},
-            {"key": "persian_name", "label": "نام فارسی"},
-        ],
+    return templates.TemplateResponse("admin/technical_tables.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
+
+
+@router.get("/technical-tables/new", response_class=HTMLResponse)
+async def admin_technical_table_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    return templates.TemplateResponse("admin/technical_table_form.html", {
+        "request": request, "current_user": current_user, "table": None,
+    })
+
+
+@router.post("/technical-tables/new", response_class=HTMLResponse)
+async def admin_technical_table_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    title = (form.get("title") or "").strip()
+    en_title = (form.get("en_title") or "").strip()
+    columns = _to_int(form.get("columns"), 0)
+    header = (form.get("header") or "").strip()
+
+    tt = TechnicalTable(
+        title=title or None, en_title=en_title or None,
+        columns=columns, header=header or None, created_by_user_id=current_user.id,
+    )
+    db.add(tt)
+    await db.flush()
+    db.add(Log(
+        record_id=tt.id, table_name="technical_tables",
+        description=f"ایجاد جدول فنی: {title}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-tables", status_code=303)
+
+
+@router.get("/technical-tables/{table_id}/edit", response_class=HTMLResponse)
+async def admin_technical_table_edit(
+    request: Request,
+    table_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    tt = await db.get(TechnicalTable, uuid.UUID(table_id))
+    if tt is None or tt.is_removed:
+        raise HTTPException(status_code=404, detail="Technical table not found")
+    return templates.TemplateResponse("admin/technical_table_form.html", {
+        "request": request, "current_user": current_user, "table": tt,
+    })
+
+
+@router.post("/technical-tables/{table_id}/edit", response_class=HTMLResponse)
+async def admin_technical_table_edit_submit(
+    request: Request,
+    table_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    tt = await db.get(TechnicalTable, uuid.UUID(table_id))
+    if tt is None or tt.is_removed:
+        raise HTTPException(status_code=404, detail="Technical table not found")
+
+    form = await request.form()
+    tt.title = (form.get("title") or "").strip() or None
+    tt.en_title = (form.get("en_title") or "").strip() or None
+    tt.columns = _to_int(form.get("columns"), 0)
+    tt.header = (form.get("header") or "").strip() or None
+    await db.flush()
+
+    db.add(Log(
+        record_id=tt.id, table_name="technical_tables",
+        description=f"ویرایش جدول فنی: {tt.title}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-tables", status_code=303)
+
+
+@router.get("/technical-tables/{table_id}", response_class=HTMLResponse)
+async def admin_technical_table_detail(
+    request: Request,
+    table_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    tt = await db.get(TechnicalTable, uuid.UUID(table_id))
+    if tt is None or tt.is_removed:
+        raise HTTPException(status_code=404, detail="Technical table not found")
+    return templates.TemplateResponse("admin/technical_table_detail.html", {
+        "request": request, "current_user": current_user, "table": tt,
+    })
+
+
+@router.post("/technical-tables/{table_id}/delete", response_class=HTMLResponse)
+async def admin_technical_table_delete(
+    request: Request,
+    table_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    tt = await db.get(TechnicalTable, uuid.UUID(table_id))
+    if tt is None or tt.is_removed:
+        raise HTTPException(status_code=404, detail="Technical table not found")
+    name = tt.title or ""
+    tt.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=tt.id, table_name="technical_tables",
+        description=f"حذف جدول فنی: {name}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-tables", status_code=303)
+
+
+# ── Technical Table Products ──
+
+@router.get("/technical-table-products", response_class=HTMLResponse)
+async def admin_technical_table_products(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    items = (await db.execute(
+        select(TechnicalTableProduct)
+        .options(selectinload(TechnicalTableProduct.product), selectinload(TechnicalTableProduct.technical_table))
+        .where(TechnicalTableProduct.is_removed == False)
+        .order_by(TechnicalTableProduct.insert_date.desc())
+    )).unique().scalars().all()
+    return templates.TemplateResponse("admin/technical_table_products.html", {
+        "request": request, "current_user": current_user, "items": items,
+    })
+
+
+@router.get("/technical-table-products/new", response_class=HTMLResponse)
+async def admin_technical_table_product_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    products = (await db.execute(
+        select(Product).where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    tables = (await db.execute(
+        select(TechnicalTable).where(TechnicalTable.is_removed == False).order_by(TechnicalTable.title)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/technical_table_product_form.html", {
+        "request": request, "current_user": current_user, "ttp": None,
+        "products": products, "tables": tables,
+    })
+
+
+@router.post("/technical-table-products/new", response_class=HTMLResponse)
+async def admin_technical_table_product_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    product_id = form.get("product_id")
+    technical_table_id = form.get("technical_table_id")
+    if not product_id or not technical_table_id:
+        raise HTTPException(status_code=400, detail="Product and technical table are required")
+
+    exists = (await db.execute(
+        select(TechnicalTableProduct.id).where(
+            TechnicalTableProduct.is_removed == False,
+            TechnicalTableProduct.product_id == uuid.UUID(product_id),
+            TechnicalTableProduct.technical_table_id == uuid.UUID(technical_table_id),
+        )
+    )).scalar_one_or_none()
+    if exists:
+        raise HTTPException(status_code=400, detail="این جدول فنی برای این محصول تعریف شده")
+
+    ttp = TechnicalTableProduct(
+        product_id=uuid.UUID(product_id),
+        technical_table_id=uuid.UUID(technical_table_id),
+        created_by_user_id=current_user.id,
+    )
+    db.add(ttp)
+    await db.flush()
+    db.add(Log(
+        record_id=ttp.id, table_name="technical_table_products",
+        description="ایجاد جدول فنی محصول", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-table-products", status_code=303)
+
+
+@router.get("/technical-table-products/{ttp_id}/edit", response_class=HTMLResponse)
+async def admin_technical_table_product_edit(
+    request: Request,
+    ttp_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    ttp = (await db.execute(
+        select(TechnicalTableProduct)
+        .options(selectinload(TechnicalTableProduct.product), selectinload(TechnicalTableProduct.technical_table))
+        .where(TechnicalTableProduct.id == uuid.UUID(ttp_id), TechnicalTableProduct.is_removed == False)
+    )).scalar_one_or_none()
+    if ttp is None:
+        raise HTTPException(status_code=404, detail="Technical table product not found")
+    products = (await db.execute(
+        select(Product).where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    tables = (await db.execute(
+        select(TechnicalTable).where(TechnicalTable.is_removed == False).order_by(TechnicalTable.title)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/technical_table_product_form.html", {
+        "request": request, "current_user": current_user, "ttp": ttp,
+        "products": products, "tables": tables,
+    })
+
+
+@router.post("/technical-table-products/{ttp_id}/edit", response_class=HTMLResponse)
+async def admin_technical_table_product_edit_submit(
+    request: Request,
+    ttp_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    ttp = (await db.execute(
+        select(TechnicalTableProduct)
+        .where(TechnicalTableProduct.id == uuid.UUID(ttp_id), TechnicalTableProduct.is_removed == False)
+    )).scalar_one_or_none()
+    if ttp is None:
+        raise HTTPException(status_code=404, detail="Technical table product not found")
+
+    form = await request.form()
+    product_id = form.get("product_id")
+    technical_table_id = form.get("technical_table_id")
+    if not product_id or not technical_table_id:
+        raise HTTPException(status_code=400, detail="Product and technical table are required")
+
+    ttp.product_id = uuid.UUID(product_id)
+    ttp.technical_table_id = uuid.UUID(technical_table_id)
+    await db.flush()
+
+    db.add(Log(
+        record_id=ttp.id, table_name="technical_table_products",
+        description="ویرایش جدول فنی محصول", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-table-products", status_code=303)
+
+
+@router.get("/technical-table-products/{ttp_id}", response_class=HTMLResponse)
+async def admin_technical_table_product_detail(
+    request: Request,
+    ttp_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    ttp = (await db.execute(
+        select(TechnicalTableProduct)
+        .options(selectinload(TechnicalTableProduct.product), selectinload(TechnicalTableProduct.technical_table))
+        .where(TechnicalTableProduct.id == uuid.UUID(ttp_id), TechnicalTableProduct.is_removed == False)
+    )).scalar_one_or_none()
+    if ttp is None:
+        raise HTTPException(status_code=404, detail="Technical table product not found")
+    return templates.TemplateResponse("admin/technical_table_product_detail.html", {
+        "request": request, "current_user": current_user, "ttp": ttp,
+    })
+
+
+@router.post("/technical-table-products/{ttp_id}/delete", response_class=HTMLResponse)
+async def admin_technical_table_product_delete(
+    request: Request,
+    ttp_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    ttp = (await db.execute(
+        select(TechnicalTableProduct)
+        .where(TechnicalTableProduct.id == uuid.UUID(ttp_id), TechnicalTableProduct.is_removed == False)
+    )).scalar_one_or_none()
+    if ttp is None:
+        raise HTTPException(status_code=404, detail="Technical table product not found")
+    ttp.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=ttp.id, table_name="technical_table_products",
+        description="حذف جدول فنی محصول", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-table-products", status_code=303)
+
+
+# ── Technical Features ──
+
+@router.get("/technical-features", response_class=HTMLResponse)
+async def admin_technical_features(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    items = (await db.execute(
+        select(TechnicalFeature).where(TechnicalFeature.is_removed == False).order_by(TechnicalFeature.fa_name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/technical_features.html", {
+        "request": request, "current_user": current_user, "items": items,
+    })
+
+
+@router.get("/technical-features/new", response_class=HTMLResponse)
+async def admin_technical_feature_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    enums = (await db.execute(
+        select(TechnicalFeatureEnum).where(TechnicalFeatureEnum.is_removed == False).order_by(TechnicalFeatureEnum.persian_name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/technical_feature_form.html", {
+        "request": request, "current_user": current_user, "feature": None, "enums": enums,
+    })
+
+
+@router.post("/technical-features/new", response_class=HTMLResponse)
+async def admin_technical_feature_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    fa_name = (form.get("fa_name") or "").strip()
+    description = (form.get("description") or "").strip()
+    display_format = (form.get("display_format") or "").strip()
+    linear_display = (form.get("linear_display") or "").strip()
+    columns = _to_int(form.get("columns"), 1)
+    priority = _to_int(form.get("priority"), 1500)
+    visible_in_schema = form.get("visible_in_schema") == "on"
+
+    feature = TechnicalFeature(
+        name=name or None, fa_name=fa_name or None, description=description or None,
+        display_format=display_format or None, linear_display=linear_display or None,
+        columns=max(columns, 1), priority=priority, visible_in_schema=visible_in_schema,
+        d_value=_checkbox_bool(form, "d_value"), unit=_checkbox_bool(form, "unit"),
+        s_value=_checkbox_bool(form, "s_value"), e_value=_checkbox_bool(form, "e_value"),
+        e_value1=_checkbox_bool(form, "e_value1"),
+        b_value=_checkbox_bool(form, "b_value"),
+        min_value=_checkbox_bool(form, "min_value"), min_unit=_checkbox_bool(form, "min_unit"),
+        max_value=_checkbox_bool(form, "max_value"), max_unit=_checkbox_bool(form, "max_unit"),
+        x_value=_checkbox_bool(form, "x_value"), x_unit=_checkbox_bool(form, "x_unit"),
+        y_value=_checkbox_bool(form, "y_value"), y_unit=_checkbox_bool(form, "y_unit"),
+        z_value=_checkbox_bool(form, "z_value"), z_unit=_checkbox_bool(form, "z_unit"),
+        created_by_user_id=current_user.id,
+    )
+    db.add(feature)
+    await db.flush()
+    await _assign_feature_enums(db, feature, form.getlist("feature_enum_ids"), form.getlist("feature_enum1_ids"))
+    db.add(Log(
+        record_id=feature.id, table_name="technical_features",
+        description=f"ایجاد ویژگی فنی: {fa_name or name}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-features", status_code=303)
+
+
+async def _assign_feature_enums(db: AsyncSession, feature: TechnicalFeature, enum_ids, enum1_ids):
+    enum_ids = enum_ids or []
+    enum1_ids = enum1_ids or []
+    existing = (await db.execute(
+        select(TechnicalFeatureEnum).where(
+            TechnicalFeatureEnum.id.in_([uuid.UUID(x) for x in enum_ids + enum1_ids]),
+            TechnicalFeatureEnum.is_removed == False,
+        )
+    )).scalars().all()
+    for e in existing:
+        if e.id in {uuid.UUID(x) for x in enum_ids}:
+            e.technical_feature_id = feature.id
+        else:
+            e.technical_feature_id = None
+        if e.id in {uuid.UUID(x) for x in enum1_ids}:
+            e.technical_feature1_id = feature.id
+        else:
+            e.technical_feature1_id = None
+
+
+@router.get("/technical-features/{feature_id}/edit", response_class=HTMLResponse)
+async def admin_technical_feature_edit(
+    request: Request,
+    feature_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    feature = await db.get(TechnicalFeature, uuid.UUID(feature_id))
+    if feature is None or feature.is_removed:
+        raise HTTPException(status_code=404, detail="Technical feature not found")
+    enums = (await db.execute(
+        select(TechnicalFeatureEnum).where(TechnicalFeatureEnum.is_removed == False).order_by(TechnicalFeatureEnum.persian_name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/technical_feature_form.html", {
+        "request": request, "current_user": current_user, "feature": feature, "enums": enums,
+    })
+
+
+@router.post("/technical-features/{feature_id}/edit", response_class=HTMLResponse)
+async def admin_technical_feature_edit_submit(
+    request: Request,
+    feature_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    feature = await db.get(TechnicalFeature, uuid.UUID(feature_id))
+    if feature is None or feature.is_removed:
+        raise HTTPException(status_code=404, detail="Technical feature not found")
+
+    form = await request.form()
+    feature.name = (form.get("name") or "").strip() or None
+    feature.fa_name = (form.get("fa_name") or "").strip() or None
+    feature.description = (form.get("description") or "").strip() or None
+    feature.display_format = (form.get("display_format") or "").strip() or None
+    feature.linear_display = (form.get("linear_display") or "").strip() or None
+    feature.columns = max(_to_int(form.get("columns"), 1), 1)
+    feature.priority = _to_int(form.get("priority"), 1500)
+    feature.visible_in_schema = form.get("visible_in_schema") == "on"
+
+    feature.d_value = _checkbox_bool(form, "d_value")
+    feature.unit = _checkbox_bool(form, "unit")
+    feature.s_value = _checkbox_bool(form, "s_value")
+    feature.e_value = _checkbox_bool(form, "e_value")
+    feature.e_value1 = _checkbox_bool(form, "e_value1")
+    feature.b_value = _checkbox_bool(form, "b_value")
+    feature.min_value = _checkbox_bool(form, "min_value")
+    feature.min_unit = _checkbox_bool(form, "min_unit")
+    feature.max_value = _checkbox_bool(form, "max_value")
+    feature.max_unit = _checkbox_bool(form, "max_unit")
+    feature.x_value = _checkbox_bool(form, "x_value")
+    feature.x_unit = _checkbox_bool(form, "x_unit")
+    feature.y_value = _checkbox_bool(form, "y_value")
+    feature.y_unit = _checkbox_bool(form, "y_unit")
+    feature.z_value = _checkbox_bool(form, "z_value")
+    feature.z_unit = _checkbox_bool(form, "z_unit")
+    await _assign_feature_enums(db, feature, form.getlist("feature_enum_ids"), form.getlist("feature_enum1_ids"))
+    await db.flush()
+
+    db.add(Log(
+        record_id=feature.id, table_name="technical_features",
+        description=f"ویرایش ویژگی فنی: {feature.fa_name or feature.name}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-features", status_code=303)
+
+
+@router.get("/technical-features/{feature_id}", response_class=HTMLResponse)
+async def admin_technical_feature_detail(
+    request: Request,
+    feature_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    feature = await db.get(TechnicalFeature, uuid.UUID(feature_id))
+    if feature is None or feature.is_removed:
+        raise HTTPException(status_code=404, detail="Technical feature not found")
+    return templates.TemplateResponse("admin/technical_feature_detail.html", {
+        "request": request, "current_user": current_user, "feature": feature,
+    })
+
+
+@router.post("/technical-features/{feature_id}/delete", response_class=HTMLResponse)
+async def admin_technical_feature_delete(
+    request: Request,
+    feature_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    feature = await db.get(TechnicalFeature, uuid.UUID(feature_id))
+    if feature is None or feature.is_removed:
+        raise HTTPException(status_code=404, detail="Technical feature not found")
+    name = feature.name or feature.fa_name or ""
+    feature.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=feature.id, table_name="technical_features",
+        description=f"حذف ویژگی فنی: {name}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/technical-features", status_code=303)
+
+
+# ── Category Options ──
+
+@router.get("/category-options", response_class=HTMLResponse)
+async def admin_category_options(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    items = (await db.execute(
+        select(CategoryOption).where(CategoryOption.is_removed == False).order_by(CategoryOption.name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/category_options.html", {
+        "request": request, "current_user": current_user, "items": items,
+    })
+
+
+@router.get("/category-options/new", response_class=HTMLResponse)
+async def admin_category_option_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    return templates.TemplateResponse("admin/category_option_form.html", {
+        "request": request, "current_user": current_user, "category_option": None,
+    })
+
+
+@router.post("/category-options/new", response_class=HTMLResponse)
+async def admin_category_option_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    try:
+        co = CategoryOption(name=name, created_by_user_id=current_user.id)
+        db.add(co)
+        await db.flush()
+    except Exception:
+        raise HTTPException(status_code=400, detail="این گزینه قبلاً تعریف شده")
+    db.add(Log(
+        record_id=co.id, table_name="category_options",
+        description=f"ایجاد گزینه دسته‌بندی: {name}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/category-options", status_code=303)
+
+
+@router.get("/category-options/{co_id}/edit", response_class=HTMLResponse)
+async def admin_category_option_edit(
+    request: Request,
+    co_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    co = await db.get(CategoryOption, uuid.UUID(co_id))
+    if co is None or co.is_removed:
+        raise HTTPException(status_code=404, detail="Category option not found")
+    return templates.TemplateResponse("admin/category_option_form.html", {
+        "request": request, "current_user": current_user, "category_option": co,
+    })
+
+
+@router.post("/category-options/{co_id}/edit", response_class=HTMLResponse)
+async def admin_category_option_edit_submit(
+    request: Request,
+    co_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    co = await db.get(CategoryOption, uuid.UUID(co_id))
+    if co is None or co.is_removed:
+        raise HTTPException(status_code=404, detail="Category option not found")
+
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="نام الزامی است")
+    co.name = name
+    await db.flush()
+
+    db.add(Log(
+        record_id=co.id, table_name="category_options",
+        description=f"ویرایش گزینه دسته‌بندی: {co.name}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/category-options", status_code=303)
+
+
+@router.get("/category-options/{co_id}", response_class=HTMLResponse)
+async def admin_category_option_detail(
+    request: Request,
+    co_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    co = await db.get(CategoryOption, uuid.UUID(co_id))
+    if co is None or co.is_removed:
+        raise HTTPException(status_code=404, detail="Category option not found")
+    return templates.TemplateResponse("admin/category_option_detail.html", {
+        "request": request, "current_user": current_user, "category_option": co,
+    })
+
+
+@router.post("/category-options/{co_id}/delete", response_class=HTMLResponse)
+async def admin_category_option_delete(
+    request: Request,
+    co_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    co = await db.get(CategoryOption, uuid.UUID(co_id))
+    if co is None or co.is_removed:
+        raise HTTPException(status_code=404, detail="Category option not found")
+    name = co.name or ""
+    co.is_removed = True
+    await db.flush()
+    db.add(Log(
+        record_id=co.id, table_name="category_options",
+        description=f"حذف گزینه دسته‌بندی: {name}", created_by_user_id=current_user.id,
+    ))
+    return RedirectResponse(url="/administration/category-options", status_code=303)
+
+
+def _to_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _checkbox_bool(form, key):
+    return form.get(key) == "on"
 
 
 # ── Role Claims ──

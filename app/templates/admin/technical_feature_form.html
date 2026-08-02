@@ -1,0 +1,292 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش ویژگی فنی" if feature else "ایجاد ویژگی فنی" }}{% endblock %}
+{% block content %}
+<style>
+    .info-icon { color: #64748b; cursor: pointer; font-size: 18px; margin-inline-start: 6px; vertical-align: middle; }
+    .info-icon:hover { color: #0ea5e9; }
+    .fval-box {
+        background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px;
+        display: flex; align-items: center; gap: 10px; transition: all .15s;
+    }
+    .fval-box:hover { border-color: #a7f3d0; background: #f0fdf4; }
+    .fval-box input[type="checkbox"] { width: 18px; height: 18px; accent-color: #10b981; }
+    .fval-order { color: #94a3b8; font-size: 11px; min-width: 24px; text-align: center; }
+    .fval-name { font-size: 13px; font-weight: 600; color: #334155; }
+</style>
+
+<div class="max-w-5xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-emerald-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-200">
+                    <i class="fas fa-sliders-h"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش" if feature else "ایجاد" }} ویژگی فنی</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">مشخصات ویژگی فنی</p>
+                </div>
+            </div>
+            <a href="/administration/technical-features" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ '/administration/technical-features/' ~ feature.id ~ '/edit' if feature else '/administration/technical-features/new' }}" class="space-y-6" id="tf-form">
+
+        <!-- مشخصات اصلی -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-tag"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">مشخصات اصلی</h2>
+                        <p class="text-xs text-gray-500">نام، توضیحات و قالب نمایش ویژگی</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-5">
+                    <div>
+                        <label class="form-label" for="name">
+                            نام (انگلیسی)
+                            <i class="fa fa-info-circle info-icon" title="در این قسمت نام انگلیسی ویژگی فنی را وارد نمایید."></i>
+                        </label>
+                        <input type="text" id="name" name="name" value="{{ feature.name if feature else '' }}" class="form-input ltr-input" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="form-label" for="fa_name">نام فارسی</label>
+                        <input type="text" id="fa_name" name="fa_name" value="{{ feature.fa_name if feature else '' }}" class="form-input">
+                    </div>
+                    <div>
+                        <label class="form-label" for="description">توضیحات</label>
+                        <input type="text" id="description" name="description" value="{{ feature.description if feature else '' }}" class="form-input">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-x-8 gap-y-5 mt-5">
+                    <div class="md:col-span-2">
+                        <label class="form-label" for="display_format">
+                            فرمت نمایش
+                            <i class="fa fa-info-circle info-icon" title="فرمت نمایش نحوه نشان دادن مقدار ویژگی فنی را نمایش می‌دهد. مثلا برای نمایش مقدار به صورت: 20mm * 30mm * 40mm باید فرمت نمایش را به این صورت وارد کنید: {9}{10} * {11}{12} * {13}{14}"></i>
+                        </label>
+                        <input dir="ltr" type="text" id="display_format" name="display_format" value="{{ feature.display_format if feature else '' }}" class="form-input ltr-input">
+                    </div>
+                    <div>
+                        <label class="form-label" for="columns">ستون‌ها</label>
+                        <input type="number" id="columns" name="columns" value="{{ feature.columns if feature else '' }}" class="form-input" min="0">
+                    </div>
+                    <div>
+                        <label class="form-label" for="visible_in_schema">نمایش در اسکیما</label>
+                        <div class="pt-2">
+                            <input type="checkbox" id="visible_in_schema" name="visible_in_schema" class="w-5 h-5 rounded border-gray-300 text-emerald-600" {% if feature and feature.visible_in_schema %}checked{% endif %}>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 mt-5">
+                    <div>
+                        <label class="form-label" for="linear_display">نمایش خطی</label>
+                        <input dir="ltr" type="text" id="linear_display" name="linear_display" value="{{ feature.linear_display if feature else '' }}" class="form-input ltr-input">
+                    </div>
+                    <div>
+                        <label class="form-label" for="priority">اولویت</label>
+                        <input type="number" id="priority" name="priority" min="1000" step="10" value="{{ feature.priority if feature else 1500 }}" class="form-input">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- مقادیر ویژگی -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-cubes"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">مقادیر ویژگی</h2>
+                        <p class="text-xs text-gray-500">پارامترهایی که ویژگی فنی می‌پذیرد را انتخاب کنید</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div class="fval-box">
+                        <span class="fval-order">۰</span>
+                        <input type="checkbox" id="d_value" name="d_value" data-order="0" class="fval-cb" {% if feature and feature.d_value %}checked{% endif %}>
+                        <label for="d_value" class="fval-name">DValue</label>
+                        <i class="fa fa-info-circle info-icon" title="مقدار اعشاری می‌گیرد."></i>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۱</span>
+                        <input type="checkbox" id="unit" name="unit" data-order="1" class="fval-cb" {% if feature and feature.unit %}checked{% endif %}>
+                        <label for="unit" class="fval-name">Unit</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۲</span>
+                        <input type="checkbox" id="s_value" name="s_value" data-order="2" class="fval-cb" {% if feature and feature.s_value %}checked{% endif %}>
+                        <label for="s_value" class="fval-name">SValue</label>
+                        <i class="fa fa-info-circle info-icon" title="مقدار رشته‌ای می‌گیرد."></i>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۳</span>
+                        <input type="checkbox" id="e_value" name="e_value" data-order="3" class="fval-cb" {% if feature and feature.e_value %}checked{% endif %}>
+                        <label for="e_value" class="fval-name">EValue</label>
+                        <i class="fa fa-info-circle info-icon" title="با کلیک بر روی این می‌توانید از قسمت پایین انوم‌های مختلف را انتخاب کنید."></i>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۴</span>
+                        <input type="checkbox" id="b_value" name="b_value" data-order="4" class="fval-cb" {% if feature and feature.b_value %}checked{% endif %}>
+                        <label for="b_value" class="fval-name">BValue</label>
+                        <i class="fa fa-info-circle info-icon" title="مقدار درست و غلط می‌گیرد."></i>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۵</span>
+                        <input type="checkbox" id="min_value" name="min_value" data-order="5" class="fval-cb" {% if feature and feature.min_value %}checked{% endif %}>
+                        <label for="min_value" class="fval-name">MinValue</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۶</span>
+                        <input type="checkbox" id="min_unit" name="min_unit" data-order="6" class="fval-cb" {% if feature and feature.min_unit %}checked{% endif %}>
+                        <label for="min_unit" class="fval-name">MinUnit</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۷</span>
+                        <input type="checkbox" id="max_value" name="max_value" data-order="7" class="fval-cb" {% if feature and feature.max_value %}checked{% endif %}>
+                        <label for="max_value" class="fval-name">MaxValue</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۸</span>
+                        <input type="checkbox" id="max_unit" name="max_unit" data-order="8" class="fval-cb" {% if feature and feature.max_unit %}checked{% endif %}>
+                        <label for="max_unit" class="fval-name">MaxUnit</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۹</span>
+                        <input type="checkbox" id="x_value" name="x_value" data-order="9" class="fval-cb" {% if feature and feature.x_value %}checked{% endif %}>
+                        <label for="x_value" class="fval-name">XValue</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۱۰</span>
+                        <input type="checkbox" id="x_unit" name="x_unit" data-order="10" class="fval-cb" {% if feature and feature.x_unit %}checked{% endif %}>
+                        <label for="x_unit" class="fval-name">XUnit</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۱۱</span>
+                        <input type="checkbox" id="y_value" name="y_value" data-order="11" class="fval-cb" {% if feature and feature.y_value %}checked{% endif %}>
+                        <label for="y_value" class="fval-name">YValue</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۱۲</span>
+                        <input type="checkbox" id="y_unit" name="y_unit" data-order="12" class="fval-cb" {% if feature and feature.y_unit %}checked{% endif %}>
+                        <label for="y_unit" class="fval-name">YUnit</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۱۳</span>
+                        <input type="checkbox" id="z_value" name="z_value" data-order="13" class="fval-cb" {% if feature and feature.z_value %}checked{% endif %}>
+                        <label for="z_value" class="fval-name">ZValue</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۱۴</span>
+                        <input type="checkbox" id="z_unit" name="z_unit" data-order="14" class="fval-cb" {% if feature and feature.z_unit %}checked{% endif %}>
+                        <label for="z_unit" class="fval-name">ZUnit</label>
+                    </div>
+                    <div class="fval-box">
+                        <span class="fval-order">۱۵</span>
+                        <input type="checkbox" id="e_value1" name="e_value1" data-order="15" class="fval-cb" {% if feature and feature.e_value1 %}checked{% endif %}>
+                        <label for="e_value1" class="fval-name">EValue1</label>
+                        <i class="fa fa-info-circle info-icon" title="با کلیک بر روی این می‌توانید از قسمت پایین انوم‌های مختلف را انتخاب کنید."></i>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-4 flex items-center gap-1">
+                    <i class="fas fa-info-circle text-gray-300"></i>
+                    با انتخاب هر پارامتر، شماره آن به‌صورت خودکار به «فرمت نمایش» و «نمایش خطی» اضافه می‌شود. سپس می‌توانید ترتیب را ویرایش کنید.
+                </p>
+            </div>
+        </div>
+
+        <!-- مقادیر Enumerable -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" id="featureEnumSection" style="display:none">
+            <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-list"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">مقادیر Enumerable</h2>
+                        <p class="text-xs text-gray-500">مقادیر شمارشی مرتبط با EValue</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div id="featureEnum">
+                        <label class="form-label" for="feature_enum_ids">
+                            مقادیر EValue
+                            <i class="fa fa-info-circle info-icon" title="با نگه داشتن دکمه Ctrl می‌توانید چندین مورد را انتخاب نمایید."></i>
+                        </label>
+                        <select id="feature_enum_ids" name="feature_enum_ids" class="form-input" multiple size="8">
+                            {% for e in enums %}
+                            <option value="{{ e.id }}" {% if feature and e.technical_feature_id == feature.id %}selected{% endif %}>{{ e.persian_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="featureEnum1">
+                        <label class="form-label" for="feature_enum1_ids">
+                            مقادیر EValue1
+                            <i class="fa fa-info-circle info-icon" title="با نگه داشتن دکمه Ctrl می‌توانید چندین مورد را انتخاب نمایید."></i>
+                        </label>
+                        <select id="feature_enum1_ids" name="feature_enum1_ids" class="form-input" multiple size="8">
+                            {% for e in enums %}
+                            <option value="{{ e.id }}" {% if feature and e.technical_feature1_id == feature.id %}selected{% endif %}>{{ e.persian_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-gray-300"></i>
+                    {{ "ویرایش ویژگی فنی" if feature else "ایجاد ویژگی فنی" }}
+                </p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/technical-features" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-times"></i> انصراف
+                    </a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-check"></i> {{ "ذخیره" if feature else "ایجاد" }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+$(document).ready(function () {
+    // auto-append {order} to DisplayFormat & LinearDisplay when a value checkbox is checked
+    $('.fval-cb').on('click', function () {
+        if (this.checked) {
+            var order = $(this).data('order');
+            $('#display_format').val($('#display_format').val() + '{' + order + '} ');
+            $('#linear_display').val($('#linear_display').val() + '{' + order + '} ');
+        }
+    });
+
+    // show/hide enum selects based on EValue / EValue1
+    function toggleEnumSections() {
+        $('#featureEnumSection').toggle($('#e_value').is(':checked') || $('#e_value1').is(':checked'));
+        $('#featureEnum').toggle($('#e_value').is(':checked'));
+        $('#featureEnum1').toggle($('#e_value1').is(':checked'));
+    }
+    $('#e_value').on('click', toggleEnumSections);
+    $('#e_value1').on('click', toggleEnumSections);
+    toggleEnumSections();
+});
+</script>
+{% endblock %}

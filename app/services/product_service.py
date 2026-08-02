@@ -102,10 +102,6 @@ async def update_category(db: AsyncSession, category: Category, request: Categor
 async def delete_category(db: AsyncSession, category: Category) -> None:
     category.is_removed = True
     category.update_date = datetime.now(timezone.utc)
-    # Also soft-delete children
-    for child in category.children:
-        child.is_removed = True
-        child.update_date = datetime.now(timezone.utc)
 
 
 async def get_all_categories_flat(db: AsyncSession) -> list[Category]:
