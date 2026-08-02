@@ -1,0 +1,241 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش دسته‌بندی" if category else "ایجاد دسته‌بندی" }}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-sitemap"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش گروه محصولی" if category else "ایجاد گروه محصولی جدید" }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">مدیریت دسته‌بندی‌های فروشگاه</p>
+                </div>
+            </div>
+            <a href="/administration/categories" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ '/administration/categories/' ~ category.id ~ '/edit' if category else '/administration/categories/new' }}" class="space-y-6" id="category-form">
+        <input type="hidden" name="log" id="Log">
+        <input type="hidden" name="is_disable" value="{{ '1' if category and category.is_disable else '0' }}">
+
+        <!-- اطلاعات اصلی -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <i class="fas fa-folder"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">اطلاعات دسته‌بندی</h2>
+                        <p class="text-xs text-gray-500">مشخصات پایه دسته‌بندی را وارد کنید</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div>
+                        <label class="form-label" for="title">عنوان <span class="text-red-500">*</span></label>
+                        <input type="text" id="title" name="title" value="{{ category.title if category else '' }}" class="form-input" required placeholder="مثال: لوازم دیجیتال">
+                    </div>
+                    <div>
+                        <label class="form-label" for="en_title">عنوان انگلیسی</label>
+                        <input type="text" id="en_title" name="en_title" value="{{ category.en_title if category else '' }}" class="form-input ltr-input" dir="ltr" maxlength="100" placeholder="Digital Devices">
+                    </div>
+                    <div>
+                        <label class="form-label" for="slug">
+                            اسلاگ
+                            <i class="fas fa-info-circle text-blue-400 text-sm cursor-pointer hover:text-blue-600 transition-colors" data-tooltip="لینک کوتاه شده فارسی: مقدار این قسمت پس از وارد کردن &quot;عنوان&quot; به صورت خودکار پر می شود."></i>
+                        </label>
+                        <input type="text" id="slug" name="slug" value="{{ category.slug if category else '' }}" class="form-input ltr-input" dir="ltr" placeholder="digital-devices">
+                    </div>
+                    <div>
+                        <label class="form-label" for="priority">
+                            اولویت
+                            <i class="fas fa-info-circle text-blue-400 text-sm cursor-pointer hover:text-blue-600 transition-colors" data-tooltip="ترتیب نمایش دسته بندی را در صفحه اصلی سایت نشان می دهد. مقدار آن از صفر شروع می شود. هرچه عدد آن کوچک تر باشد زودتر نمایش داده می شود."></i>
+                        </label>
+                        <input type="number" id="priority" name="priority" value="{{ category.priority if category is not none else 0 }}" min="0" class="form-input" placeholder="0">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="form-label" for="parent_category_id">
+                            دسته‌بندی پدر
+                            <i class="fas fa-info-circle text-blue-400 text-sm cursor-pointer hover:text-blue-600 transition-colors" data-tooltip="منظور از دسته بندی پدر اینست که این دسته بندی زیرمجموعه کدام دسته بندی است. برای مثال دسته بندی موبایل زیرمجموعه دسته بندی لوازم دیجیتال است."></i>
+                        </label>
+                        <select id="parent_category_id" name="parent_category_id" class="form-input">
+                            <option value="">— بدون دسته‌بندی پدر —</option>
+                            {% for opt in categories %}
+                            {% if opt.id not in exclude_ids %}
+                            <option value="{{ opt.id }}" {{ 'selected' if category and category.parent_category_id and opt.id == category.parent_category_id|string else '' }} {{ 'selected' if not category and parent_id and opt.id == parent_id else '' }}>
+                                {% for _ in range(opt.depth) %}&nbsp;&nbsp;{% endfor %}{{ opt.title }}
+                            </option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="keywords">کلید واژه‌ها</label>
+                        <input type="text" id="keywords" name="keywords" value="{{ category.keywords if category else '' }}" class="form-input" placeholder="مثال: لوازم دیجیتال, موبایل, لپ تاپ">
+                    </div>
+                    <div>
+                        <label class="form-label" for="place">مکان</label>
+                        <input type="text" id="place" name="place" value="{{ category.place if category else '' }}" class="form-input" placeholder="مثال: صفحه اصلی, فوتر">
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-amber-300 transition-colors" id="no_display_switch_row">
+                        <div class="flex items-center gap-3 pointer-events-none">
+                            <i class="fas fa-eye-slash text-gray-400 text-lg"></i>
+                            <div>
+                                <label class="form-label mb-0 text-gray-700 font-medium">عدم نمایش</label>
+                                <p class="text-xs text-gray-400">با فعال‌سازی این گزینه، دسته‌بندی در سایت نمایش داده نمی‌شود</p>
+                            </div>
+                        </div>
+                        <div class="switch {{ 'active' if category and category.no_display else 'inactive' }}" id="no_display_switch">
+                            <span class="switch-dot"></span>
+                        </div>
+                        <input type="hidden" name="no_display" id="no_display" value="{{ '1' if category and category.no_display else '0' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- توضیحات و سئو -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <i class="fas fa-align-right"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">توضیحات و سئو</h2>
+                        <p class="text-xs text-gray-500">متن توضیحات و تنظیمات سئوی دسته‌بندی</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="form-label" for="description">توضیح</label>
+                    <div class="border border-gray-200 rounded-lg overflow-hidden" id="ckeditor-wrapper">
+                        <textarea id="description" name="description" rows="6" class="form-input border-0 rounded-none focus:ring-0">{{ category.description if category else '' }}</textarea>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                        این بخش دارای ویرایشگر متن پیشرفته است. پس از درج متن، توضیحات متا به صورت خودکار پر می‌شود.
+                    </p>
+                </div>
+                <div>
+                    <label class="form-label" for="meta_description">
+                        توضیحات متا
+                        <i class="fas fa-info-circle text-blue-400 text-sm cursor-pointer hover:text-blue-600 transition-colors" data-tooltip="توضیحات متا: مقدار این قسمت پس از وارد کردن &quot;توضیح&quot; به صورت خودکار پر می شود. این قسمت برای سئو سایت است."></i>
+                    </label>
+                    <textarea id="meta_description" name="meta_description" rows="6" class="form-input" placeholder="توضیحات متا برای موتورهای جستجو..." style="width:100%;min-height:100px;border:1px solid #d1d5db;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#d1d5db'">{{ category.meta_description if category else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-gray-300"></i>
+                    {{ "ویرایش دسته‌بندی" if category else "ایجاد دسته‌بندی جدید" }}
+                </p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/categories" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-times"></i> انصراف
+                    </a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-check"></i> {{ "بروزرسانی" if category else "ایجاد" }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/lib/ckeditor/ckeditor.js"></script>
+<script>
+let ckEditor;
+
+// Mirror .NET: initialize CKEditor classic build on the Description textarea (default config)
+if (typeof ClassicEditor !== 'undefined') {
+    ClassicEditor
+        .create(document.querySelector('#description'))
+        .then(function (instance) {
+            ckEditor = instance;
+            // Fill meta description ONLY on blur (user finishes editing), with plain text, like .NET
+            instance.editing.view.document.on('blur', function () {
+                if ($('#meta_description').val() === '') {
+                    var text = instance.getData()
+                        .replace(/<[^>]*>/g, '')  // strip HTML tags
+                        .replace(/&nbsp;/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    if (text) {
+                        $('#meta_description').val(text);
+                    }
+                }
+            });
+            // Sync editor data to the hidden textarea on submit
+        })
+        .catch(function (error) {
+            console.error(error);
+        });
+}
+
+$(function () {
+    // عدم نمایش switch - make whole row clickable and use jQuery
+    var $switchRow = $('#no_display_switch_row');
+    var $switchDot = $('#no_display_switch');
+    $switchRow.on('click', function () {
+        $switchDot.toggleClass('active inactive');
+        var isActive = $switchDot.hasClass('active');
+        $('#no_display').val(isActive ? '1' : '0');
+    });
+    // Tooltips
+    $('[data-tooltip]').each(function () {
+        var $el = $(this);
+        var text = $el.attr('data-tooltip');
+        $el.attr('title', text);
+    });
+
+    // Auto-fill slug + keywords from title (matches .NET makeSlug + Keywords)
+    $('#title').on('change input', function () {
+        var title = $(this).val();
+        if ($('#slug').val() === '' || $('#slug').data('auto') !== false) {
+            $('#slug').val(convertToSlug(title));
+            $('#slug').data('auto', true);
+        }
+        $('#keywords').val(title);
+    });
+
+    // Build the Log hidden field (matches .NET log collector) on submit
+    $('#category-form').on('submit', function () {
+        if (ckEditor) {
+            $('#description').val(ckEditor.getData());
+        }
+        var log = '';
+        $('#category-form :input').not('[type="submit"], [type="button"], [type="hidden"]').each(function () {
+            var name = $(this).attr('name') || '';
+            var val = $(this).val() || '';
+            if ($(this).is(':checkbox')) { val = this.checked ? '1' : '0'; }
+            log += name + ': ' + val + '; ';
+        });
+        $('#Log').val(log);
+        return true;
+    });
+});
+
+function convertToSlug(str) {
+    return String(str || '').trim()
+        .replace(/[^a-z0-9\u0600-\u06FF\u200c-]/gi, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase();
+}
+</script>
+{% endblock %}

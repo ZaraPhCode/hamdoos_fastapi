@@ -1,0 +1,29 @@
+{% extends "shop/base.html" %}
+{% block title %}علاقه‌مندی‌ها - آشا شاپ{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-6">علاقه‌مندی‌ها</h1>
+{% if favorite_lists %}
+    {% for fav_list in favorite_lists %}
+    <div class="bg-white rounded-lg shadow-sm border p-4 mb-4">
+        <h3 class="font-semibold mb-3">{{ fav_list.name or 'لیست پیش‌فرض' }} ({{ fav_list.count or fav_list.favorite_list_items|length }})</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {% for item in fav_list.favorite_list_items or [] %}
+            <div class="border rounded-lg p-2 text-center">
+                <a href="/products/{{ item.product.slug or item.product.id }}">
+                    <img src="{{ item.product.medium_image_url or '/static/img/placeholder.png' }}" class="w-full h-24 object-contain mb-2">
+                    <p class="text-xs line-clamp-2">{{ item.product.name[:40] }}</p>
+                    <p class="text-indigo-600 font-bold text-xs mt-1">{{ "{:,.0f}".format(item.product.price_after_discount or item.product.price or 0) }} تومان</p>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="text-center py-16 text-gray-400">
+    <i class="fas fa-heart text-5xl mb-4"></i>
+    <p>لیست علاقه‌مندی‌ها خالی است</p>
+    <a href="/products" class="inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-lg mt-4">مشاهده محصولات</a>
+</div>
+{% endif %}
+{% endblock %}

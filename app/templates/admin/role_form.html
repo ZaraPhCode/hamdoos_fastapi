@@ -1,0 +1,61 @@
+?{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش نقش" if role else "نقش جدید" }}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش نقش" if role else "نقش جدید" }}</h1>
+        <a href="/administration/roles" class="btn-secondary flex items-center gap-2">
+            <i class="fas fa-arrow-right"></i> بازگشت
+        </a>
+    </div>
+    <form method="POST" action="{{ '/administration/roles/' ~ role.id ~ '/edit' if role else '/administration/roles/create' }}" class="space-y-6">
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات نقش</h2></div>
+            <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label" for="name">نام نقش</label>
+                    <input type="text" id="name" name="name" value="{{ role.name if role else '' }}" class="form-input" required>
+                </div>
+                <div>
+                    <label class="form-label" for="description">توضیحات</label>
+                    <input type="text" id="description" name="description" value="{{ role.description if role else '' }}" class="form-input">
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-lg font-semibold">دسترسی‌ها</h2>
+                <p class="text-sm text-gray-500 mt-1">مجوزهای این نقش را انتخاب کنید</p>
+            </div>
+            <div class="card-body">
+                {% if permissions %}
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {% for perm in permissions %}
+                    <label class="flex items-start gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="permissions" value="{{ perm.id }}" {{ 'checked' if role and perm.id in role.permission_ids else '' }} class="w-4 h-4 mt-0.5 text-blue-600 rounded border-gray-300">
+                        <div>
+                            <p class="font-medium text-sm">{{ perm.title or perm.name }}</p>
+                            {% if perm.description %}
+                            <p class="text-xs text-gray-500 mt-0.5">{{ perm.description }}</p>
+                            {% endif %}
+                            {% if perm.group_name %}
+                            <p class="text-xs text-blue-500 mt-0.5">{{ perm.group_name }}</p>
+                            {% endif %}
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm">هیچ دسترسی‌ای تعریف نشده است.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex items-center gap-3 justify-end">
+            <a href="/administration/roles" class="btn-secondary">انصراف</a>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-save ml-2"></i> {{ "بروزرسانی" if role else "ایجاد نقش" }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

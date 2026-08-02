@@ -1,0 +1,321 @@
+{% extends "admin/base.html" %}
+{% block title %}جزییات دسته‌بندی{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-sitemap"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">جزییات دسته‌بندی</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ category.title or '—' }}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="/administration/categories/{{ category.id }}/edit" class="btn-warning flex items-center gap-2">
+                    <i class="fas fa-edit"></i> ویرایش
+                </a>
+                <a href="/administration/categories" class="btn-secondary flex items-center gap-2">
+                    <i class="fas fa-arrow-right"></i> بازگشت به لیست
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category info card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold text-gray-800">اطلاعات دسته‌بندی</h2>
+                    <p class="text-xs text-gray-500">مشخصات این دسته‌بندی</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <div class="md:col-span-2 flex items-center gap-5">
+                    {% set img = category.poster_image_url or (category.medias|selectattr('display_photo')|map(attribute='url')|first if category.medias else none) %}
+                    {% if img %}
+                    <img src="{{ img }}" class="w-20 h-20 object-cover rounded-lg border border-gray-200" alt="{{ category.title }}">
+                    {% else %}
+                    <div class="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200 text-2xl">
+                        <i class="fas fa-folder"></i>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="font-semibold text-gray-800 text-lg">{{ category.title or '—' }}</div>
+                        {% if category.en_title %}<div class="text-sm text-gray-500" dir="ltr">{{ category.en_title }}</div>{% endif %}
+                        <div class="flex items-center gap-3 mt-1">
+                            {% if category.no_display %}<span class="badge bg-red-100 text-red-700">عدم نمایش</span>{% endif %}
+                            {% if category.is_disable %}<span class="badge bg-red-100 text-red-700">غیرفعال</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-gray-100 md:col-span-2"></div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">دسته‌بندی پدر</dt>
+                    <dd class="text-sm text-gray-800">
+                        {% if category.parent %}
+                        <a href="/administration/categories/{{ category.parent.id }}/details" class="text-indigo-600 hover:underline">{{ category.parent.title }}</a>
+                        {% else %}
+                        <span class="text-gray-400">—</span>
+                        {% endif %}
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">اولویت</dt>
+                    <dd class="text-sm text-gray-800">{{ category.priority }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">مکان</dt>
+                    <dd class="text-sm text-gray-800">{{ category.place or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-1">اسلاگ</dt>
+                    <dd class="text-sm text-gray-800" dir="ltr">{{ category.slug or '—' }}</dd>
+                </div>
+            </dl>
+            <div class="mt-6 border-t border-gray-100 pt-5 space-y-4">
+                <div>
+                    <dt class="text-xs text-gray-500 mb-2">کلید واژه‌ها</dt>
+                    <dd class="text-sm text-gray-800">{{ category.keywords or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-2">توضیح</dt>
+                    <dd class="text-sm text-gray-700 leading-relaxed">{{ category.description|safe or '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500 mb-2">توضیحات متا</dt>
+                    <dd class="text-sm text-gray-700 leading-relaxed">{{ category.meta_description or '—' }}</dd>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">لیست محصولات</h2>
+                        <p class="text-xs text-gray-500">{{ total_products }} محصول در این دسته‌بندی</p>
+                    </div>
+                </div>
+                <a href="/administration/products/new?category={{ category.id }}" class="btn-success flex items-center gap-1 px-3 py-1.5 text-xs">
+                    <i class="fas fa-plus"></i> ایجاد محصول جدید
+                </a>
+            </div>
+        </div>
+        <div class="p-6">
+            {% if products %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2">نام</th>
+                            <th class="text-right py-3 px-2">شماره قطعه</th>
+                            <th class="text-left py-3 px-2">قیمت</th>
+                            <th class="text-right py-3 px-2">تاریخ ایجاد</th>
+                            <th class="text-center py-3 px-2 w-40">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in products %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500">{{ loop.index }}</td>
+                            <td class="py-3 px-2 font-medium text-gray-800">{{ p.name or '—' }}</td>
+                            <td class="py-3 px-2 text-gray-600" dir="ltr">{{ p.part_number or '—' }}</td>
+                            <td class="py-3 px-2 text-left text-gray-800" dir="ltr">{{ "{:,}".format(p.price|int) if p.price else '—' }}</td>
+                            <td class="py-3 px-2 text-gray-600">{{ p.insert_date.strftime('%Y/%m/%d') if p.insert_date else '—' }}</td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="/administration/products/{{ p.id }}/edit" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs hover:bg-amber-200"><i class="fas fa-edit"></i></a>
+                                    <a href="/administration/products/{{ p.id }}/details" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs hover:bg-blue-200"><i class="fas fa-eye"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-400">
+                <i class="fas fa-box-open text-3xl mb-2"></i>
+                <p class="text-sm">هیچ محصولی در این دسته‌بندی یافت نشد.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Images section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center">
+                        <i class="fas fa-images"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">لیست عکس‌های {{ category.title }}</h2>
+                        <p class="text-xs text-gray-500">{{ medias|length if medias else 0 }} عکس</p>
+                    </div>
+                </div>
+                <a href="/administration/categories/{{ category.id }}/add-picture" class="btn-success flex items-center gap-1 px-3 py-1.5 text-xs">
+                    <i class="fas fa-plus"></i> افزودن عکس
+                </a>
+            </div>
+        </div>
+        <div class="p-6">
+            {% if medias %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2 w-24">عکس</th>
+                            <th class="text-right py-3 px-2">عنوان</th>
+                            <th class="text-right py-3 px-2">توضیح</th>
+                            <th class="text-center py-3 px-2 w-24">عکس اصلی</th>
+                            <th class="text-center py-3 px-2 w-24">عکس پوستر</th>
+                            <th class="text-center py-3 px-2 w-32">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in medias %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500">{{ loop.index }}</td>
+                            <td class="py-3 px-2">
+                                {% if m.url %}
+                                <img src="{{ m.url }}" class="w-14 h-14 object-cover rounded-lg border border-gray-200" alt="{{ m.title or '' }}">
+                                {% else %}
+                                <div class="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i class="fas fa-image"></i></div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-gray-800">{{ m.title or '—' }}</td>
+                            <td class="py-3 px-2 text-gray-600 max-w-xs truncate">{{ m.description or '—' }}</td>
+                            <td class="py-3 px-2 text-center">{% if m.display_photo %}<i class="fas fa-check-circle text-green-500 text-lg"></i>{% else %}<i class="fas fa-times-circle text-gray-300 text-lg"></i>{% endif %}</td>
+                            <td class="py-3 px-2 text-center">{% if m.poster_image %}<i class="fas fa-check-circle text-green-500 text-lg"></i>{% else %}<i class="fas fa-times-circle text-gray-300 text-lg"></i>{% endif %}</td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="/administration/medias/{{ m.id }}/edit" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs hover:bg-amber-200"><i class="fas fa-edit"></i> ویرایش</a>
+                                    <a href="/administration/medias/{{ m.id }}/delete" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-100 text-red-700 text-xs hover:bg-red-200"><i class="fas fa-trash"></i> حذف</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-400">
+                <i class="fas fa-image text-3xl mb-2"></i>
+                <p class="text-sm">هیچ عکسی برای این دسته‌بندی ثبت نشده است.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Subcategories section -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+                        <i class="fas fa-sitemap"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">لیست دسته‌بندی‌ها</h2>
+                        <p class="text-xs text-gray-500">{{ children|length }} زیرمجموعه</p>
+                    </div>
+                </div>
+                <a href="/administration/categories/new?parent={{ category.id }}" class="btn-success flex items-center gap-1 px-3 py-1.5 text-xs">
+                    <i class="fas fa-plus"></i> ایجاد گروه محصولی جدید
+                </a>
+            </div>
+        </div>
+        <div class="p-6">
+            {% if children %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2 w-20">عکس</th>
+                            <th class="text-right py-3 px-2">نام</th>
+                            <th class="text-center py-3 px-2 w-20">اولویت</th>
+                            <th class="text-right py-3 px-2">دسته‌بندی پدر</th>
+                            <th class="text-center py-3 px-2 w-24">مکان</th>
+                            <th class="text-center py-3 px-2 w-48">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for child in children %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500">{{ loop.index }}</td>
+                            <td class="py-3 px-2">
+                                {% set cimg = child.poster_image_url or (child.medias|selectattr('display_photo')|map(attribute='url')|first if child.medias else none) %}
+                                {% if cimg %}
+                                <img src="{{ cimg }}" class="w-14 h-14 object-cover rounded-lg border border-gray-200">
+                                {% else %}
+                                <div class="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i class="fas fa-folder"></i></div>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2">
+                                <a href="/administration/categories/{{ child.id }}/details" class="font-medium text-gray-800 hover:text-indigo-600">{{ child.title or '—' }}</a>
+                                {% if child.en_title %}<div class="text-xs text-gray-400" dir="ltr">{{ child.en_title }}</div>{% endif %}
+                                {% if child.no_display %}<span class="badge bg-gray-100 text-gray-500 mt-1">عدم نمایش</span>{% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-center text-gray-600">{{ child.priority }}</td>
+                            <td class="py-3 px-2 text-gray-600">
+                                {% if child.parent %}
+                                <span class="inline-flex items-center gap-1"><i class="fas fa-level-up-alt text-gray-400 text-xs"></i>{{ child.parent.title }}</span>
+                                {% else %}<span class="text-gray-400">—</span>{% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-center text-gray-600">{{ child.place or '—' }}</td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="/administration/categories/{{ child.id }}/edit" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-100 text-amber-700 text-xs hover:bg-amber-200"><i class="fas fa-edit"></i> ویرایش</a>
+                                    <a href="/administration/categories/{{ child.id }}/details" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs hover:bg-blue-200"><i class="fas fa-eye"></i> جزییات</a>
+                                    <a href="/administration/categories/{{ child.id }}/delete" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-100 text-red-700 text-xs hover:bg-red-200"><i class="fas fa-trash"></i> حذف</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-400">
+                <i class="fas fa-sitemap text-3xl mb-2"></i>
+                <p class="text-sm">هیچ زیرمجموعه‌ای برای این دسته‌بندی ثبت نشده است.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <a href="/administration/logs/{{ category.id }}?user_id={{ current_user.id }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                <i class="fas fa-history"></i> سوابق
+            </a>
+            <a href="/administration/categories" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

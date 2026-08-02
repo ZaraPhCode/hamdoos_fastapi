@@ -1,0 +1,53 @@
+﻿.g-tp__source {
+    padding-left: 0;
+    ul{
+    background: #fff;
+}
+
+li {
+    list-style: none;
+}
+
+button {
+    padding: 5px;
+    margin: 5px;
+    background: #fff;
+    border: 1px solid #000;
+    &:hover
+
+{
+    background: #eee;
+}
+
+&:focus {
+    background: #dff;
+}
+
+}
+}
+
+[aria-hidden="true"] {
+    display: none;
+}
+
+[aria-expanded="false"] {
+    display: none;
+}
+
+[aria-selected="true"] {
+    > .g-tp__value
+
+{
+    background: #dff;
+}
+
+}
+
+mark {
+    font-weight: bold;
+    background-color: #ff0;
+}
+
+.g-rf__target {
+    border: 1px solid;
+}

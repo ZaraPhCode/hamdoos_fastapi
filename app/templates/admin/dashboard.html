@@ -1,0 +1,173 @@
+?{% extends "admin/base.html" %}
+{% block title %}داشبورد مدیریت{% endblock %}
+{% block header %}داشبورد{% endblock %}
+{% block content %}
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-5 border-r-4 border-indigo-500">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-sm">کاربران</p>
+                <p class="text-2xl font-bold mt-1">{{ stats.total_users }}</p>
+                <p class="text-xs text-green-600 mt-1">+{{ stats.new_users_30d }} در ۳۰ روز</p>
+            </div>
+            <i class="fas fa-users text-indigo-400 text-3xl"></i>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5 border-r-4 border-blue-500">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-sm">محصولات</p>
+                <p class="text-2xl font-bold mt-1">{{ stats.total_products }}</p>
+                <p class="text-xs text-red-600 mt-1">{{ stats.out_of_stock }} ناموجود</p>
+            </div>
+            <i class="fas fa-box text-blue-400 text-3xl"></i>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5 border-r-4 border-green-500">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-sm">سفارشات</p>
+                <p class="text-2xl font-bold mt-1">{{ stats.total_orders }}</p>
+                <p class="text-xs text-orange-600 mt-1">{{ stats.pending_orders }} در انتظار</p>
+            </div>
+            <i class="fas fa-shopping-cart text-green-400 text-3xl"></i>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5 border-r-4 border-yellow-500">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-500 text-sm">درآمد</p>
+                <p class="text-2xl font-bold mt-1">{{ "{:,.0f}".format(stats.total_revenue) }}</p>
+                <p class="text-xs text-gray-500 mt-1">تومان</p>
+            </div>
+            <i class="fas fa-money-bill-wave text-yellow-400 text-3xl"></i>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Recent Orders -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-5 py-4 border-b flex justify-between items-center">
+            <h3 class="font-semibold">سفارشات اخیر</h3>
+            <a href="/administration/orders" class="text-sm text-indigo-600 hover:underline">مشاهده همه</a>
+        </div>
+        <div class="p-5">
+            {% if recent_orders %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-500 border-b">
+                        <th class="text-right py-2">کد</th>
+                        <th class="text-right py-2">مشتری</th>
+                        <th class="text-right py-2">وضعیت</th>
+                        <th class="text-left py-2">مبلغ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr class="border-b last:border-0">
+                        <td class="py-2">{{ order.reference_code }}</td>
+                        <td class="py-2">{{ order.first_name }} {{ order.last_name }}</td>
+                        <td class="py-2">
+                            <span class="px-2 py-0.5 rounded text-xs 
+                                {% if order.order_status == 'Ordering' %}bg-yellow-100 text-yellow-800
+                                {% elif order.order_status == 'Paid' %}bg-blue-100 text-blue-800
+                                {% elif order.order_status == 'Posted' %}bg-green-100 text-green-800
+                                {% elif order.order_status == 'Canceled' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ order.order_status }}
+                            </span>
+                        </td>
+                        <td class="py-2 text-left">{{ "{:,.0f}".format(order.payable) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-gray-400 text-center py-4">هیچ سفارشی ثبت نشده است</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Low Stock Products -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-5 py-4 border-b flex justify-between items-center">
+            <h3 class="font-semibold">محصولات با موجودی کم</h3>
+            <a href="/administration/products" class="text-sm text-indigo-600 hover:underline">مشاهده همه</a>
+        </div>
+        <div class="p-5">
+            {% if low_stock_products %}
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-500 border-b">
+                        <th class="text-right py-2">محصول</th>
+                        <th class="text-right py-2">کد</th>
+                        <th class="text-left py-2">موجودی</th>
+                        <th class="text-left py-2">قیمت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in low_stock_products %}
+                    <tr class="border-b last:border-0">
+                        <td class="py-2">{{ p.name[:40] }}{% if p.name|length > 40 %}...{% endif %}</td>
+                        <td class="py-2 text-gray-500">{{ p.part_number or '-' }}</td>
+                        <td class="py-2 text-left">
+                            <span class="{% if p.stock_quantity <= 0 %}text-red-600 font-bold{% else %}text-orange-600{% endif %}">
+                                {{ p.stock_quantity }}
+                            </span>
+                        </td>
+                        <td class="py-2 text-left">{{ "{:,.0f}".format(p.price) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-gray-400 text-center py-4">همه محصولات موجودی کافی دارند</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Order Distribution -->
+<div class="mt-6 bg-white rounded-lg shadow">
+    <div class="px-5 py-4 border-b">
+        <h3 class="font-semibold">توزیع وضعیت سفارشات</h3>
+    </div>
+    <div class="p-5">
+        {% if order_distribution %}
+        <div class="flex flex-wrap gap-3">
+            {% for item in order_distribution %}
+            <div class="px-4 py-2 rounded-lg text-sm
+                {% if item.status == 'Ordering' %}bg-yellow-50 text-yellow-700 border border-yellow-200
+                {% elif item.status == 'Paid' %}bg-blue-50 text-blue-700 border border-blue-200
+                {% elif item.status == 'Posted' %}bg-green-50 text-green-700 border border-green-200
+                {% elif item.status == 'Canceled' %}bg-red-50 text-red-700 border border-red-200
+                {% else %}bg-gray-50 text-gray-700 border border-gray-200{% endif %}">
+                <span class="font-medium">{{ item.status }}</span>
+                <span class="mr-2">{{ item.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white rounded-lg shadow p-5 text-center">
+        <p class="text-gray-500 text-sm">دسته‌بندی‌ها</p>
+        <p class="text-2xl font-bold mt-1">{{ stats.total_categories }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5 text-center">
+        <p class="text-gray-500 text-sm">برندها</p>
+        <p class="text-2xl font-bold mt-1">{{ stats.total_brands }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5 text-center">
+        <p class="text-gray-500 text-sm">نظرات</p>
+        <p class="text-2xl font-bold mt-1">{{ stats.total_comments }}</p>
+        {% if stats.pending_comments > 0 %}
+        <p class="text-xs text-orange-600 mt-1">{{ stats.pending_comments }} تایید نشده</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

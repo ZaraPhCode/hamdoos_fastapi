@@ -1,0 +1,101 @@
+{% extends "shop/base.html" %}
+{% block title %}تسویه حساب - آشا شاپ{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-6">تسویه حساب</h1>
+
+{% if not cart or not cart.items %}
+<div class="text-center py-16 text-gray-400">
+    <i class="fas fa-shopping-cart text-5xl mb-4"></i>
+    <p>سبد خرید شما خالی است</p>
+    <a href="/products" class="inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-lg mt-4">مشاهده محصولات</a>
+</div>
+{% else %}
+<form method="POST" action="/checkout" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Address -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h3 class="font-bold mb-4">آدرس تحویل</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm mb-1">نام</label><input name="first_name" required class="w-full border rounded-lg px-3 py-2"></div>
+                <div><label class="block text-sm mb-1">نام خانوادگی</label><input name="last_name" required class="w-full border rounded-lg px-3 py-2"></div>
+                <div><label class="block text-sm mb-1">شماره تماس</label><input name="phone_number" required class="w-full border rounded-lg px-3 py-2" pattern="09\d{9}"></div>
+                <div><label class="block text-sm mb-1">تلفن ثابت</label><input name="telephone" class="w-full border rounded-lg px-3 py-2"></div>
+                <div class="col-span-2"><label class="block text-sm mb-1">آدرس</label><textarea name="address_description" required class="w-full border rounded-lg px-3 py-2" rows="3"></textarea></div>
+                <div><label class="block text-sm mb-1">کد پستی</label><input name="postal_code" required class="w-full border rounded-lg px-3 py-2"></div>
+                <div><label class="block text-sm mb-1">استان</label><input name="province" class="w-full border rounded-lg px-3 py-2"></div>
+                <div><label class="block text-sm mb-1">شهر</label><input name="city" class="w-full border rounded-lg px-3 py-2"></div>
+            </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h3 class="font-bold mb-4">روش پرداخت</h3>
+            {% for pm in pay_methods %}
+            <label class="flex items-center gap-3 p-3 border rounded-lg mb-2 cursor-pointer hover:bg-gray-50">
+                <input type="radio" name="pay_method_id" value="{{ pm.id }}" {% if loop.first %}checked{% endif %}>
+                <span>{{ pm.name }}</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <!-- Shipping Method -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h3 class="font-bold mb-4">روش ارسال</h3>
+            {% for pt in post_types %}
+            <label class="flex items-center gap-3 p-3 border rounded-lg mb-2 cursor-pointer hover:bg-gray-50">
+                <input type="radio" name="post_type_id" value="{{ pt.id }}" {% if loop.first %}checked{% endif %}>
+                <span>{{ pt.name }}</span>
+                <span class="mr-auto text-indigo-600 font-bold">{{ "{:,.0f}".format(pt.price or 0) }} تومان</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <!-- Discount Code -->
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h3 class="font-bold mb-4">کد تخفیف</h3>
+            <div class="flex gap-2">
+                <input name="discount_code" class="flex-1 border rounded-lg px-3 py-2" placeholder="کد تخفیف را وارد کنید">
+                <button type="button" onclick="applyDiscount()" class="bg-gray-200 px-4 rounded-lg hover:bg-gray-300">اعمال</button>
+            </div>
+            <div id="discount-result" class="mt-2 text-sm"></div>
+        </div>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="bg-white rounded-lg shadow-sm border p-6 h-fit sticky top-24">
+        <h3 class="font-bold mb-4">خلاصه سفارش</h3>
+        <div class="space-y-3 text-sm">
+            {% for item in cart.items %}
+            <div class="flex justify-between">
+                <span class="text-gray-600">{{ item.product_name[:30] }}{% if item.product_name|length > 30 %}...{% endif %} (×{{ item.quantity }})</span>
+                <span>{{ "{:,.0f}".format(item.total_price) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <hr class="my-4">
+        <div class="flex justify-between font-bold"><span>جمع کل</span><span>{{ "{:,.0f}".format(cart.total_price) }} تومان</span></div>
+        <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg mt-4 hover:bg-indigo-700 font-medium">
+            <i class="fas fa-check ml-2"></i>ثبت سفارش
+        </button>
+    </div>
+</form>
+{% endif %}
+
+<script>
+function applyDiscount() {
+    const code = document.querySelector('input[name="discount_code"]').value;
+    fetch('/api/v1/cart/validate-discount', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({code: code})
+    }).then(r => r.json()).then(data => {
+        const div = document.getElementById('discount-result');
+        if (data.is_valid) {
+            div.innerHTML = '<span class="text-green-600">' + data.description + ' - مبلغ تخفیف: ' + data.discount_value.toLocaleString() + ' تومان</span>';
+        } else {
+            div.innerHTML = '<span class="text-red-600">کد تخفیف معتبر نیست</span>';
+        }
+    });
+}
+</script>
+{% endblock %}

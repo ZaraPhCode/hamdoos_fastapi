@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="POST" class="space-y-4">
+            {% for field in fields %}
+            <div>
+                <label class="block text-sm mb-1">{{ field.label }}{% if field.required %} <span class="text-red-500">*</span>{% endif %}</label>
+                {% if field.type == 'textarea' %}
+                <textarea name="{{ field.name }}" rows="3" class="w-full border rounded-lg px-3 py-2" {% if field.required %}required{% endif %}>{{ field.value or '' }}</textarea>
+                {% elif field.type == 'select' %}
+                <select name="{{ field.name }}" class="w-full border rounded-lg px-3 py-2">
+                    <option value="">{% if field.placeholder %}{{ field.placeholder }}{% else %}انتخاب کنید{% endif %}</option>
+                    {% for opt in field.options %}
+                    <option value="{{ opt.value }}" {% if field.value and field.value == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+                    {% endfor %}
+                </select>
+                {% elif field.type == 'checkbox' %}
+                <label class="flex items-center gap-2"><input type="checkbox" name="{{ field.name }}" value="true" {% if field.value %}checked{% endif %} class="w-4 h-4">{{ field.label }}</label>
+                {% else %}
+                <input type="{{ field.type or 'text' }}" name="{{ field.name }}" value="{{ field.value or '' }}" {% if field.required %}required{% endif %} class="w-full border rounded-lg px-3 py-2">
+                {% endif %}
+                {% if field.help %}<p class="text-xs text-gray-400 mt-1">{{ field.help }}</p>{% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 font-medium">ذخیره</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

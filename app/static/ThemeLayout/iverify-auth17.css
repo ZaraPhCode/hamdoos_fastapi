@@ -1,0 +1,450 @@
+#module-iverify-authentication #account-creation_form .account_creation > div {
+    min-height: 50px !important;
+    /* electron */
+    border: unset !important;
+    margin: unset !important;
+}
+
+#module-iverify-authentication #login_form div.form-group {
+    /*padding: 0px 10px !important;*/
+    min-height: 30px !important;
+    /*padding: 12px 10px !important;*/
+}
+
+#module-iverify-authentication #wrapper, #module-iverify-authentication #content {
+    background: unset;
+    box-shadow: unset;
+    padding-top: unset;
+    border: unset;
+}
+
+#module-iverify-authentication #content {
+    margin-top: 10%;
+}
+
+#mobile {
+    direction: ltr;
+    text-align: right !important;
+    height: 50px !important;
+    width: 271px;
+    line-height: 50px;
+    font-size: 16px;
+    -webkit-transition: 0.3s !important;
+    -o-transition: 0.3s;
+    transition: 0.3s;
+    /*border-radius: 10px !important;*/
+    margin: auto;
+}
+
+#login_form label {
+    text-align: center !important;
+}
+
+#login_form #email {
+    margin-top: 15px;
+}
+
+#create-account_form label {
+    text-align: right !important;
+}
+
+.form_info {
+    font-size: 12px;
+}
+
+/***************************************************************/
+#create, #verifyothernum, #login_form {
+    text-align: center;
+}
+
+#verify label {
+    text-align: center !important;
+}
+
+.loginsms {
+    text-align: center;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+    margin-right: 10px;
+    border-top: 1px solid #eee;
+}
+
+.loginsms h4 {
+    margin-bottom: 15px;
+}
+
+.loginsms p {
+    top: -6px;
+}
+
+.verifyterms {
+    text-align: center;
+    max-width: 216px;
+    margin: auto;
+    font-size: 13px;
+    margin-top: 10px !important;
+}
+
+/*--------------------------------------*/
+.justify-center-verif {
+    -webkit-box-pack: center !important;
+    -ms-flex-pack: center !important;
+    justify-content: center !important;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+}
+
+#login_form .verify-loginform, #login_form .form_content h3 {
+    /*direction: ltr;
+    float: right;*/
+
+    /*  electron  */
+    direction: ltr;
+}
+
+#submitpasswd {
+    /*float: left;
+    min-width: 17%;
+    line-height: 23px;
+    font-size: 17px;
+    margin-left: 35px;*/
+
+    /*  electron  */
+    /*min-width: 17%;*/
+    font-size: 17px;
+    margin-top: 18px;
+    width: 40% !important;
+    text-align: center !important;
+    background-color: #d7d7d6;
+}
+
+#SubmitLogin {
+    font-size: 17px;
+    max-width: 271px !important;
+    width: 100% !important;
+    text-align: center !important;
+    line-height: 35px;
+    margin-top: -4px;
+}
+
+#submitAccount {
+    margin-top: 18px;
+    width: 40% !important;
+    text-align: center !important;
+    font-size: 17px;
+}
+
+#SubmitCreate {
+    font-size: 17px;
+    max-width: 271px !important;
+    width: 100% !important;
+    text-align: center !important;
+    line-height: 35px;
+    margin-top: 18px;
+}
+
+#success .btn {
+    margin-right: 10px;
+}
+
+.bckmyaccivrf {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+#submitAccount i {
+    margin-right: 5px;
+}
+
+#account-creation_form #mobile {
+    direction: ltr;
+}
+
+#create, #login, #verify, #createacc {
+    /*margin-top: 10%;*/
+    font-size: 16px !important;
+}
+
+#login_form .page-subheading {
+    border: unset;
+}
+
+#passwd {
+    height: 50px !important;
+    max-width: 271px !important;
+    width: 100% !important;
+    line-height: 50px;
+    font-size: 16px;
+    /*color: #000;*/
+    -webkit-transition: 0.3s !important;
+    -o-transition: 0.3s;
+    transition: 0.3s;
+    margin: 15px auto 0 auto !important;
+    /*border-radius: 10px !important;*/
+}
+
+#account-creation_form #passwd {
+    width: 100% !important;
+}
+
+#phone_mobile {
+    height: 50px !important;
+    width: 100%;
+    line-height: 50px;
+    font-size: 16px;
+    /*color: #000;*/
+    -webkit-transition: 0.3s !important;
+    -o-transition: 0.3s;
+    transition: 0.3s;
+    max-width: 271px;
+    margin: auto;
+    margin-top: 28px !important;
+}
+
+#phone_mobile_other {
+    height: 50px !important;
+    width: 100%;
+    line-height: 50px;
+    font-size: 16px;
+    /*color: #000;*/
+    -webkit-transition: 0.3s !important;
+    -o-transition: 0.3s;
+    transition: 0.3s;
+    /*margin-top: 15px !important;*/
+    /*margin-top: 28px !important;*/
+    color: #a7a7a7 !important;
+    max-width: 271px;
+    margin: auto;
+}
+
+.verifysitelogo {
+    text-align: center;
+    margin: 10% auto 30px auto !important;
+    width: 100%;
+}
+
+#SubmitSMSPassword {
+    /*margin-top: -6px;
+    font-size: 14px;
+    line-height: 23px;*/
+    /*border-radius: 5px;*/
+
+}
+
+#login_form .form_content .submit {
+    /*margin-bottom: 27px;*/
+    margin-bottom: 5px;
+}
+
+/* electron */
+#create-account_form .page-subheading:before, #login_form .page-subheading:before {
+    content: unset !important;
+}
+
+#login_form .form-control, #create-account_form .form-control {
+    text-align: right !important;
+}
+
+#account-creation_form .page-subheading {
+    text-align: center !important;
+}
+
+#account-creation_form .submit {
+    text-align: center !important;
+    margin-bottom: 20px;
+}
+
+#timerofsendcode div {
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.page-subheading {
+    font-size: 18px !important;
+}
+
+#timerofsendcode {
+    font-size: 18px !important;
+    background-color: #dfdfdf;
+    max-width: 271px !important;
+    width: 100% !important;
+    text-align: center !important;
+    line-height: 35px;
+    margin-bottom: 20px;
+}
+
+.resendsms {
+    max-width: 271px !important;
+    width: 100% !important;
+    text-align: center !important;
+    line-height: 35px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #fff !important;
+}
+
+
+#resend {
+    color: #fff !important;
+}
+
+#create-account_form .form-group {
+    margin-bottom: 0 !important;
+}
+
+#phone_mobile::placeholder, #phone_mobile_other::placeholder {
+    color: #a7a7a7 !important;
+}
+
+.verifyterms .checker, .verifyterms label {
+    display: inline;
+}
+
+#number {
+    min-height: 300px;
+    padding: 30px 10px 8px 10px;
+    line-height: 23px;
+}
+
+.myaccountnum, #success {
+    margin-top: 100px;
+}
+
+#create-account_form_other {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    min-height: 380px;
+    margin: unset !important;
+    margin-top: 100px;
+    font-size: 16px !important;
+    /*border: 1px solid rgba(0, 0, 0, 0.1);*/
+    height: 380px;
+    padding: 30px 10px 8px 10px;
+    /*border-radius: 10px !important;*/
+    box-shadow: 0 0 8px #888888 !important;
+    line-height: 23px;
+}
+
+@media (min-width: 767px) {
+    form#create-account_form, form#login_form {
+        /*margin: unset !important;*/
+    }
+}
+
+.mynumberaccount {
+    /*margin-top: 6.3%;*/
+}
+
+#number .delete, #number .verify, #number .phone {
+    margin-left: 2px;
+}
+
+@media (min-width: 768px) {
+    .col-xs-offset-3 {
+        margin-left: inherit;
+        margin-right: 25%;
+    }
+
+    .col-sm-offset-3 {
+        margin-left: inherit;
+        margin-right: 25%;
+    }
+
+    .col-sm-offset-4 {
+        margin-left: inherit;
+        margin-right: 36.333%;
+    }
+
+    .col-sm-offset-5 {
+        margin-left: inherit;
+        margin-right: 44.667%;
+    }
+
+    #number {
+        border-left: 1px solid rgba(0, 0, 0, 0.1);
+    }
+}
+
+@media (max-width: 768px) {
+    .col-xs-offset-3 {
+        margin-left: inherit;
+        /*margin-right: 25%;*/
+    }
+
+    .col-sm-offset-3 {
+        margin-left: inherit;
+        /*margin-right: 25%;*/
+    }
+
+    .col-sm-offset-4 {
+        margin-left: inherit;
+        margin-right: 36.333%;
+    }
+
+    .col-sm-offset-5 {
+        margin-left: inherit;
+        margin-right: 30.667%;
+    }
+
+    #number {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    #create {
+        margin-top: 20px;
+    }
+}
+
+@media (min-width: 992px) {
+    .col-md-offset-4 {
+        margin-left: inherit;
+        margin-right: 33.33333333%;
+    }
+}
+
+#email, #customer_firstname, #customer_lastname {
+
+}
+
+.justify-center-verif form.box {
+    border: 1px solid rgba(0, 0, 5, .1);
+    box-shadow: 0 0 8px #888888 !important;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    padding: 35px 15px 15px 15px;
+    text-align: center !important;
+}
+
+#createacc .form-control {
+    width: 250px;
+    line-height: 40px;
+    font-size: 14px;
+    -webkit-transition: 0.3s !important;
+    -o-transition: 0.3s;
+    transition: 0.3s;
+    /*border-radius: 10px !important;*/
+    height: 40px !important;
+    margin: auto;
+
+}
+#createacc .form-group {
+    padding: 10px 10px !important;
+}
+#createacc h3 {
+    margin: 10px;
+}
+#change_number {
+    color: #3983f1;
+    cursor: pointer;
+    font-size: 75%;
+}
+#hidden-create {
+    display: none;
+}

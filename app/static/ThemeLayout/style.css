@@ -1,0 +1,142 @@
+table.dataTable thead .sorting:after,
+table.dataTable thead .sorting_asc:after,
+table.dataTable thead .sorting_desc:after,
+table.dataTable thead .sorting_asc_disabled:after,
+table.dataTable thead .sorting_desc_disabled:after {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    display: block;
+    font-family: 'FontAwesome';
+    opacity: 0.5;
+}
+table.dataTable thead .sorting:after {
+    opacity: 0.2;
+    content: "\f0dc";
+    /* sort */
+}
+table.dataTable thead .sorting_asc:after {
+    content: "\f0de";
+    color: #0a86bf;
+    /* sort-by-attributes */
+}
+table.dataTable thead .sorting_desc:after {
+    content: "\f0dd";
+    color: #0a86bf;
+    /* sort-by-attributes-alt */
+}
+.upload_area {
+    width: 100%;
+    margin: 0 auto;
+}
+
+.dropzone {
+    min-height: 90px;
+    border: 1px solid #eee;
+    background: #fff;
+    padding: 0 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 3em;
+}
+
+.dropzone .fa-picture-o{
+    color: #9999;
+    font-size: 4rem;
+    margin: 10px auto;
+}
+
+.dz-message{
+    margin-bottom: 10px !important;
+    margin-top: 0 !important;
+    display: grid;
+    justify-content: center;
+}
+.dz-message span{
+    color: #999;
+    font-size: 1.3rem;
+}
+
+#result_alert .fa-check{
+    text-align: center;
+    font-size: 3rem;
+    margin: 2rem;
+    color: #00b33f;
+}
+
+#result_alert .modal-body{
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+#result_alert .fa.fa-remove {
+    text-align: center;
+    font-size: 3rem;
+    margin: 2rem;
+    color: #E08F95;
+}
+#result_alert .fa.fa-remove::before {
+    background-color: #f9ebef;
+    width: 20%;
+    border-radius: 50%;
+    padding: 15px 20px;
+}
+
+#result_alert .fa-check::before {
+    content: "\F00C";
+    background-color: #c6ffda;
+    width: 20%;
+    border-radius: 50%;
+    padding: 15px;
+}
+
+#form_id nav{
+    border: 1px solid #e2e2e2;
+    border-radius: 20px;
+    display: flex;
+    overflow: hidden;
+    margin:  30px 0;
+}
+#form_id nav a{
+    width: 50%;
+    height: 100%;
+    padding: 15px;
+    text-align: center;
+    color: #999;
+}
+#form_id .active {
+    background-color: #c4edff;
+    color: #0082bc !important;
+}
+
+#form_id label{
+    text-align: right;
+}
+
+#form_id .submit_cash_transfer{
+    width: 150px;
+    border-radius: 10px;
+    height: 50px;
+    background-color: #00a693;
+    margin: 0 !important;
+    position: relative;
+    padding: 0 30px;
+}
+
+#form_id .submit_cash_transfer i{
+    background-color: #298665;
+    padding: 0.7em 0.5em 1em 1em;
+    font-size: 1.5rem;
+    border-radius: 0 10px 10px 0;
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 3.1rem;
+    margin: 0;
+}
+#form_id .submit_cash_transfer span{
+    font-size: 1rem;
+    display: block;
+    text-align: left;
+    font-weight: bolder;
+}

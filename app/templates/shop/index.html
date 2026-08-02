@@ -1,0 +1,245 @@
+{% extends "shop/base.html" %}
+{% block title %}فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس{% endblock %}
+{% block body_id %}index{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-index tax-display-enabled st-wrapper{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="1" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">صفحه اصلی</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+        </ol>
+    </div>
+</nav>
+<aside id="notifications">
+    <div class="container"></div>
+</aside>
+<h1 class="d-none">همدوس فروشگاه تخصصی لیزر، اپتیک و فوتونیک</h1>
+
+{% if product_tags_html %}
+{{ product_tags_html|safe }}
+{% endif %}
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div id="left-column" class="sidebar-column col-12 col-md-4 col-lg-3">
+                <div class="column-wrapper md-bottom">
+                    <div class="aone-column">
+                        <div class="column-block md-bottom clearfix no-box">
+                            <div class="static-html typo">
+                                <a href="#" target="_blank"><img loading="lazy" src="/static/ThemeLayout/img/customer-support.jpg" width="750" alt="پشتیبانی"></a>
+                            </div>
+                        </div>
+                        <div class="column-block md-bottom clearfix shown-index">
+                            <div class="static-html typo">
+                                <div class="block_content">
+                                    <div dir="rtl" align="justify">
+                                        <div style="margin-bottom:10px;"><img src="/static/ThemeLayout/img/support.png" style="margin-left:8px;" width="38px"><span style="color:#333;font-size:1.1rem;">شماره‌های تماس</span></div>
+                                        <div>دفتر مرکزی و امور مشتریان: {% if site_settings %}{{ site_settings.telephone }}{% else %}۰۲۱-۸۸۲۱۴۶۴۱{% endif %}</div>
+                                        <div style="font-size:12px;color:#868686;">زمان پاسخگویی: شنبه تا چهارشنبه از ساعت ۹ الی ۱۷، پنجشنبه‌ها از ساعت ۹ الی ۱۴</div>
+                                        <div style="font-size:12px;color:#868686;">پیگیری تمامی موارد مربوط به فروش وبسایت از دفتر مرکزی تهران مقدور می‌باشد.</div>
+                                        <div style="margin-top:5px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="bottomVisible"></div>
+                </div>
+            </div>
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <div class="aone-homepage home-blocks-middle">
+                        {% if top_category_poster %}
+                        <div class="block block_id_14 clearfix md-bottom">
+                            <div class="static-html typo">
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="banner2" style="margin-bottom:0;">
+                                            <a href="/category/{{ top_category_poster.en_title or top_category_poster.slug }}">
+                                                <picture>
+                                                    <img loading="lazy" src="{{ top_category_poster.poster_image_url or top_category_poster.PosterImageURL }}" alt="{{ top_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                </picture>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                        {% endif %}
+
+                        <div class="block block_id_10 clearfix box-bg md-bottom">
+                            <div class="title-block d-flex flex-wrap">
+                                <span>محصولات جدید</span>
+                                <a href="/search?tag=new" style="margin-right:10px;">
+                                    <span class="view-all-link">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></span>
+                                </a>
+                            </div>
+                            {% if new_products %}
+                            <div class="product-list">
+                                <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
+                                     id="aSlick10"
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                    {% for product in new_products %}
+                                    {% include "shop/_product_card.html" %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if middle_category_poster %}
+                        <div class="block block_id_16 clearfix mb-4 md-bottom">
+                            <div class="static-html typo">
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="banner2">
+                                            <a href="/category/{{ middle_category_poster.en_title or middle_category_poster.slug }}">
+                                                <picture>
+                                                    <img loading="lazy" src="{{ middle_category_poster.poster_image_url or middle_category_poster.PosterImageURL }}" alt="{{ middle_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                </picture>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                        {% endif %}
+
+                        {% if top_category_products %}
+                        <div class="block block_id_1 clearfix box-bg md-bottom">
+                            <div class="title-block d-flex flex-wrap">
+                                <span>{{ top_category_title or 'محصولات' }}</span>
+                                <a href="/category/{{ top_category.en_title or top_category.slug }}" style="margin-right:10px;">
+                                    <span class="view-all-link">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></span>
+                                </a>
+                            </div>
+                            <div class="product-list">
+                                <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
+                                     id="aSlick1"
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:false,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                    {% for product in top_category_products %}
+                                    {% include "shop/_product_card.html" %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if mid_right_poster or mid_left_poster %}
+                        <div class="block block_id_7 clearfix mb-4 md-bottom">
+                            <div class="static-html typo">
+                                <div class="row">
+                                    {% if mid_right_poster %}
+                                    <div class="col-12 col-lg-6">
+                                        <div class="banner2">
+                                            <a href="/category/{{ mid_right_poster.en_title or mid_right_poster.slug }}">
+                                                <img loading="lazy" src="{{ mid_right_poster.poster_image_url or mid_right_poster.PosterImageURL }}" alt="{{ mid_right_poster.en_title or '' }}" width="840" height="350">
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if mid_left_poster %}
+                                    <div class="col-12 col-lg-6">
+                                        <div class="banner2">
+                                            <a href="/category/{{ mid_left_poster.en_title or mid_left_poster.slug }}">
+                                                <img loading="lazy" src="{{ mid_left_poster.poster_image_url or mid_left_poster.PosterImageURL }}" alt="{{ mid_left_poster.en_title or '' }}" width="840" height="350">
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                        {% endif %}
+
+                        {% if middle_category_products %}
+                        <div class="block block_id_13 clearfix box-bg md-bottom">
+                            <div class="title-block d-flex flex-wrap">
+                                <span>{{ middle_category_title or 'محصولات' }}</span>
+                                <a href="/category/{{ middle_category.en_title or middle_category.slug }}" style="margin-right:10px;">
+                                    <span class="view-all-link">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></span>
+                                </a>
+                            </div>
+                            <div class="product-list">
+                                <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
+                                     id="aSlick13"
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                    {% for product in middle_category_products %}
+                                    {% include "shop/_product_card.html" %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if bottom_category_poster %}
+                        <div class="block block_id_7 clearfix mb-4 md-bottom">
+                            <div class="static-html typo">
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="banner2">
+                                            <a href="/category/{{ bottom_category_poster.en_title or bottom_category_poster.slug }}">
+                                                <picture>
+                                                    <img loading="lazy" src="{{ bottom_category_poster.poster_image_url or bottom_category_poster.PosterImageURL }}" alt="{{ bottom_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                </picture>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                        {% endif %}
+
+                        {% if suggested_products %}
+                        <div class="block block_id_8 clearfix box-bg md-bottom">
+                            <div class="title-block d-flex flex-wrap">
+                                <span>محصولات پیشنهادی</span>
+                            </div>
+                            <div class="product-list">
+                                <div class="product-list-wrapper clearfix grid columns-5">
+                                    {% for product in suggested_products %}
+                                    {% include "shop/_product_card.html" %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if bottom_category_products %}
+                        <div class="block block_id_13 clearfix box-bg md-bottom">
+                            <div class="title-block d-flex flex-wrap">
+                                <span>{{ bottom_category_title or 'محصولات' }}</span>
+                                <a href="/category/{{ bottom_category.en_title or bottom_category.slug }}" style="margin-right:10px;">
+                                    <span class="view-all-link">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></span>
+                                </a>
+                            </div>
+                            <div class="product-list">
+                                <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
+                                     id="aSlick13"
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                    {% for product in bottom_category_products %}
+                                    {% include "shop/_product_card.html" %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="outside-container bottom-column-content"></div>
+{% endblock %}

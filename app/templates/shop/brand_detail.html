@@ -1,0 +1,25 @@
+{% extends "shop/base.html" %}
+{% block title %}{{ brand.name }} - آشا شاپ{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-6">محصولات {{ brand.name }}</h1>
+<div id="brand-products" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <!-- Products loaded via API -->
+</div>
+<script>
+fetch('/api/v1/products?brand_id={{ brand.id }}&page_size=50').then(r=>r.json()).then(data=>{
+    const container = document.getElementById('brand-products');
+    if(data.items && data.items.length){
+        data.items.forEach(p => {
+            container.innerHTML += `<div class="bg-white rounded-lg shadow-sm border p-3">
+                <a href="/products/${p.slug||p.id}">
+                    <img src="${p.medium_image_url||'/static/img/placeholder.png'}" class="w-full h-32 object-contain mb-2">
+                    <p class="text-sm line-clamp-2">${p.name}</p>
+                    <p class="text-indigo-600 font-bold mt-1">${(p.price_after_discount||p.price||0).toLocaleString()} <span class="text-xs">تومان</span></p>
+                </a></div>`;
+        });
+    } else {
+        container.innerHTML = '<div class="col-span-full text-center py-16 text-gray-400"><p>محصولی یافت نشد</p></div>';
+    }
+});
+</script>
+{% endblock %}

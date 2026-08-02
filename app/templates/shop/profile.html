@@ -1,0 +1,44 @@
+{% extends "shop/base.html" %}
+{% block title %}پروفایل - آشا شاپ{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <!-- Sidebar -->
+    <div class="bg-white rounded-lg shadow-sm border p-4">
+        <div class="text-center mb-4">
+            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <i class="fas fa-user text-indigo-600 text-2xl"></i>
+            </div>
+            <p class="font-bold">{{ current_user.full_name or current_user.user_name }}</p>
+            <p class="text-xs text-gray-500">{{ current_user.phone_number }}</p>
+        </div>
+        <nav class="space-y-1">
+            <a href="/profile" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700"><i class="fas fa-user w-5"></i>پروفایل</a>
+            <a href="/orders" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-shopping-bag w-5"></i>سفارشات</a>
+            <a href="/profile/addresses" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-map-marker-alt w-5"></i>آدرس‌ها</a>
+            <a href="/profile/favorites" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-heart w-5"></i>علاقه‌مندی‌ها</a>
+            <a href="/profile/bank-info" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-credit-card w-5"></i>اطلاعات بانکی</a>
+            <a href="/wallet" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-wallet w-5"></i>کیف پول</a>
+            <a href="/tickets" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-ticket-alt w-5"></i>تیکت‌ها</a>
+            <a href="/auth/change-password" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-key w-5"></i>تغییر رمز عبور</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="md:col-span-3">
+        {% block profile_content %}
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-bold mb-4">اطلاعات حساب</h2>
+            <form method="POST" action="/profile/update" class="grid grid-cols-2 gap-4">
+                <div><label class="block text-sm mb-1">نام</label><input name="first_name" value="{{ current_user.first_name or '' }}" class="w-full border rounded-lg px-3 py-2"></div>
+                <div><label class="block text-sm mb-1">نام خانوادگی</label><input name="last_name" value="{{ current_user.last_name or '' }}" class="w-full border rounded-lg px-3 py-2"></div>
+                <div><label class="block text-sm mb-1">ایمیل</label><input name="email" type="email" value="{{ current_user.email or '' }}" class="w-full border rounded-lg px-3 py-2"></div>
+                <div><label class="block text-sm mb-1">شماره تماس</label><input value="{{ current_user.phone_number or '' }}" disabled class="w-full border rounded-lg px-3 py-2 bg-gray-50"></div>
+                <div class="col-span-2">
+                    <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">ذخیره تغییرات</button>
+                </div>
+            </form>
+        </div>
+        {% endblock %}
+    </div>
+</div>
+{% endblock %}

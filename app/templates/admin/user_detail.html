@@ -1,0 +1,92 @@
+?{% extends "admin/base.html" %}
+{% block title %}جزئیات کاربر {{ user.name or user.username }}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">جزئیات کاربر</h1>
+        <a href="/administration/users" class="btn-secondary flex items-center gap-2">
+            <i class="fas fa-arrow-right"></i> بازگشت
+        </a>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="card lg:col-span-2">
+            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات کاربر</h2></div>
+            <div class="card-body grid grid-cols-2 gap-4">
+                <div><span class="text-gray-500 text-sm">نام کاربری:</span><p class="font-medium">{{ user.username }}</p></div>
+                <div><span class="text-gray-500 text-sm">نام:</span><p class="font-medium">{{ user.name or '---' }}</p></div>
+                <div><span class="text-gray-500 text-sm">نام خانوادگی:</span><p class="font-medium">{{ user.family or '---' }}</p></div>
+                <div><span class="text-gray-500 text-sm">موبایل:</span><p class="font-medium" dir="ltr">{{ user.mobile or '---' }}</p></div>
+                <div><span class="text-gray-500 text-sm">ایمیل:</span><p class="font-medium" dir="ltr">{{ user.email or '---' }}</p></div>
+                <div><span class="text-gray-500 text-sm">تاریخ ثبت‌نام:</span><p class="font-medium">{{ user.insert_date }}</p></div>
+                <div><span class="text-gray-500 text-sm">وضعیت:</span>
+                    <p>{% if user.is_active %}<span class="badge bg-emerald-100 text-emerald-800">فعال</span>{% else %}<span class="badge bg-red-100 text-red-800">غیرفعال</span>{% endif %}</p>
+                </div>
+                <div><span class="text-gray-500 text-sm">تأیید موبایل:</span>
+                    <p>{% if user.mobile_confirmed %}<span class="badge bg-emerald-100 text-emerald-800">تأیید شده</span>{% else %}<span class="badge bg-gray-100 text-gray-800">تأیید نشده</span>{% endif %}</p>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">عملیات</h2></div>
+            <div class="card-body space-y-3">
+                <form method="POST" action="/administration/users/{{ user.id }}/toggle-active">
+                    {% if user.is_active %}
+                    <button type="submit" class="btn-danger w-full"><i class="fas fa-ban ml-2"></i> غیرفعال کردن</button>
+                    {% else %}
+                    <button type="submit" class="btn-success w-full"><i class="fas fa-check ml-2"></i> فعال کردن</button>
+                    {% endif %}
+                </form>
+                <form method="POST" action="/administration/users/{{ user.id }}/reset-password" onsubmit="return confirm('آیا از بازنشانی رمز عبور اطمینان دارید؟')">
+                    <button type="submit" class="btn-warning w-full"><i class="fas fa-key ml-2"></i> بازنشانی رمز</button>
+                </form>
+                <form method="POST" action="/administration/users/{{ user.id }}/delete" onsubmit="return confirm('آیا از حذف این کاربر اطمینان دارید؟')">
+                    <button type="submit" class="btn-danger w-full"><i class="fas fa-trash ml-2"></i> حذف کاربر</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="card mt-6">
+        <div class="card-header"><h2 class="text-lg font-semibold">مدیریت نقش‌ها</h2></div>
+        <div class="card-body">
+            <form method="POST" action="/administration/users/{{ user.id }}/roles" class="space-y-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {% for role in roles %}
+                    <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="role_ids" value="{{ role.id }}" {{ 'checked' if role.id in user.role_ids else '' }} class="w-4 h-4 text-blue-600 rounded border-gray-300">
+                        <div>
+                            <p class="font-medium text-sm">{{ role.name }}</p>
+                            {% if role.description %}<p class="text-xs text-gray-500">{{ role.description }}</p>{% endif %}
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="btn-primary"><i class="fas fa-save ml-2"></i> ذخیره نقش‌ها</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% if user.orders %}
+    <div class="card mt-6">
+        <div class="card-header"><h2 class="text-lg font-semibold">آخرین سفارشات</h2></div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr><th class="table-header">#</th><th class="table-header">تاریخ</th><th class="table-header">مبلغ</th><th class="table-header">وضعیت</th></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for o in user.orders[:10] %}
+                    <tr class="table-row-hover">
+                        <td class="table-cell"><a href="/administration/orders/{{ o.id }}" class="text-blue-600 hover:underline">{{ o.reference_code or o.id }}</a></td>
+                        <td class="table-cell">{{ o.insert_date }}</td>
+                        <td class="table-cell">{{ "{:,}".format(o.total_price) }} تومان</td>
+                        <td class="table-cell"><span class="badge bg-gray-100 text-gray-800">{{ o.status_name or o.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

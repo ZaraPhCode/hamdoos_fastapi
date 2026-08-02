@@ -1,0 +1,26 @@
+?{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش برند" if brand else "برند جدید" }}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش برند" if brand else "برند جدید" }}</h1>
+        <a href="/administration/brands" class="btn-secondary flex items-center gap-2">
+            <i class="fas fa-arrow-right"></i> بازگشت
+        </a>
+    </div>
+    <form method="POST" action="{{ '/administration/brands/' ~ brand.id ~ '/edit' if brand else '/administration/brands/create' }}" class="card">
+        <div class="card-body space-y-4">
+            <div>
+                <label class="form-label" for="name">نام برند</label>
+                <input type="text" id="name" name="name" value="{{ brand.name if brand else '' }}" class="form-input" required>
+            </div>
+            <div class="flex items-center gap-3 justify-end pt-2">
+                <a href="/administration/brands" class="btn-secondary">انصراف</a>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save ml-2"></i> {{ "بروزرسانی" if brand else "ایجاد" }}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

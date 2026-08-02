@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head><meta charset="UTF-8"><title>پرداخت تأیید شد - آشا شاپ</title></head>
+<body style="font-family:Tahoma,Arial,sans-serif;background:#f4f4f4;padding:20px;">
+    <div style="max-width:600px;margin:auto;background:white;border-radius:8px;overflow:hidden;">
+        <div style="background:#059669;padding:20px;text-align:center;">
+            <h1 style="color:white;margin:0;font-size:20px;">پرداخت با موفقیت انجام شد</h1>
+        </div>
+        <div style="padding:30px;">
+            <p>کاربر گرامی {{ full_name }}، پرداخت سفارش شما تأیید شد.</p>
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+                <tr><td style="padding:8px;border:1px solid #ddd;">شماره سفارش</td><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">{{ reference_code }}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;">مبلغ</td><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">{{ "{:,.0f}".format(amount) }} تومان</td></tr>
+                <tr><td style="padding:8px;border:1px solid #ddd;">کد پیگیری پرداخت</td><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">{{ ref_id }}</td></tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

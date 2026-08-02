@@ -1,0 +1,42 @@
+?{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش تأمین‌کننده" if supplier else "تأمین‌کننده جدید" }}{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش تأمین‌کننده" if supplier else "تأمین‌کننده جدید" }}</h1>
+        <a href="/administration/suppliers" class="btn-secondary flex items-center gap-2">
+            <i class="fas fa-arrow-right"></i> بازگشت
+        </a>
+    </div>
+    <form method="POST" action="{{ '/administration/suppliers/' ~ supplier.id ~ '/edit' if supplier else '/administration/suppliers/create' }}" class="card">
+        <div class="card-body space-y-4">
+            <div>
+                <label class="form-label" for="name">نام تأمین‌کننده</label>
+                <input type="text" id="name" name="name" value="{{ supplier.name if supplier else '' }}" class="form-input" required>
+            </div>
+            <div>
+                <label class="form-label" for="telephone">تلفن</label>
+                <input type="text" id="telephone" name="telephone" value="{{ supplier.telephone if supplier else '' }}" class="form-input" dir="ltr">
+            </div>
+            <div>
+                <label class="form-label" for="address">آدرس</label>
+                <textarea id="address" name="address" rows="3" class="form-input">{{ supplier.address if supplier else '' }}</textarea>
+            </div>
+            <div>
+                <label class="form-label" for="site">وب‌سایت</label>
+                <input type="text" id="site" name="site" value="{{ supplier.site if supplier else '' }}" class="form-input" dir="ltr" placeholder="https://">
+            </div>
+            <div>
+                <label class="form-label" for="intermediary_name">نام واسط / نماینده</label>
+                <input type="text" id="intermediary_name" name="intermediary_name" value="{{ supplier.intermediary_name if supplier else '' }}" class="form-input">
+            </div>
+            <div class="flex items-center gap-3 justify-end pt-2">
+                <a href="/administration/suppliers" class="btn-secondary">انصراف</a>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save ml-2"></i> {{ "بروزرسانی" if supplier else "ایجاد" }}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

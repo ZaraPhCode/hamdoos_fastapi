@@ -1,0 +1,28 @@
+{% extends "shop/base.html" %}
+{% block title %}جزئیات تیکت - آشا شاپ{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-xl font-bold">تیکت #{{ ticket.id[:8] }}</h1>
+        <span class="px-3 py-1 rounded text-sm {% if ticket.status == 'Open' %}bg-blue-100 text-blue-700{% elif ticket.status == 'Closed' %}bg-gray-100 text-gray-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">{{ ticket.status }}</span>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-4 mb-4">
+        <p class="font-medium">{{ ticket.subject or 'بدون موضوع' }}</p>
+        <p class="text-sm text-gray-600 mt-2">{{ ticket.description }}</p>
+        <p class="text-xs text-gray-400 mt-2">{{ ticket.insert_date }}</p>
+    </div>
+    {% for msg in ticket.messages %}
+    <div class="bg-white rounded-lg shadow-sm border p-4 mb-2 {% if msg.user_id and msg.user_id != current_user.id %}mr-8 border-indigo-200{% else %}ml-8{% endif %}">
+        <p class="text-sm">{{ msg.message }}</p>
+        <p class="text-xs text-gray-400 mt-1">{{ msg.insert_date }}</p>
+    </div>
+    {% endfor %}
+    {% if ticket.status != 'Closed' %}
+    <form method="POST" action="/tickets/{{ ticket.id }}/reply" class="bg-white rounded-lg shadow-sm border p-4 mt-4">
+        <textarea name="message" rows="3" class="w-full border rounded-lg px-3 py-2 mb-3" placeholder="پاسخ شما..."></textarea>
+        <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-indigo-700">ارسال پاسخ</button>
+        <button type="submit" formaction="/tickets/{{ ticket.id }}/close" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm mr-2 hover:bg-gray-300">بستن تیکت</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

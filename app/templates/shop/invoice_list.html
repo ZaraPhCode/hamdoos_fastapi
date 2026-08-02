@@ -1,0 +1,28 @@
+{% extends "shop/base.html" %}
+{% block title %}فاکتورهای من - آشا شاپ{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-6">فاکتورهای من</h1>
+{% if invoices %}
+<div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50"><tr>
+            <th class="text-right px-4 py-3">شماره</th><th class="text-right px-4 py-3">تاریخ</th>
+            <th class="text-right px-4 py-3">نوع</th><th class="text-left px-4 py-3">مبلغ</th>
+            <th class="text-center px-4 py-3">وضعیت</th><th class="text-center px-4 py-3">عملیات</th>
+        </tr></thead>
+        <tbody>{% for inv in invoices %}
+            <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3">{{ inv.reference_code or inv.id[:8] }}</td>
+                <td class="px-4 py-3 text-gray-500">{{ inv.date[:10] if inv.date else inv.insert_date[:10] if inv.insert_date else '-' }}</td>
+                <td class="px-4 py-3">{{ inv.type }}</td>
+                <td class="px-4 py-3 text-left font-bold">{{ "{:,.0f}".format(inv.payable or 0) }}</td>
+                <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded text-xs {% if inv.status == 'Bought' %}bg-green-100 text-green-700{% elif inv.status == 'Canceled' %}bg-red-100 text-red-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">{{ inv.status }}</span></td>
+                <td class="px-4 py-3 text-center"><a href="/export/invoice/{{ inv.id }}/pdf" class="text-indigo-600 hover:underline"><i class="fas fa-file-pdf"></i></a></td>
+            </tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-16 text-gray-400"><i class="fas fa-file-invoice text-5xl mb-4"></i><p>فاکتوری یافت نشد</p></div>
+{% endif %}
+{% endblock %}

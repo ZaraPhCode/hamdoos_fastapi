@@ -1,0 +1,16 @@
+{% extends "shop/base.html" %}
+{% block title %}برندها - آشا شاپ{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-6">برندها</h1>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    {% for brand in brands %}
+    <a href="/brands/{{ brand.id }}" class="bg-white rounded-lg shadow-sm border p-6 text-center hover:shadow-md transition">
+        <i class="fas fa-tag text-indigo-500 text-3xl mb-2"></i>
+        <h3 class="font-medium">{{ brand.name }}</h3>
+        <p class="text-xs text-gray-500 mt-1">{{ brand.count }} محصول</p>
+    </a>
+    {% else %}
+    <div class="col-span-full text-center py-16 text-gray-400"><p>برندی یافت نشد</p></div>
+    {% endfor %}
+</div>
+{% endblock %}

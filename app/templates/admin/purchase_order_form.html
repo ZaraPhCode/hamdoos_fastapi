@@ -1,0 +1,106 @@
+?{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش سفارش خرید" if purchase_order else "سفارش خرید جدید" }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش سفارش خرید" if purchase_order else "سفارش خرید جدید" }}</h1>
+        <a href="/administration/purchase-orders" class="btn-secondary flex items-center gap-2">
+            <i class="fas fa-arrow-right"></i> بازگشت
+        </a>
+    </div>
+    <form method="POST" action="{{ '/administration/purchase-orders/' ~ purchase_order.id ~ '/edit' if purchase_order else '/administration/purchase-orders/create' }}" class="space-y-6">
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات سفارش خرید</h2></div>
+            <div class="card-body grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="form-label" for="supplier_id">تأمین‌کننده</label>
+                    <select id="supplier_id" name="supplier_id" class="form-input" required>
+                        <option value="">انتخاب کنید</option>
+                        {% for sup in suppliers %}
+                        <option value="{{ sup.id }}" {{ 'selected' if purchase_order and purchase_order.supplier_id == sup.id else '' }}>{{ sup.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="currency_id">ارز</label>
+                    <select id="currency_id" name="currency_id" class="form-input">
+                        <option value="">ریال / تومان</option>
+                        {% for cur in currencies %}
+                        <option value="{{ cur.id }}" {{ 'selected' if purchase_order and purchase_order.currency_id == cur.id else '' }}>{{ cur.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="shipping_cost">هزینه حمل و نقل</label>
+                    <input type="number" id="shipping_cost" name="shipping_cost" value="{{ purchase_order.shipping_cost if purchase_order else '0' }}" class="form-input" min="0">
+                </div>
+                <div>
+                    <label class="form-label" for="status">وضعیت</label>
+                    <select id="status" name="status" class="form-input">
+                        <option value="pending" {{ 'selected' if purchase_order and purchase_order.status == 'pending' else '' }}>در انتظار</option>
+                        <option value="approved" {{ 'selected' if purchase_order and purchase_order.status == 'approved' else '' }}>تأیید شده</option>
+                        <option value="shipped" {{ 'selected' if purchase_order and purchase_order.status == 'shipped' else '' }}>ارسال شده</option>
+                        <option value="received" {{ 'selected' if purchase_order and purchase_order.status == 'received' else '' }}>دریافت شده</option>
+                        <option value="canceled" {{ 'selected' if purchase_order and purchase_order.status == 'canceled' else '' }}>لغو شده</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header flex items-center justify-between">
+                <h2 class="text-lg font-semibold">محصولات</h2>
+                <button type="button" onclick="addProductRow()" class="btn-secondary text-xs px-3 py-1">
+                    <i class="fas fa-plus ml-1"></i> افزودن محصول
+                </button>
+            </div>
+            <div class="card-body" id="products-container">
+                {% if purchase_order and purchase_order.products %}
+                {% for item in purchase_order.products %}
+                <div class="product-row grid grid-cols-1 md:grid-cols-5 gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+                    <select name="product_ids[]" class="form-input">
+                        <option value="">انتخاب محصول</option>
+                        {% for p in products %}
+                        <option value="{{ p.id }}" {{ 'selected' if item.product_id == p.id else '' }}>{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="quantities[]" value="{{ item.quantity }}" class="form-input" placeholder="تعداد" min="1">
+                    <input type="number" name="unit_prices[]" value="{{ item.unit_price }}" class="form-input" placeholder="قیمت واحد" min="0">
+                    <input type="number" name="discounts[]" value="{{ item.discount or 0 }}" class="form-input" placeholder="تخفیف" min="0">
+                    <button type="button" onclick="this.closest('.product-row').remove()" class="text-red-500 hover:text-red-700 self-center"><i class="fas fa-trash"></i></button>
+                </div>
+                {% endfor %}
+                {% endif %}
+                <div class="product-row grid grid-cols-1 md:grid-cols-5 gap-3 mb-3 p-3 bg-gray-50 rounded-lg">
+                    <select name="product_ids[]" class="form-input"><option value="">انتخاب محصول</option>{% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
+                    <input type="number" name="quantities[]" class="form-input" placeholder="تعداد" min="1">
+                    <input type="number" name="unit_prices[]" class="form-input" placeholder="قیمت واحد" min="0">
+                    <input type="number" name="discounts[]" class="form-input" placeholder="تخفیف" min="0">
+                    <button type="button" onclick="this.closest('.product-row').remove()" class="text-red-500 hover:text-red-700 self-center"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 justify-end">
+            <a href="/administration/purchase-orders" class="btn-secondary">انصراف</a>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-save ml-2"></i> {{ "بروزرسانی" if purchase_order else "ایجاد سفارش خرید" }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function addProductRow() {
+    var container = document.getElementById('products-container');
+    var row = document.createElement('div');
+    row.className = 'product-row grid grid-cols-1 md:grid-cols-5 gap-3 mb-3 p-3 bg-gray-50 rounded-lg';
+    var selectHtml = '<select name="product_ids[]" class="form-input"><option value="">انتخاب محصول</option>';
+    {% for p in products %}
+    selectHtml += '<option value="{{ p.id }}">{{ p.name }}</option>';
+    {% endfor %}
+    selectHtml += '</select>';
+    row.innerHTML = selectHtml + '<input type="number" name="quantities[]" class="form-input" placeholder="تعداد" min="1"><input type="number" name="unit_prices[]" class="form-input" placeholder="قیمت واحد" min="0"><input type="number" name="discounts[]" class="form-input" placeholder="تخفیف" min="0"><button type="button" onclick="this.closest(\'.product-row\').remove()" class="text-red-500 hover:text-red-700 self-center"><i class="fas fa-trash"></i></button>';
+    container.appendChild(row);
+}
+</script>
+{% endblock %}

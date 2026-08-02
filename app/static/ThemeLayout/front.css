@@ -1,0 +1,14 @@
+/**
+ * 2022 liewebs - Prestashop module developers and website designers.
+ *
+ * NOTICE OF LICENSE
+ *  @author liewebs <info@liewebs.com>
+ *  @copyright 2022 www.liewebs.com - liewebs
+ *  @version 6.x.x
+ * 	@module SuperTinyMCE PRO
+ */
+ 
+ /* Link modal */
+ #supertiny_link_modal .modal-footer {
+    text-align: center;
+}

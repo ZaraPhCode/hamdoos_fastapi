@@ -1,0 +1,284 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'ویرایش محصول' if product else 'ایجاد محصول' }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ 'ویرایش محصول' if product else 'ایجاد محصول' }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">محصولات</p>
+                </div>
+            </div>
+            <a href="/administration/products" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ '/administration/products/' + product.id|string + '/edit' if product else '/administration/products/new' }}" class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="product-form">
+        <input type="hidden" name="log" id="Log">
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Basic info -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fas fa-info"></i></div>
+                        <div><h2 class="font-semibold text-gray-800">اطلاعات پایه</h2><p class="text-xs text-gray-500">مشخصات اصلی محصول</p></div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                        <div class="md:col-span-2"><label class="form-label" for="name">نام محصول <span class="text-red-500">*</span></label><input type="text" id="name" name="name" value="{{ product.name if product else '' }}" class="form-input" required placeholder="مثال: لیزر ۴۵۰ نانومتر ۱.۶ وات"></div>
+                        <div><label class="form-label" for="en_name">نام انگلیسی</label><input type="text" id="en_name" name="en_name" value="{{ product.en_name if product else '' }}" class="form-input ltr-input" dir="ltr" placeholder="Laser 450nm 1.6W"></div>
+                        <div><label class="form-label" for="part_number">شماره قطعه</label><input type="text" id="part_number" name="part_number" value="{{ product.part_number if product else '' }}" class="form-input ltr-input" dir="ltr" placeholder="GH04C01A2G"></div>
+                        <div><label class="form-label" for="delivery_day">روز تحویل</label><input type="number" id="delivery_day" name="delivery_day" value="{{ product.delivery_day or 0 }}" min="0" class="form-input" placeholder="۰"></div>
+                        <div><label class="form-label" for="brand_id">برند</label><select id="brand_id" name="brand_id" class="form-input"><option value="">انتخاب</option>{% for b in brands %}<option value="{{ b.id }}" {{ 'selected' if product and product.brand_id == b.id else '' }}>{{ b.name }}</option>{% endfor %}</select></div>
+                        <div><label class="form-label" for="status">وضعیت</label><select id="status" name="status" class="form-input">
+                                <option value="OutOfStock" {{ 'selected' if product and product.status == 'OutOfStock' else '' }}>ناموجود</option>
+                                <option value="InStock" {{ 'selected' if product and product.status == 'InStock' else '' }}>موجود در انبار</option>
+                                <option value="Ordering" {{ 'selected' if product and product.status == 'Ordering' else '' }}>در حال تامین</option>
+                                <option value="Importing" {{ 'selected' if product and product.status == 'Importing' else '' }}>در حال تولید</option>
+                                <option value="CustomSupply" {{ 'selected' if product and product.status == 'CustomSupply' else '' }}>تامین سفارشی</option>
+                                <option value="Obsolete" {{ 'selected' if product and product.status == 'Obsolete' else '' }}>منسوخ شده</option>
+                        </select></div>
+                        <div><label class="form-label" for="product_unit_id">واحد محصول</label><select id="product_unit_id" name="product_unit_id" class="form-input"><option value="">انتخاب</option>{% for pu in product_units %}<option value="{{ pu.id }}" {{ 'selected' if product and product.product_unit_id == pu.id else '' }}>{{ pu.name or pu.abbreviation }}</option>{% endfor %}</select></div>
+                        <div><label class="form-label" for="model">مدل</label><input type="text" id="model" name="model" value="{{ product.model if product else '' }}" class="form-input ltr-input" dir="ltr" placeholder="مدل محصول"></div>
+                        <div><label class="form-label" for="product_type_id">نوع محصول</label><select id="product_type_id" name="product_type_id" class="form-input"><option value="">انتخاب</option>{% for pt in product_types %}<option value="{{ pt.id }}" {{ 'selected' if product and product.product_type_id == pt.id else '' }}>{{ pt.fa_name or pt.en_name }}</option>{% endfor %}</select></div>
+                    </div>
+                    <div class="mt-5 pt-4 border-t border-gray-100">
+                        <label class="form-label" for="keywords">کلید واژه‌ها</label>
+                        <textarea id="keywords" name="keywords" rows="2" style="width:100%;min-height:60px;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.75rem;font-size:0.875rem;resize:vertical;box-sizing:border-box;" onfocus="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 2px rgba(59,130,246,0.2)'" onblur="this.style.borderColor='#d1d5db';this.style.boxShadow='none'" placeholder="کلمات کلیدی برای سئو">{{ product.keywords if product else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category + Slug -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fas fa-sitemap"></i></div>
+                        <div><h2 class="font-semibold text-gray-800">دسته‌بندی و اسلاگ</h2><p class="text-xs text-gray-500">تنظیمات دسته‌بندی و لینک‌ها</p></div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                        <div class="md:col-span-2">
+                            <label class="form-label" for="category_id">دسته‌بندی</label>
+                            <select id="category_id" name="category_id" class="form-input">
+                                <option value="">— بدون دسته‌بندی —</option>
+                                {% for opt in categories_tree %}
+                                <option value="{{ opt.id }}" {{ 'selected' if product and product.category_id|string == opt.id else '' }}>
+                                    {% for _ in range(opt.depth) %}—{% endfor %} {{ opt.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div><label class="form-label" for="slug">اسلاگ (فارسی)</label>
+                            <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
+                                <span class="px-3 py-2 bg-gray-50 text-gray-500 text-sm border-l border-gray-300">/</span>
+                                <input type="text" id="slug" name="slug" value="{{ product.slug if product else '' }}" class="flex-1 px-3 py-2 text-sm outline-none border-0" dir="ltr" placeholder="به صورت خودکار از عنوان پر می‌شود">
+                            </div></div>
+                        <div><label class="form-label" for="en_slug">اسلاگ (انگلیسی)</label>
+                            <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
+                                <span class="px-3 py-2 bg-gray-50 text-gray-500 text-sm border-l border-gray-300">/en</span>
+                                <input type="text" id="en_slug" name="en_slug" value="{{ product.en_slug if product else '' }}" class="flex-1 px-3 py-2 text-sm outline-none border-0" dir="ltr" placeholder="به صورت خودکار از نام انگلیسی پر می‌شود">
+                            </div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rich description editors -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center"><i class="fas fa-align-left"></i></div>
+                        <div><h2 class="font-semibold text-gray-800">توضیحات</h2><p class="text-xs text-gray-500">محتوا و توضیحات محصول</p></div>
+                    </div>
+                </div>
+                <div class="p-6 space-y-5">
+                    <div><label class="form-label" for="meta_description">توضیحات متا</label>
+                        <textarea id="meta_description" name="meta_description" rows="3" class="form-input" placeholder="پس از درج توضیح کوتاه به صورت خودکار پر می‌شود" style="width:100%;min-height:80px;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.75rem;font-size:0.875rem;resize:vertical;" onfocus="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 2px rgba(59,130,246,0.2)'" onblur="this.style.borderColor='#d1d5db';this.style.boxShadow='none'">{{ product.meta_description if product else '' }}</textarea></div>
+                    <div><label class="form-label" for="short_description">توضیح کوتاه</label>
+                        <div class="border border-gray-200 rounded-lg overflow-hidden"><textarea id="short_description" name="short_description" rows="6" class="form-input border-0 rounded-none focus:ring-0">{{ product.short_description if product else '' }}</textarea></div>
+                        <p class="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5"><i class="fas fa-info-circle text-blue-400"></i> از ویرایشگر پیشرفته برای قالب‌بندی متن استفاده کنید</p></div>
+                    <div><label class="form-label" for="introduction">معرفی</label>
+                        <div class="border border-gray-200 rounded-lg overflow-hidden"><textarea id="introduction" name="introduction" rows="10" class="form-input border-0 rounded-none focus:ring-0">{{ product.introduction if product else '' }}</textarea></div>
+                        <p class="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5"><i class="fas fa-info-circle text-blue-400"></i> توضیحات کامل محصول با ویرایشگر پیشرفته</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Side panel -->
+        <div class="space-y-6">
+            <!-- Price & Stock -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center"><i class="fas fa-tag"></i></div>
+                        <div><h2 class="font-semibold text-gray-800">قیمت و موجودی</h2></div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                        <div><label class="form-label" for="price">قیمت</label><input type="number" step="1" id="price" name="price" value="{{ product.price|int if product and product.price else '' }}" class="form-input ltr-input" dir="ltr" placeholder="۰"></div>
+                        <div><label class="form-label" for="stock_quantity">موجودی انبار</label><input type="number" id="stock_quantity" name="stock_quantity" value="{{ product.stock_quantity if product else 0 }}" min="0" class="form-input ltr-input" dir="ltr"></div>
+                        <div><label class="form-label" for="minimum_purchase">حداقل تعداد خرید</label><input type="number" id="minimum_purchase" name="minimum_purchase" value="{{ product.minimum_purchase if product else 1 }}" min="1" class="form-input ltr-input" dir="ltr"></div>
+                        <div><label class="form-label" for="currency_id">ارز</label><select id="currency_id" name="currency_id" class="form-input"><option value="">انتخاب</option>{% for c in currencies %}<option value="{{ c.id }}" {{ 'selected' if product and product.currency_id == c.id else '' }}>{{ c.name }}</option>{% endfor %}</select></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tax & Financial -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-rose-50 to-pink-50 border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center"><i class="fas fa-file-invoice"></i></div>
+                        <div><h2 class="font-semibold text-gray-800">مالی و مالیاتی</h2></div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                        <div><label class="form-label" for="type">نوع</label><select id="type" name="type" class="form-input">
+                            <option value="Product" {{ 'selected' if product and product.type == 'Product' else '' }}>محصول</option>
+                            <option value="Service" {{ 'selected' if product and product.type == 'Service' else '' }}>خدمات</option>
+                        </select></div>
+                        <div><label class="form-label" for="max_number_of_purchases">حداکثر تعداد خرید</label><input type="number" id="max_number_of_purchases" name="max_number_of_purchases" value="{{ product.max_number_of_purchases if product else 0 }}" min="0" class="form-input ltr-input" dir="ltr" placeholder="۰"></div>
+                        <div><label class="form-label" for="tax_unique_id">شناسه یکتای مالیاتی</label><input type="text" id="tax_unique_id" name="tax_unique_id" value="{{ product.tax_unique_id if product else '' }}" class="form-input ltr-input" dir="ltr" placeholder="۱۳ رقمی"></div>
+                        <div><label class="form-label" for="taobao_choice_id">شناسه تائوبائو</label><input type="text" id="taobao_choice_id" name="taobao_choice_id" value="{{ product.taobao_choice_id if product else '' }}" class="form-input ltr-input" dir="ltr"></div>
+                        <div><label class="form-label" for="vat_rate">نرخ مالیات بر ارزش افزوده (%)</label><input type="number" step="0.01" id="vat_rate" name="vat_rate" value="{{ product.vat_rate if product else 0 }}" class="form-input ltr-input" dir="ltr" placeholder="۰"></div>
+                        <div><label class="form-label" for="profit_rate">نرخ سود (%)</label><input type="number" step="0.01" id="profit_rate" name="profit_rate" value="{{ product.profit_rate if product else 0 }}" class="form-input ltr-input" dir="ltr" placeholder="۰"></div>
+                        <div><label class="form-label" for="purchase_date">تاریخ خرید</label><input type="text" id="purchase_date" name="purchase_date" value="{{ product.purchase_date.strftime('%Y/%m/%d') if product and product.purchase_date else '' }}" class="form-input" placeholder="۱۴۰۳/۰۱/۰۱"></div>
+                        <div><label class="form-label" for="points_from_purchases">امتیاز از خرید</label><input type="number" id="points_from_purchases" name="points_from_purchases" value="{{ product.points_from_purchases if product else 0 }}" min="0" class="form-input ltr-input" dir="ltr"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toggles -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center"><i class="fas fa-toggle-on"></i></div>
+                        <div><h2 class="font-semibold text-gray-800">تنظیمات</h2></div>
+                    </div>
+                </div>
+                <div class="p-5 space-y-3">
+                    {% for toggle in [
+                        ('no_display', 'عدم نمایش', 'fa-eye-slash'),
+                        ('is_bundle', 'مجموعه', 'fa-layer-group'),
+                        ('is_calibrated', 'کالیبره شده', 'fa-check-double'),
+                        ('default_variation', 'تنوع پیش‌فرض', 'fa-layer-group'),
+                        ('on_sale', 'تخفیف دار', 'fa-percent'),
+                        ('suggested', 'پیشنهادی', 'fa-thumbs-up'),
+                        ('is_special', 'ویژه', 'fa-star'),
+                        ('is_new', 'جدید', 'fa-bolt'),
+                        ('restocked', 'تجدید موجودی', 'fa-undo'),
+                    ] %}
+                    <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onclick="toggleProductSwitch(this, '{{ toggle[0] }}')">
+                        <div class="flex items-center gap-3 pointer-events-none">
+                            <i class="fas {{ toggle[2] }} text-gray-400"></i>
+                            <label class="text-sm text-gray-700 cursor-pointer">{{ toggle[1] }}</label>
+                        </div>
+                        <div class="switch {{ 'active' if product and product[toggle[0]] else 'inactive' }}" id="switch_{{ toggle[0] }}">
+                            <span class="switch-dot"></span>
+                        </div>
+                        <input type="hidden" name="{{ toggle[0] }}" id="input_{{ toggle[0] }}" value="{{ '1' if product and product[toggle[0]] else '0' }}">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2"><i class="fas fa-info-circle text-gray-300"></i> {{ 'ویرایش محصول' if product else 'ایجاد محصول جدید' }}</p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/products" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"><i class="fas fa-times"></i> انصراف</a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200"><i class="fas fa-check"></i> {{ 'بروزرسانی' if product else 'ایجاد' }}</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/lib/ckeditor/ckeditor.js"></script>
+<script>
+let ckEditorShort, ckEditorIntro;
+
+// Auto-fill slugs from name/en_name
+$(function () {
+    $('#name').on('change input', function () {
+        var val = $(this).val();
+        if ($('#slug').val() === '' || $('#slug').data('auto') !== false) {
+            $('#slug').val(convertToSlug(val));
+            $('#slug').data('auto', true);
+        }
+    });
+    $('#en_name').on('change input', function () {
+        var val = $(this).val();
+        if ($('#en_slug').val() === '' || $('#en_slug').data('auto') !== false) {
+            $('#en_slug').val(convertToSlug(val));
+            $('#en_slug').data('auto', true);
+        }
+    });
+
+    // Build Log on submit
+    $('#product-form').on('submit', function () {
+        if (ckEditorShort) { $('#short_description').val(ckEditorShort.getData()); }
+        if (ckEditorIntro) { $('#introduction').val(ckEditorIntro.getData()); }
+        var log = '';
+        $('#product-form :input').not('[type="submit"], [type="button"], [type="hidden"]').each(function () {
+            var name = $(this).attr('name') || '';
+            var val = $(this).val() || '';
+            log += name + ': ' + val + '; ';
+        });
+        $('#Log').val(log);
+        return true;
+    });
+});
+
+function toggleProductSwitch(container, field) {
+    var $switch = $(container).find('.switch');
+    $switch.toggleClass('active inactive');
+    var isActive = $switch.hasClass('active');
+    $('#input_' + field).val(isActive ? '1' : '0');
+}
+
+function convertToSlug(str) {
+    return String(str || '').trim()
+        .replace(/[^a-z0-9\u0600-\u06FF\u200c-]/gi, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase();
+}
+
+// CKEditor on short_description and introduction, with meta auto-fill on blur
+if (typeof ClassicEditor !== 'undefined') {
+    ClassicEditor.create(document.querySelector('#short_description'))
+        .then(function (i) {
+            ckEditorShort = i;
+            // Auto-fill meta_description on CKEditor blur (matches .NET behavior)
+            i.editing.view.document.on('blur', function () {
+                if ($('#meta_description').val() === '') {
+                    var text = i.getData()
+                        .replace(/<[^>]*>/g, '')
+                        .replace(/&nbsp;/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    if (text) { $('#meta_description').val(text); }
+                }
+            });
+        })
+        .catch(function (e) { console.error(e); });
+    ClassicEditor.create(document.querySelector('#introduction'))
+        .then(function (i) { ckEditorIntro = i; })
+        .catch(function (e) { console.error(e); });
+}
+</script>
+{% endblock %}

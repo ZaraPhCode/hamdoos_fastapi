@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="theme-color" content="#f9f2e8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{% block title %}فروشگاه آشا شاپ{% endblock %}</title>
+    <meta name="description" content="فروشگاه تخصصی لیزر و اپتیک همدوس فروش اینترنتی لیزر، قطعات اپتیکی و فوتونیکی با کیفیت و قیمت مناسب">
+    <meta name="keywords" content="فروشگاه تخصصی الکترونیک، لیزر، اپتیک، فوتونیک، قطعات الکترونیکی">
+    <meta name="enamad" content="954080" />
+    {% block meta %}{% endblock %}
+    <link rel="icon" type="image/vnd.microsoft.icon" href="/static/ThemeLayout/img/laserfavicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/ThemeLayout/img/laserfavicon.png">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/ThemeLayout/theme.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/ps_searchbar.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/style_rtl.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/jquery.rateyo.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/productrating.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/override.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/jquery-ui.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/jquery.ui.theme.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/wishlist.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/jquery.fancybox.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/custom_rtl.min.css" type="text/css" media="all">
+    <script src="/static/lib/jquery/dist/jquery.min.js"></script>
+    <script src="/static/ThemeLayout/js/js.js"></script>
+    <script>
+        var prestashop = {
+            "cart": { "products": [], "totals": { "total": { "type": "total", "label": "مجموع", "amount": 0, "value": "0 ریال" }, "total_including_tax": { "type": "total", "label": "جمع (با مالیات)", "amount": 0, "value": "0 ریال" }, "total_excluding_tax": { "type": "total", "label": "هزینه نهایی (بدون مالیات)", "amount": 0, "value": "0 ریال" } }, "subtotals": { "products": { "type": "products", "label": "جمع محصولات", "amount": 0, "value": "0 ریال" }, "discounts": null, "shipping": { "type": "shipping", "label": "ارسال", "amount": 0, "value": "" }, "tax": null }, "products_count": 0, "summary_string": "0 مورد", "vouchers": { "allowed": 1, "added": [] }, "discounts": [], "minimalPurchase": 0, "minimalPurchaseRequired": "" },
+            "currency": { "id": 1, "name": "ریال ایران", "iso_code": "IRR", "iso_code_num": "364", "sign": "ریال" },
+            "customer": { "is_logged": {{ 'true' if current_user else 'false' }} },
+            "language": { "name": "پارسی (Persian)", "iso_code": "fa", "locale": "fa-IR", "language_code": "fa-ir", "is_rtl": "1", "date_format_lite": "Y-m-d", "date_format_full": "Y-m-d H:i:s", "id": 1 },
+            "page": { "title": "", "canonical": null, "meta": { "title": "فروشگاه تخصصی الکترونیک" } }
+        };
+        var productsAlreadyTagged = [];
+        var removeFromWishlistUrl = "#";
+        var varGetFinalDateController = "#";
+        var varGetFinalDateMiniatureController = "#";
+        var varPSAjaxCart = 1;
+        var wishlistAddProductToCartUrl = "#";
+        var wishlistUrl = "#";
+    </script>
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% block og_title %}فروشگاه تخصصی آشا شاپ{% endblock %}">
+    <meta property="og:description" content="فروشگاه تخصصی الکترونیک، لیزر، اپتیک و فوتونیک">
+    <meta property="og:image" content="/static/ThemeLayout/img/logo.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}فروشگاه تخصصی آشا شاپ{% endblock %}">
+    <meta name="twitter:description" content="فروشگاه تخصصی الکترونیک، لیزر، اپتیک و فوتونیک">
+    <meta name="twitter:image" content="/static/ThemeLayout/img/logo.jpg">
+    <style type="text/css">
+        a, .btn-outline-primary, .btn-outline-primary.disabled, .btn-outline-primary:disabled, .btn-link, .page-link, .text-primary, .products-selection .total-products p, .products-selection .products-sort-order .product-display .display-select .selected, #header .left-nav-trigger .left-nav-icon, #footer .footer-about-us .fa, #footer .footer-about-us .material-icons, .feature .material-icons, .feature .fa, .feature2 a:hover { color: #00a693 }
+        .btn-primary, .btn-primary.disabled, .btn-primary:disabled, .btn-outline-primary:hover, .btn-outline-primary:not(:disabled):not(.disabled):active, .btn-outline-primary:not(:disabled):not(.disabled).active, .show > .btn-outline-primary.dropdown-toggle, .nav-pills .nav-link.active, .nav-pills .show > .nav-link, .page-item.active .page-link, .badge-primary, .progress-bar, .list-group-item.active, .bg-primary, .btn.btn-primary, .btn.btn-primary.disabled, .btn.btn-primary:disabled, .group-span-filestyle .btn-default, .add-to-cart, .add-to-cart.disabled, .add-to-cart:disabled, .sidebar-currency .currency-list .current .dropdown-item, .sidebar-language .language-list .current .dropdown-item, .pace .pace-progress, .pace-bounce .pace-activity, #header .mobile-header-version .mobile-menu-icon, .banner3:hover, #product-comments-list-pagination ul li.active span { background-color: #00a693 }
+        .btn-primary, .btn-primary.disabled, .btn-primary:disabled, .btn-outline-primary, .btn-outline-primary:hover, .btn-outline-primary:not(:disabled):not(.disabled):active, .btn-outline-primary:not(:disabled):not(.disabled).active, .show > .btn-outline-primary.dropdown-toggle, .page-item.active .page-link, .list-group-item.active, .border-primary, .product-combinations .combination-item.active .switch-cbnt, .product-swatches .swatches-list > li.selected > span, .pace .pace-activity { border-color: #00a693 }
+        .btn-primary:hover, .btn-primary:focus, .btn.btn-primary:hover, .btn-primary:not(:disabled):not(.disabled):active, .btn-primary:not(:disabled):not(.disabled).active, .btn.btn-primary:not(:disabled):not(.disabled):active, .btn.btn-primary:not(:disabled):not(.disabled).active, .add-to-cart:hover, .add-to-cart:not(:disabled):not(.disabled):active, .add-to-cart:not(:disabled):not(.disabled).active { background-color: #298665 }
+        a:hover, .btn-link:hover, .page-link:hover, .product-price, .price-total, .product-name a:hover, a.product-name:hover, .product-list .product-miniature .grid-hover-btn a, .main-product-details .product-cover .layer .zoom-in, #product-modal .arrows, .cart-items-review .product-line-grid .product-prices .qty, .st-menu-close:hover, .aone-slideshow .nivoSlider .nivo-directionNav .nivo-prevNav, .aone-slideshow .nivoSlider .nivo-directionNav .nivo-nextNav, #header .left-nav-trigger .left-nav-icon:hover, .feature a:hover, .feature2 .material-icons, .feature2 .fa, .icon-link:hover { color: #3ac01b }
+        .custom-checkbox input[type="checkbox"]:checked + .check-shape, .custom-radio input[type="radio"]:checked + .check-shape, .category-tree > ul > li > a:hover:before, .discount-percentage, .discount-amount, .product-flags .product-flag.discount span, .product-flags .product-flag.on-sale span, .add-to-cart.added:after, .main-product-details .scroll-box-arrows .left, .main-product-details .scroll-box-arrows .right, .cart-preview .cart-header .cart-products-count, .slick-prev, .slick-next, .slick-dots li button, .anav-top .amenu-link > sup, .anav-top .acategory-content .category-subs li a:hover:before, .aone-slideshow .nivoSlider .nivo-controlNav a, .aone-popupnewsletter button.close, #header .sticky-icon-cart .cart-products-count, #scrollTopButton .scroll-button, .typoImageSlider .scrollArrows .left, .typoImageSlider .scrollArrows .right { background-color: #23883c }
+        #wrapper { background-color: #eef1f7 }
+        .icon-link:hover, .active-filters .filter-block .material-icons, .product-list .product-miniature .grid-hover-btn a, .main-product-details .product-cover .layer .zoom-in, #product-modal .arrows, .st-menu-close:hover, .aone-slideshow .nivoSlider .nivo-directionNav .nivo-prevNav, .aone-slideshow .nivoSlider .nivo-directionNav .nivo-nextNav { color: #298665 }
+        .modal .modal-header .close:hover, .add-to-cart.added:after, .main-product-details .scroll-box-arrows .left, .main-product-details .scroll-box-arrows .right, .slick-prev, .slick-next, .slick-dots li button, .aone-slideshow .nivoSlider .nivo-controlNav a, .aone-popupnewsletter button.close, #scrollTopButton .scroll-button, .typoImageSlider .scrollArrows .left, .typoImageSlider .scrollArrows .right { background-color: #00a693 }
+        .aone-slideshow .nivoSlider .nivo-controlNav a.active { border-color: #fd6282 }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body id="{% block body_id %}index{% endblock %}" class="{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-index tax-display-enabled st-wrapper{% endblock %}">
+    <div class="st-menu st-effect-left" data-st-menu>
+        <div class="st-menu-title h4">شاخه‌ها</div>
+        {% include "shop/_category_sidebar.html" %}
+    </div>
+    <div class="st-menu profile-effect-left" data-profile-menu>
+        <div class="block-myaccount-infos column-block"></div>
+    </div>
+    <main id="page" class="st-pusher">
+        {% include "shop/_header.html" %}
+        <section id="wrapper" style="overflow-x: visible">
+            {% block content %}{% endblock %}
+        </section>
+        {% include "shop/_footer.html" %}
+    </main>
+    <div class="js-popup-newsletter-form" data-ajax-submit-url="#"></div>
+    <div id="scrollTopButton" data-scroll-to-top>
+        <a class="scroll-button" href="#" title="بازگشت به بالا" data-toggle="tooltip" data-placement="top"><i class="fa fa-angle-double-up"></i></a>
+    </div>
+    <div class="st-menu-right st-effect-right" data-st-cart>
+        <div class="st-menu-close d-flex" data-close-st-cart><i class="material-icons">close</i></div>
+        <div id="js-cart-sidebar" class="sidebar-cart cart-preview">
+            <div class="cart-dropdown-wrapper">
+                <div class="cart-title h4">سبد خرید</div>
+                <div class="no-items">سبد خرید شما خالی است</div>
+            </div>
+            <div class="js-cart-update-quantity page-loading-overlay cart-overview-loading">
+                <div class="page-loading-backdrop d-flex align-items-center justify-content-center">
+                    <span class="uil-spin-css"><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span></span>
+                </div>
+            </div>
+        </div>
+        <div id="js-currency-sidebar" class="sidebar-currency"></div>
+    </div>
+    <div id="modalMessage" class="modal fade modal-message js-modal-message" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger mb-0" role="alert">
+                        <i class="material-icons">error_outline</i> <span class="js-modal-message-text"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade simple-modal" id="extraModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="extra-content typo js-modal-extra-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="st-overlay" data-close-st-menu data-close-st-cart data-close-profile-menu></div>
+    <script>
+        (function () {
+            function toggleMenu(open) {
+                var html = document.documentElement;
+                if (open) { html.classList.add('st-effect-left', 'st-menu-open'); }
+                else { html.classList.remove('st-effect-left', 'st-menu-open'); }
+            }
+            document.querySelectorAll('[data-left-nav-trigger]').forEach(function (el) {
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    toggleMenu(true);
+                });
+            });
+            document.querySelectorAll('[data-close-st-menu]').forEach(function (el) {
+                el.addEventListener('click', function () { toggleMenu(false); });
+            });
+            document.querySelectorAll('[data-close-profile-menu]').forEach(function (el) {
+                el.addEventListener('click', function () { toggleMenu(false); });
+            });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { toggleMenu(false); } });
+        })();
+    </script>
+    <script>
+        (function () {
+            function setupSidebarTree() {
+                document.querySelectorAll('.js-sidebar-categories').forEach(function (tree) {
+                    tree.querySelectorAll('.js-collapse-trigger').forEach(function (trigger) {
+                        if (trigger.dataset.treeBound) return;
+                        trigger.dataset.treeBound = '1';
+                        trigger.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            var li = trigger.parentElement;
+                            var sub = li ? li.querySelector(':scope > .js-sub-categories') : null;
+                            var opened = trigger.classList.contains('opened');
+                            if (opened) {
+                                trigger.classList.remove('opened');
+                                if (sub) { sub.style.display = 'none'; }
+                            } else {
+                                trigger.classList.add('opened');
+                                if (sub) { sub.style.display = 'block'; }
+                            }
+                            var add = trigger.querySelector('.add');
+                            var rem = trigger.querySelector('.remove');
+                            if (add) { add.style.display = opened ? 'inline-block' : 'none'; }
+                            if (rem) { rem.style.display = opened ? 'none' : 'inline-block'; }
+                        });
+                    });
+                });
+            }
+            setupSidebarTree();
+            document.addEventListener('DOMContentLoaded', setupSidebarTree);
+        })();
+    </script>
+    <script src="/static/ThemeLayout/js/core.js"></script>
+    <script src="/static/ThemeLayout/js/front.js"></script>
+    <script src="/static/ThemeLayout/js/theme.min.js"></script>
+    <script src="/static/ThemeLayout/js/jquery.rateyo.min.js"></script>
+    <script src="/static/ThemeLayout/js/productrating.min.js"></script>
+    <script src="/static/ThemeLayout/js/displayInvoiceOption.min.js"></script>
+    <script src="/static/ThemeLayout/js/notifyme.min.js"></script>
+    <script src="/static/ThemeLayout/js/GoogleAnalyticActionLib.min.js"></script>
+    <script src="/static/ThemeLayout/js/jquery-ui.min.js"></script>
+    <script src="/static/ThemeLayout/js/jquery.fancybox.js"></script>
+    <script src="/static/ThemeLayout/js/ps_searchbar.js"></script>
+    <script src="/static/ThemeLayout/js/ps_shoppingcart.min.js"></script>
+    <script src="/static/ThemeLayout/js/graphql.js"></script>
+    <script src="/static/ThemeLayout/js/vendors.js"></script>
+    {% block extra_scripts %}{% endblock %}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Website",
+        "name": "آشا شاپ",
+        "url": "{{ request.url_for('home_page') if request else '/' }}"
+    }
+    </script>
+</body>
+</html>

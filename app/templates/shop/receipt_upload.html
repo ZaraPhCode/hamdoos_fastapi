@@ -1,0 +1,24 @@
+{% extends "shop/base.html" %}
+{% block title %}پرداخت با رسید بانکی - آشا شاپ{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+        <h1 class="text-xl font-bold mb-4">پرداخت با رسید بانکی</h1>
+        <p class="text-sm text-gray-600 mb-4">لطفاً مبلغ سفارش را به حساب زیر واریز کرده و تصویر رسید را بارگذاری کنید.</p>
+        <div class="bg-gray-50 rounded-lg p-4 mb-6 text-sm">
+            <p><strong>بانک:</strong> {{ site_settings.bank_name or 'ملت' }}</p>
+            <p><strong>شماره حساب:</strong> {{ site_settings.account_number or '۱۲۳۴۵۶۷۸۹۰' }}</p>
+            <p><strong>شماره کارت:</strong> {{ site_settings.card_number or '۵۰۲۲-۲۱۰۰-XXXX-XXXX' }}</p>
+            <p><strong>شبا:</strong> {{ site_settings.sheba_number or 'IRXXXXXXXXXX' }}</p>
+            <p><strong>صاحب حساب:</strong> {{ site_settings.account_owner or 'آشا شاپ' }}</p>
+        </div>
+        <form method="POST" enctype="multipart/form-data" action="/receipts/upload" class="space-y-4">
+            <input type="hidden" name="order_id" value="{{ order_id }}">
+            <div><label class="block text-sm mb-1">مبلغ واریزی (تومان)</label><input name="price" type="number" required class="w-full border rounded-lg px-3 py-2"></div>
+            <div><label class="block text-sm mb-1">تصویر رسید</label><input name="image" type="file" accept="image/*" required class="w-full border rounded-lg px-3 py-2"></div>
+            <div><label class="block text-sm mb-1">توضیحات</label><textarea name="description" rows="3" class="w-full border rounded-lg px-3 py-2"></textarea></div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700">ارسال رسید</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

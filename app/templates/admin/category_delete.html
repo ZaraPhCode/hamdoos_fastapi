@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% block title %}حذف دسته‌بندی{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="card border border-red-200">
+        <div class="card-header bg-red-50 border-b border-red-200">
+            <h2 class="font-semibold text-red-700 flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i> حذف دسته‌بندی
+            </h2>
+        </div>
+        <div class="card-body">
+            <p class="text-gray-700 mb-4">
+                آیا از حذف دسته‌بندی <span class="font-semibold text-gray-900">"{{ category.title or '—' }}"</span> مطمئن هستید؟
+                این عملیات قابل بازگشت نیست.
+            </p>
+            <dl class="bg-gray-50 rounded-lg p-4 space-y-2 text-sm mb-6">
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">عنوان</dt>
+                    <dd class="text-gray-800 font-medium">{{ category.title or '—' }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">توضیح</dt>
+                    <dd class="text-gray-800 max-w-xs text-left">{{ (category.description or '—')[:80] }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">اولویت</dt>
+                    <dd class="text-gray-800">{{ category.priority }}</dd>
+                </div>
+            </dl>
+            <form method="POST" action="/administration/categories/{{ category.id }}/delete" class="flex items-center gap-3 justify-end">
+                <a href="/administration/categories" class="btn-secondary flex items-center gap-2">
+                    <i class="fas fa-arrow-right"></i> بازگشت به لیست
+                </a>
+                <button type="submit" class="btn-danger flex items-center gap-2 px-6 py-2.5">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "admin/base.html" %}
+{% block title %}مدیریت انبار{% endblock %}
+{% block header %}مدیریت انبار{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-lg shadow p-5">
+        <h3 class="font-semibold mb-4">عملیات سریع</h3>
+        <form id="import-form" class="space-y-3 mb-6 pb-6 border-b">
+            <h4 class="text-sm font-medium text-green-700"><i class="fas fa-arrow-down ml-1"></i>ورود کالا</h4>
+            <div><label class="block text-xs mb-1">شناسه محصول</label><input name="product_id" class="w-full border rounded-lg px-3 py-1.5 text-sm"></div>
+            <div><label class="block text-xs mb-1">تعداد</label><input name="quantity" type="number" min="1" class="w-full border rounded-lg px-3 py-1.5 text-sm"></div>
+            <div><label class="block text-xs mb-1">توضیحات</label><input name="note" class="w-full border rounded-lg px-3 py-1.5 text-sm"></div>
+            <button type="submit" class="w-full bg-green-600 text-white py-1.5 rounded-lg text-sm hover:bg-green-700">ثبت ورود</button>
+        </form>
+        <form id="export-form" class="space-y-3">
+            <h4 class="text-sm font-medium text-red-700"><i class="fas fa-arrow-up ml-1"></i>خروج کالا</h4>
+            <div><label class="block text-xs mb-1">شناسه محصول</label><input name="product_id" class="w-full border rounded-lg px-3 py-1.5 text-sm"></div>
+            <div><label class="block text-xs mb-1">تعداد</label><input name="quantity" type="number" min="1" class="w-full border rounded-lg px-3 py-1.5 text-sm"></div>
+            <div><label class="block text-xs mb-1">توضیحات</label><input name="note" class="w-full border rounded-lg px-3 py-1.5 text-sm"></div>
+            <button type="submit" class="w-full bg-red-600 text-white py-1.5 rounded-lg text-sm hover:bg-red-700">ثبت خروج</button>
+        </form>
+    </div>
+
+    <!-- Low Stock Alerts -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-5 py-4 border-b"><h3 class="font-semibold">هشدار موجودی</h3></div>
+        <div class="p-5">
+            {% if low_stock %}
+            <div class="space-y-2">
+                {% for item in low_stock %}
+                <div class="flex items-center justify-between p-3 rounded-lg {% if item.current_stock <= 0 %}bg-red-50{% else %}bg-orange-50{% endif %}">
+                    <div>
+                        <p class="text-sm font-medium">{{ item.product_name[:30] }}</p>
+                        <p class="text-xs text-gray-500">{{ item.part_number or '' }}</p>
+                    </div>
+                    <div class="text-left">
+                        <span class="font-bold {% if item.current_stock <= 0 %}text-red-600{% else %}text-orange-600{% endif %}">{{ item.current_stock }}</span>
+                        <p class="text-xs text-gray-500">{{ item.status }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400 text-center py-4">همه محصولات موجودی کافی دارند</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Movements -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-5 py-4 border-b"><h3 class="font-semibold">آخرین حرکات انبار</h3></div>
+        <div class="p-5">
+            {% if movements %}
+            <div class="space-y-2">
+                {% for m in movements %}
+                <div class="flex items-center justify-between p-2 border-b text-sm last:border-0">
+                    <div>
+                        <p class="text-xs text-gray-500">{{ m.date[:10] if m.date else '' }}</p>
+                        <p class="font-medium">{{ m.product_name[:25] }}</p>
+                    </div>
+                    <span class="font-bold {% if m.quantity > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ '+' if m.quantity > 0 }}{{ m.quantity }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400 text-center py-4">هیچ حرکتی ثبت نشده</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('import-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    const params = new URLSearchParams(fd);
+    const r = await fetch('/api/v1/warehouse/import?' + params, {method: 'POST'});
+    if (r.ok) { alert('ورود کالا ثبت شد'); location.reload(); }
+    else { alert('خطا'); }
+});
+document.getElementById('export-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    const params = new URLSearchParams(fd);
+    const r = await fetch('/api/v1/warehouse/export?' + params, {method: 'POST'});
+    if (r.ok) { alert('خروج کالا ثبت شد'); location.reload(); }
+    else { alert('خطا'); }
+});
+</script>
+{% endblock %}

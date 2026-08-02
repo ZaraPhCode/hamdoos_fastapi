@@ -1,0 +1,28 @@
+{% extends "shop/base.html" %}
+{% block title %}اطلاعات بانکی - آشا شاپ{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-6">اطلاعات بانکی</h1>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-4">
+        {% for bi in bank_infos %}
+        <div class="bg-white rounded-lg shadow-sm border p-4">
+            <p class="font-medium">{{ bi.bank_name or 'بانک' }} - {{ bi.account_owner }}</p>
+            <p class="text-sm text-gray-500 mt-1">شماره کارت: {{ bi.card_number[:4] if bi.card_number else '---' }}****{{ bi.card_number[-4:] if bi.card_number else '' }}</p>
+            <p class="text-sm text-gray-500">شبا: {{ bi.sheba_number[:10] if bi.sheba_number else '---' }}...</p>
+        </div>
+        {% else %}
+        <p class="text-gray-400 text-center py-8">اطلاعات بانکی ثبت نشده است</p>
+        {% endfor %}
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-4">
+        <h3 class="font-bold mb-4">اطلاعات بانکی جدید</h3>
+        <form method="POST" action="/profile/bank-info/add" class="space-y-3">
+            <div><input name="bank_name" placeholder="نام بانک" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><input name="account_owner" placeholder="صاحب حساب" required class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><input name="card_number" placeholder="شماره کارت (۱۶ رقمی)" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><input name="sheba_number" placeholder="شماره شبا (IR...)" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">افزودن</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

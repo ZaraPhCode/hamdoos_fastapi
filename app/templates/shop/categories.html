@@ -1,0 +1,28 @@
+{% extends "shop/base.html" %}
+{% block title %}دسته‌بندی محصولات - آشا شاپ{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-6">دسته‌بندی محصولات</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for cat in categories %}
+    <div class="bg-white rounded-lg shadow-sm border p-4">
+        <a href="/categories/{{ cat.slug or cat.id }}" class="flex items-center gap-3">
+            <i class="fas fa-folder text-indigo-500 text-2xl"></i>
+            <div>
+                <h3 class="font-medium hover:text-indigo-600">{{ cat.title }}</h3>
+                <p class="text-xs text-gray-500">{{ cat.product_count }} محصول</p>
+            </div>
+        </a>
+        {% if cat.children %}
+        <div class="mr-8 mt-2 space-y-1">
+            {% for child in cat.children %}
+            <a href="/categories/{{ child.slug or child.id }}" class="block text-sm text-gray-600 hover:text-indigo-600">
+                {{ child.title }}
+                <span class="text-xs text-gray-400">({{ child.product_count }})</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

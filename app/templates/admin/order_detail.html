@@ -1,0 +1,132 @@
+?{% extends "admin/base.html" %}
+{% block title %}جزئیات سفارش #{{ order.id }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">جزئیات سفارش #{{ order.id }}</h1>
+        <a href="/administration/orders" class="btn-secondary flex items-center gap-2">
+            <i class="fas fa-arrow-right"></i> بازگشت
+        </a>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="card lg:col-span-2">
+            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات سفارش</h2></div>
+            <div class="card-body grid grid-cols-2 gap-4">
+                <div><span class="text-gray-500 text-sm">کد سفارش:</span><p class="font-medium">{{ order.reference_code or order.id }}</p></div>
+                <div><span class="text-gray-500 text-sm">تاریخ ثبت:</span><p class="font-medium">{{ order.insert_date }}</p></div>
+                <div><span class="text-gray-500 text-sm">وضعیت:</span>
+                    <p><span class="badge
+                        {%- if order.status == 'delivered' %} bg-emerald-100 text-emerald-800
+                        {%- elif order.status == 'canceled' %} bg-red-100 text-red-800
+                        {%- elif order.status == 'processing' %} bg-blue-100 text-blue-800
+                        {%- elif order.status == 'shipped' %} bg-indigo-100 text-indigo-800
+                        {%- else %} bg-gray-100 text-gray-800{% endif %}">
+                        {{ order.status_name or order.status }}
+                    </span></p>
+                </div>
+                <div><span class="text-gray-500 text-sm">روش پرداخت:</span><p class="font-medium">{{ order.pay_method_title or order.pay_method }}</p></div>
+                <div><span class="text-gray-500 text-sm">نحوه ارسال:</span><p class="font-medium">{{ order.post_type_title or order.post_type }}</p></div>
+                <div><span class="text-gray-500 text-sm">مبلغ کل:</span><p class="font-medium text-lg text-blue-600">{{ "{:,}".format(order.total_price) }} تومان</p></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">مشتری</h2></div>
+            <div class="card-body space-y-3">
+                <div><span class="text-gray-500 text-sm">نام:</span><p class="font-medium">{{ order.customer.name if order.customer else '---' }}</p></div>
+                <div><span class="text-gray-500 text-sm">موبایل:</span><p class="font-medium" dir="ltr">{{ order.customer.mobile if order.customer else '---' }}</p></div>
+                <div><span class="text-gray-500 text-sm">ایمیل:</span><p class="font-medium" dir="ltr">{{ order.customer.email if order.customer else '---' }}</p></div>
+                <div><span class="text-gray-500 text-sm">آدرس:</span><p class="text-sm">{{ order.address or '---' }}</p></div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-6">
+        <div class="card-header"><h2 class="text-lg font-semibold">محصولات سفارش</h2></div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="table-header">محصول</th>
+                        <th class="table-header">کد</th>
+                        <th class="table-header">قیمت واحد</th>
+                        <th class="table-header">تعداد</th>
+                        <th class="table-header">قیمت کل</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for item in order.products %}
+                    <tr class="table-row-hover">
+                        <td class="table-cell font-medium">{{ item.product_name or item.product.name }}</td>
+                        <td class="table-cell text-gray-500">{{ item.part_number or '---' }}</td>
+                        <td class="table-cell">{{ "{:,}".format(item.price) }}</td>
+                        <td class="table-cell">{{ item.quantity }}</td>
+                        <td class="table-cell font-medium">{{ "{:,}".format(item.price * item.quantity) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="bg-gray-50 border-t border-gray-200">
+                    <tr>
+                        <td colspan="3" class="px-4 py-3 text-left font-medium text-gray-600">جمع کل</td>
+                        <td class="px-4 py-3 font-medium">{{ order.total_quantity }}</td>
+                        <td class="px-4 py-3 font-medium text-blue-600">{{ "{:,}".format(order.total_price) }} تومان</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">مدیریت وضعیت</h2></div>
+            <div class="card-body">
+                <form method="POST" action="/administration/orders/{{ order.id }}/status" class="flex items-end gap-3">
+                    <div class="flex-1">
+                        <label class="form-label" for="status">تغییر وضعیت</label>
+                        <select id="status" name="status" class="form-input">
+                            {% for st in order_statuses %}
+                            <option value="{{ st.value }}" {{ 'selected' if order.status == st.value else '' }}>{{ st.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary whitespace-nowrap">اعمال</button>
+                </form>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">کد رهگیری</h2></div>
+            <div class="card-body">
+                <form method="POST" action="/administration/orders/{{ order.id }}/tracking" class="flex items-end gap-3">
+                    <div class="flex-1">
+                        <label class="form-label" for="tracking_code">کد رهگیری پستی</label>
+                        <input type="text" id="tracking_code" name="tracking_code" value="{{ order.tracking_code or '' }}" class="form-input" dir="ltr">
+                    </div>
+                    <button type="submit" class="btn-primary whitespace-nowrap">ذخیره</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2 class="text-lg font-semibold">تاریخچه وضعیت</h2></div>
+        <div class="card-body">
+            {% if order.status_records %}
+            <div class="space-y-4">
+                {% for rec in order.status_records | sort(attribute='insert_date', reverse=True) %}
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i class="fas fa-circle text-xs"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-sm">{{ rec.status_name or rec.status }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ rec.insert_date }}</p>
+                        {% if rec.description %}
+                        <p class="text-sm text-gray-600 mt-1">{{ rec.description }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-sm">تاریخچه‌ای ثبت نشده است.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

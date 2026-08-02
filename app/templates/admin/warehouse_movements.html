@@ -1,0 +1,87 @@
+?{% extends "admin/base.html" %}
+{% block title %}مدیریت انبار{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">مدیریت انبار</h1>
+        <div class="flex items-center gap-3">
+            <a href="/administration/warehouse/import" class="btn-success flex items-center gap-2">
+                <i class="fas fa-plus-circle"></i> ورود کالا
+            </a>
+            <a href="/administration/warehouse/export" class="btn-warning flex items-center gap-2">
+                <i class="fas fa-minus-circle"></i> خروج کالا
+            </a>
+        </div>
+    </div>
+    {% if low_stock_products %}
+    <div class="card mb-6 border-2 border-red-200 bg-red-50">
+        <div class="card-header border-red-200">
+            <h2 class="text-lg font-semibold text-red-700 flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i> هشدار: موجودی کم
+            </h2>
+        </div>
+        <div class="card-body">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for p in low_stock_products %}
+                <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-red-200">
+                    <div>
+                        <p class="font-medium text-sm">{{ p.name }}</p>
+                        <p class="text-xs text-gray-500">موجودی: <span class="text-red-600 font-bold">{{ p.stock }}</span> / حداقل: {{ p.minimum_stock }}</p>
+                    </div>
+                    <a href="/administration/warehouse/import?product_id={{ p.id }}" class="btn-success text-xs px-2 py-1">ورود کالا</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="card">
+        <div class="card-header"><h2 class="text-lg font-semibold">تاریخچه حرکات انبار</h2></div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="table-header">#</th>
+                        <th class="table-header">محصول</th>
+                        <th class="table-header">نوع</th>
+                        <th class="table-header">تعداد</th>
+                        <th class="table-header">موجودی پس از</th>
+                        <th class="table-header">توضیحات</th>
+                        <th class="table-header">تاریخ</th>
+                        <th class="table-header">کاربر</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for m in movements %}
+                    <tr class="table-row-hover">
+                        <td class="table-cell">{{ m.id }}</td>
+                        <td class="table-cell font-medium">{{ m.product_name or m.product.name if m.product else '---' }}</td>
+                        <td class="table-cell">
+                            {% if m.movement_type == 'import' or m.movement_type == 'in' %}
+                            <span class="badge bg-emerald-100 text-emerald-800"><i class="fas fa-arrow-up ml-1"></i>ورود</span>
+                            {% else %}
+                            <span class="badge bg-red-100 text-red-800"><i class="fas fa-arrow-down ml-1"></i>خروج</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell font-medium">{{ m.quantity }}</td>
+                        <td class="table-cell">{{ m.stock_after or '---' }}</td>
+                        <td class="table-cell text-sm text-gray-500 max-w-xs truncate">{{ m.description or '---' }}</td>
+                        <td class="table-cell text-sm">{{ m.insert_date }}</td>
+                        <td class="table-cell text-sm">{{ m.user_name or m.user.name if m.user else '---' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">هیچ حرکتی ثبت نشده است.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-center gap-2 mt-6">
+        {% for p in range(1, total_pages + 1) %}
+        <a href="/administration/warehouse?page={{ p }}" class="pagination-btn {{ 'active' if p == page else '' }}">{{ p }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

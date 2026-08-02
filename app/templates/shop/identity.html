@@ -1,0 +1,43 @@
+{% extends "shop/base.html" %}
+{% block title %}اطلاعات هویتی - آشا شاپ{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-6">اطلاعات هویتی (فاکتور رسمی)</h1>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 space-y-4">
+        {% for info in identities %}
+        <div class="bg-white rounded-lg shadow-sm border p-4">
+            <div class="flex justify-between">
+                <div>
+                    <p class="font-medium">{{ info.name }}</p>
+                    <p class="text-sm text-gray-500">کد ملی/شناسه: {{ info.national_code_or_id or '-' }}</p>
+                    <p class="text-sm text-gray-500">کد اقتصادی: {{ info.economic_code or '-' }}</p>
+                    <p class="text-sm text-gray-500">نوع: {% if info.type == 'Legal' %}حقوقی{% else %}حقیقی{% endif %}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded text-xs {% if info.status == 'Confirmed' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                    {{ info.status or 'در انتظار تایید' }}
+                </span>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-gray-400 text-center py-8">اطلاعاتی ثبت نشده است</p>
+        {% endfor %}
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-4">
+        <h3 class="font-bold mb-4">افزودن اطلاعات هویتی</h3>
+        <form method="POST" action="/profile/identity/add" class="space-y-3">
+            <div><input name="name" placeholder="نام شرکت / نام و نام خانوادگی" required class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><input name="national_code_or_id" placeholder="کد ملی / شناسه ملی" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><input name="economic_code" placeholder="کد اقتصادی" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><input name="postal_code" placeholder="کد پستی" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+            <div><textarea name="address" placeholder="آدرس" rows="3" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea></div>
+            <div>
+                <select name="identity_type" class="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="Real">حقیقی</option>
+                    <option value="Legal">حقوقی</option>
+                </select>
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">ثبت اطلاعات</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

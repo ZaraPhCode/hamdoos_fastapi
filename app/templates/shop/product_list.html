@@ -1,0 +1,105 @@
+{% extends "shop/base.html" %}
+{% block title %}محصولات - آشا شاپ{% endblock %}
+{% block content %}
+<div class="flex gap-6">
+    <!-- Filters Sidebar -->
+    <aside class="w-64 shrink-0 hidden lg:block">
+        <div class="bg-white rounded-lg shadow-sm border p-4 sticky top-24">
+            <h3 class="font-bold mb-4">فیلترها</h3>
+            <form method="GET" action="/products" id="filter-form">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">دسته‌بندی</label>
+                    <select name="category_id" class="w-full border rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
+                        <option value="">همه دسته‌ها</option>
+                        {% for cat in all_categories or [] %}
+                        <option value="{{ cat.id }}" {% if request.query_params.category_id == cat.id|string %}selected{% endif %}>{{ cat.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">برند</label>
+                    <select name="brand_id" class="w-full border rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
+                        <option value="">همه برندها</option>
+                        {% for brand in all_brands or [] %}
+                        <option value="{{ brand.id }}" {% if request.query_params.brand_id == brand.id|string %}selected{% endif %}>{{ brand.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">محدوده قیمت</label>
+                    <input type="number" name="min_price" placeholder="حداقل" class="w-full border rounded-lg px-3 py-2 text-sm mb-2" value="{{ request.query_params.min_price or '' }}">
+                    <input type="number" name="max_price" placeholder="حداکثر" class="w-full border rounded-lg px-3 py-2 text-sm" value="{{ request.query_params.max_price or '' }}">
+                </div>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="on_sale" value="true" {% if request.query_params.on_sale %}checked{% endif %} onchange="this.form.submit()">فقط تخفیف‌دار</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_new" value="true" {% if request.query_params.is_new %}checked{% endif %} onchange="this.form.submit()">فقط جدید</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_special" value="true" {% if request.query_params.is_special %}checked{% endif %} onchange="this.form.submit()">فقط ویژه</label>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white rounded-lg py-2 mt-4 text-sm hover:bg-indigo-700">اعمال فیلتر</button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Product Grid -->
+    <div class="flex-1">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-xl font-bold">محصولات</h1>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-500">{{ total or 0 }} محصول</span>
+                <select name="sort_by" class="border rounded-lg px-3 py-1.5 text-sm" onchange="window.location.href=this.value">
+                    <option value="?sort_by=insert_date&sort_desc=true" {% if sort_by == 'insert_date' %}selected{% endif %}>جدیدترین</option>
+                    <option value="?sort_by=price&sort_desc=false" {% if sort_by == 'price' and not sort_desc %}selected{% endif %}>ارزان‌ترین</option>
+                    <option value="?sort_by=price&sort_desc=true" {% if sort_by == 'price' and sort_desc %}selected{% endif %}>گران‌ترین</option>
+                    <option value="?sort_by=rate&sort_desc=true" {% if sort_by == 'rate' %}selected{% endif %}>محبوب‌ترین</option>
+                </select>
+            </div>
+        </div>
+
+        {% if products %}
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {% for product in products %}
+            <div class="bg-white rounded-lg shadow-sm border hover:shadow-md transition p-3">
+                <a href="/products/{{ product.slug or product.id }}">
+                    <img src="{{ product.medium_image_url or '/static/img/placeholder.png' }}" alt="{{ product.name }}" class="w-full h-40 object-contain mb-3">
+                    {% if product.is_new %}<span class="bg-green-500 text-white text-xs px-2 py-0.5 rounded">جدید</span>{% endif %}
+                    {% if product.on_sale %}<span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded">تخفیف</span>{% endif %}
+                    <h3 class="text-sm font-medium text-gray-800 mt-2 line-clamp-2">{{ product.name[:50] }}{% if product.name|length > 50 %}...{% endif %}</h3>
+                    <p class="text-xs text-gray-500 mt-1">{{ product.brand_name or '' }}</p>
+                    <div class="mt-2">
+                        {% if product.price_after_discount and product.price_after_discount < product.price %}
+                        <span class="text-gray-400 text-xs line-through">{{ "{:,.0f}".format(product.price) }}</span>
+                        <span class="text-indigo-600 font-bold">{{ "{:,.0f}".format(product.price_after_discount) }}</span>
+                        {% else %}
+                        <span class="text-indigo-600 font-bold">{{ "{:,.0f}".format(product.price or 0) }}</span>
+                        {% endif %}
+                        <span class="text-xs text-gray-500">تومان</span>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="flex justify-center mt-8 gap-2">
+            {% if page > 1 %}
+            <a href="?page={{ page - 1 }}&page_size={{ page_size }}" class="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">قبلی</a>
+            {% endif %}
+            {% for p in range(1, total_pages + 1) %}
+            <a href="?page={{ p }}&page_size={{ page_size }}" class="px-4 py-2 border rounded-lg text-sm {% if p == page %}bg-indigo-600 text-white{% else %}hover:bg-gray-100{% endif %}">{{ p }}</a>
+            {% endfor %}
+            {% if page < total_pages %}
+            <a href="?page={{ page + 1 }}&page_size={{ page_size }}" class="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">بعدی</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-16 text-gray-400">
+            <i class="fas fa-box-open text-5xl mb-4"></i>
+            <p>محصولی یافت نشد</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+?{% extends "admin/base.html" %}
+{% block title %}مدیریت کاربران{% endblock %}
+{% block header %}مدیریت کاربران{% endblock %}
+{% block content %}
+<div class="bg-white rounded-lg shadow">
+    <div class="px-5 py-4 border-b">
+        <h3 class="font-semibold">لیست کاربران ({{ total or 0 }})</h3>
+    </div>
+    <div class="p-5">
+        <div class="mb-4 flex gap-2">
+            <input id="search-user" type="text" placeholder="جستجوی کاربر..." class="border rounded-lg px-3 py-2 text-sm flex-1">
+            <button onclick="searchUsers()" class="bg-indigo-600 text-white px-4 rounded-lg text-sm"><i class="fas fa-search"></i></button>
+        </div>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-gray-500 border-b">
+                    <th class="text-right py-3 px-2">نام</th>
+                    <th class="text-right py-3 px-2">شماره تماس</th>
+                    <th class="text-right py-3 px-2">ایمیل</th>
+                    <th class="text-right py-3 px-2">نقش‌ها</th>
+                    <th class="text-center py-3 px-2">تاریخ ثبت نام</th>
+                    <th class="text-center py-3 px-2">عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-2">{{ u.full_name or u.user_name }}</td>
+                    <td class="py-3 px-2">{{ u.phone_number or '-' }}</td>
+                    <td class="py-3 px-2 text-gray-500">{{ u.email or '-' }}</td>
+                    <td class="py-3 px-2">
+                        {% for role in u.roles %}
+                        <span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700 ml-1">{{ role }}</span>
+                        {% endfor %}
+                    </td>
+                    <td class="py-3 px-2 text-center text-gray-500">{{ u.insert_date.strftime('%Y-%m-%d') if u.insert_date else '-' }}</td>
+                    <td class="py-3 px-2 text-center">
+                        <a href="/administration/users/{{ u.id }}" class="text-indigo-600 hover:underline ml-2"><i class="fas fa-eye"></i></a>
+                        <button onclick="showRoleModal('{{ u.id }}')" class="text-green-600 hover:underline"><i class="fas fa-user-tag"></i></button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Role Assignment Modal -->
+<div id="role-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-96">
+        <h3 class="font-bold mb-4">مدیریت نقش کاربر</h3>
+        <form id="role-form" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-sm mb-1">نقش</label>
+                <select name="role_name" class="w-full border rounded-lg px-3 py-2">
+                    {% for role in roles %}
+                    <option value="{{ role.name }}">{{ role.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">اختصاص نقش</button>
+                <button type="button" onclick="hideRoleModal()" class="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">انصراف</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showRoleModal(userId) {
+    document.getElementById('role-form').action = '/api/v1/administration/users/' + userId + '/roles';
+    document.getElementById('role-modal').classList.remove('hidden');
+    document.getElementById('role-modal').classList.add('flex');
+}
+function hideRoleModal() {
+    document.getElementById('role-modal').classList.add('hidden');
+    document.getElementById('role-modal').classList.remove('flex');
+}
+</script>
+{% endblock %}

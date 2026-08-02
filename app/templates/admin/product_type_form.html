@@ -1,0 +1,89 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش نوع محصول" if product_type else "ایجاد نوع محصول" }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-emerald-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-emerald-200">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش نوع محصول" if product_type else "ایجاد نوع محصول جدید" }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{{ "ویرایش اطلاعات نوع محصول" if product_type else "ثبت نوع محصول جدید" }}</p>
+                </div>
+            </div>
+            <a href="/administration/product-types" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ '/administration/product-types/' ~ product_type.id ~ '/edit' if product_type else '/administration/product-types/new' }}" class="space-y-6" id="pt-form">
+        <input type="hidden" name="log" id="Log">
+
+        <!-- Main info -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-tag"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">اطلاعات نوع محصول</h2>
+                        <p class="text-xs text-gray-500">مشخصات پایه نوع محصول را وارد کنید</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div class="md:col-span-2">
+                        <label class="form-label" for="fa_name">نام فارسی <span class="text-red-500">*</span></label>
+                        <input type="text" id="fa_name" name="fa_name" value="{{ product_type.fa_name if product_type else '' }}" class="form-input" required placeholder="مثال: دیود لیزر">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="form-label" for="en_name">نام انگلیسی</label>
+                        <input type="text" id="en_name" name="en_name" value="{{ product_type.en_name if product_type else '' }}" class="form-input ltr-input" dir="ltr" placeholder="Laser Diode">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-gray-300"></i>
+                    {{ "ویرایش نوع محصول" if product_type else "ایجاد نوع محصول جدید" }}
+                </p>
+                <div class="flex items-center gap-3">
+                    <a href="/administration/product-types" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-times"></i> انصراف
+                    </a>
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-check"></i> {{ "بروزرسانی" if product_type else "ذخیره" }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(function () {
+    // Build the Log hidden field on submit
+    $('#pt-form').on('submit', function () {
+        var log = '';
+        $('#pt-form :input').not('[type="submit"], [type="button"], [type="hidden"]').each(function () {
+            var name = $(this).attr('name') || '';
+            var val = $(this).val() || '';
+            log += name + ': ' + val + '; ';
+        });
+        $('#Log').val(log);
+        return true;
+    });
+});
+</script>
+{% endblock %}

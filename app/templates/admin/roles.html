@@ -1,0 +1,53 @@
+?{% extends "admin/base.html" %}
+{% block title %}نقش‌ها{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">مدیریت نقش‌ها</h1>
+        <a href="/administration/roles/create" class="btn-primary flex items-center gap-2">
+            <i class="fas fa-plus"></i> نقش جدید
+        </a>
+    </div>
+    <div class="card">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="table-header">#</th>
+                        <th class="table-header">نام نقش</th>
+                        <th class="table-header">توضیحات</th>
+                        <th class="table-header">تعداد کاربران</th>
+                        <th class="table-header">تعداد دسترسی‌ها</th>
+                        <th class="table-header">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for role in roles %}
+                    <tr class="table-row-hover">
+                        <td class="table-cell">{{ role.id }}</td>
+                        <td class="table-cell font-medium">{{ role.name }}</td>
+                        <td class="table-cell text-sm text-gray-500 max-w-xs truncate">{{ role.description or '---' }}</td>
+                        <td class="table-cell">{{ role.user_count or 0 }}</td>
+                        <td class="table-cell">{{ role.permission_count or 0 }}</td>
+                        <td class="table-cell">
+                            <div class="flex items-center gap-2">
+                                <a href="/administration/roles/{{ role.id }}/edit" class="text-blue-600 hover:text-blue-800" title="ویرایش">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form method="POST" action="/administration/roles/{{ role.id }}/delete" onsubmit="return confirm('آیا از حذف نقش {{ role.name }} اطمینان دارید؟')" style="display:inline">
+                                    <button type="submit" class="text-red-500 hover:text-red-700" title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">هیچ نقشی یافت نشد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

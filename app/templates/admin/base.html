@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}پنل مدیریت{% endblock %} | آساشاپ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Vazirmatn', 'system-ui', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif; }
+        .sidebar-link.active { background-color: #1e40af; color: #fff; }
+        .sidebar-link:hover { background-color: #1e3a8a; color: #fff; }
+        .pagination-btn { @apply px-3 py-1 rounded text-sm border border-gray-300 hover:bg-gray-100; }
+        .pagination-btn.active { @apply bg-blue-600 text-white border-blue-600; }
+        .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+        .btn-primary { @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
+        .btn-success { @apply bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
+        .btn-danger { @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
+        .btn-warning { @apply bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
+        .btn-secondary { @apply bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors; }
+        .form-input { width: 100%; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none; box-sizing: border-box; }
+        .form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+        .form-label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
+        select.form-input { appearance: auto; -webkit-appearance: auto; }
+        textarea.form-input { resize: vertical; }
+        .ltr-input { direction: ltr; text-align: left; }
+        .card { @apply bg-white rounded-xl shadow-sm border border-gray-200; }
+        .card-header { @apply px-6 py-4 border-b border-gray-200; }
+        .card-body { @apply p-6; }
+        .table-header { @apply px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider; }
+        .table-cell { @apply px-4 py-3 text-sm text-gray-700; }
+        .table-row-hover:hover { @apply bg-gray-50; }
+        select.form-input { @apply appearance-none; }
+        textarea.form-input { @apply resize-y; }
+        .ltr-input { direction: ltr; text-align: left; }
+        .tab-active { @apply border-b-2 border-blue-600 text-blue-600 font-medium; }
+        .tab-inactive { @apply text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent; }
+        .star-rating .star { @apply text-amber-400; }
+        .star-rating .star.empty { @apply text-gray-300; }
+        .switch { position: relative; display: inline-flex; align-items: center; height: 24px; width: 44px; border-radius: 9999px; cursor: pointer; transition: background-color 0.15s ease; flex-shrink: 0; }
+        .switch.active { background-color: #2563eb; border: 1px solid #1d4ed8; }
+        .switch.inactive { background-color: #9ca3af; border: 1px solid #6b7280; }
+        .switch-dot { position: absolute; inset-inline-start: 3px; top: 3px; height: 16px; width: 16px; border-radius: 9999px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.15s ease; }
+        .switch.active .switch-dot { transform: translateX(22px); }
+        .switch.inactive .switch-dot { transform: translateX(0px); }
+        [dir="rtl"] .switch.active .switch-dot { transform: translateX(0px); }
+        [dir="rtl"] .switch.inactive .switch-dot { transform: translateX(-22px); }
+        [dir="rtl"] .ml-2 { margin-left: 0; margin-right: 0.5rem; }
+        [dir="rtl"] .mr-2 { margin-right: 0; margin-left: 0.5rem; }
+        [dir="rtl"] .space-x-reverse > :not([hidden]) ~ :not([hidden]) { --tw-space-x-reverse: 1; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex h-screen overflow-hidden">
+        <aside class="w-64 bg-gray-900 text-white flex-shrink-0 hidden lg:flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fas fa-store text-blue-400"></i>
+                    آسا‌شاپ
+                </h1>
+                <p class="text-xs text-gray-400 mt-1">پنل مدیریت</p>
+            </div>
+            <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+                <a href="/administration/dashboard" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 transition-colors">
+                    <i class="fas fa-chart-pie w-5 text-center"></i> داشبورد
+                </a>
+
+                <div class="nav-group">
+                    <button type="button" onclick="toggleSidebarGroup(this)" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                        <i class="fas fa-store w-5 text-center"></i>
+                        <span class="flex-1 text-right">فروشگاه</span>
+                        <i class="group-icon fas fa-plus text-xs text-gray-500"></i>
+                    </button>
+                    <div class="nav-submenu hidden space-y-0.5 mt-0.5">
+                        <a href="/administration/categories" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-sitemap w-4 text-center"></i> دسته بندی ها
+                        </a>
+                        <a href="/administration/products" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-box w-4 text-center"></i> محصولات
+                        </a>
+                        <a href="/administration/product-types" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-layer-group w-4 text-center"></i> انواع محصول
+                        </a>
+                        <a href="/administration/similar-products" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-clone w-4 text-center"></i> محصولات مشابه
+                        </a>
+                        <a href="/administration/related-products" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-link w-4 text-center"></i> محصولات مرتبط
+                        </a>
+                        <a href="/administration/tags" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-tags w-4 text-center"></i> برچسب ها
+                        </a>
+                        <a href="/administration/product-tags" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-tag w-4 text-center"></i> برچسب محصولات
+                        </a>
+                        <a href="/administration/brands" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-copyright w-4 text-center"></i> برند ها
+                        </a>
+                        <a href="/administration/product-units" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-weight-hanging w-4 text-center"></i> واحد های اندازه گیری
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <button type="button" onclick="toggleSidebarGroup(this)" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                        <i class="fas fa-cogs w-5 text-center"></i>
+                        <span class="flex-1 text-right">ویژگی های فنی</span>
+                        <i class="group-icon fas fa-plus text-xs text-gray-500"></i>
+                    </button>
+                    <div class="nav-submenu hidden space-y-0.5 mt-0.5">
+                        <a href="/administration/category-options" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-list w-4 text-center"></i> گزینه های دسته بندی
+                        </a>
+                        <a href="/administration/technical-features" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-sliders-h w-4 text-center"></i> ویژگی های فنی
+                        </a>
+                        <a href="/administration/technical-tables" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-table w-4 text-center"></i> جدول های فنی
+                        </a>
+                        <a href="/administration/technical-table-products" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-table-cells w-4 text-center"></i> جدول های فنی محصول
+                        </a>
+                        <a href="/administration/category-technical-features" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-boxes-stacked w-4 text-center"></i> دسته بندی ویژگی فنی
+                        </a>
+                        <a href="/administration/technical-feature-enums" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-align-left w-4 text-center"></i> انوم ویژگی فنی
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <button type="button" onclick="toggleSidebarGroup(this)" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                        <i class="fas fa-shopping-cart w-5 text-center"></i>
+                        <span class="flex-1 text-right">سفارش</span>
+                        <i class="group-icon fas fa-plus text-xs text-gray-500"></i>
+                    </button>
+                    <div class="nav-submenu hidden space-y-0.5 mt-0.5">
+                        <a href="/administration/orders" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-shopping-cart w-4 text-center"></i> سفارشات
+                        </a>
+                        <a href="/administration/invoices" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-file-invoice w-4 text-center"></i> فاکتورها
+                        </a>
+                        <a href="/administration/receipts" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-hand-holding-usd w-4 text-center"></i> رسیدها
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <button type="button" onclick="toggleSidebarGroup(this)" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                        <i class="fas fa-money-bill-wave w-5 text-center"></i>
+                        <span class="flex-1 text-right">مالی</span>
+                        <i class="group-icon fas fa-plus text-xs text-gray-500"></i>
+                    </button>
+                    <div class="nav-submenu hidden space-y-0.5 mt-0.5">
+                        <a href="/administration/suppliers" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-truck w-4 text-center"></i> تأمین کنندگان
+                        </a>
+                        <a href="/administration/purchase-orders" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-truck-loading w-4 text-center"></i> سفارش های خرید
+                        </a>
+                        <a href="/administration/currency" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-coins w-4 text-center"></i> نرخ ارز
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <button type="button" onclick="toggleSidebarGroup(this)" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                        <i class="fas fa-users w-5 text-center"></i>
+                        <span class="flex-1 text-right">کاربران</span>
+                        <i class="group-icon fas fa-plus text-xs text-gray-500"></i>
+                    </button>
+                    <div class="nav-submenu hidden space-y-0.5 mt-0.5">
+                        <a href="/administration/users" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-user w-4 text-center"></i> کاربران
+                        </a>
+                        <a href="/administration/roles" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-user-shield w-4 text-center"></i> نقش ها
+                        </a>
+                        <a href="/administration/role-claims" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-key w-4 text-center"></i> دسترسی ها
+                        </a>
+                        <a href="/administration/user-roles" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-user-tag w-4 text-center"></i> نقش کاربران
+                        </a>
+                        <a href="/administration/identity-informations" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-id-card w-4 text-center"></i> اطلاعات هویتی
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <button type="button" onclick="toggleSidebarGroup(this)" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                        <i class="fas fa-tasks w-5 text-center"></i>
+                        <span class="flex-1 text-right">امور عمومی</span>
+                        <i class="group-icon fas fa-plus text-xs text-gray-500"></i>
+                    </button>
+                    <div class="nav-submenu hidden space-y-0.5 mt-0.5">
+                        <a href="/administration/comments" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-comments w-4 text-center"></i> نظرات
+                        </a>
+                        <a href="/administration/tickets" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-headset w-4 text-center"></i> تیکت ها
+                        </a>
+                        <a href="/administration/warehouse" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-warehouse w-4 text-center"></i> انبار
+                        </a>
+                        <a href="/administration/notified-products" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-bell w-4 text-center"></i> محصولات اطلاع رسانی
+                        </a>
+                        <a href="/administration/logs" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-scroll w-4 text-center"></i> لاگ ها
+                        </a>
+                        <a href="/administration/admin-parameters" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-sliders w-4 text-center"></i> پارامترهای مدیریت
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-group">
+                    <button type="button" onclick="toggleSidebarGroup(this)" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                        <i class="fas fa-cog w-5 text-center"></i>
+                        <span class="flex-1 text-right">تنظیمات</span>
+                        <i class="group-icon fas fa-plus text-xs text-gray-500"></i>
+                    </button>
+                    <div class="nav-submenu hidden space-y-0.5 mt-0.5">
+                        <a href="/administration/settings" class="sidebar-link flex items-center gap-3 px-3 pr-8 py-2 rounded-lg text-sm text-gray-400 transition-colors">
+                            <i class="fas fa-sliders-h w-4 text-center"></i> تنظیمات سایت
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <div class="p-4 border-t border-gray-700">
+                <a href="/administration/logout" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+                    <i class="fas fa-sign-out-alt w-5 text-center"></i> خروج
+                </a>
+            </div>
+        </aside>
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-3 flex items-center justify-between lg:justify-end">
+                <button class="lg:hidden text-gray-600 text-xl" onclick="document.querySelector('aside').classList.toggle('hidden')">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-600">خوش آمدید، مدیر</span>
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">مد</div>
+                </div>
+            </header>
+            <main class="flex-1 overflow-y-auto p-6">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        function toggleSidebarGroup(btn) {
+            var submenu = btn.closest('.nav-group').querySelector('.nav-submenu');
+            var icon = btn.querySelector('.group-icon');
+            if (submenu.classList.contains('hidden')) {
+                submenu.classList.remove('hidden');
+                icon.classList.remove('fa-plus');
+                icon.classList.add('fa-minus');
+            } else {
+                submenu.classList.add('hidden');
+                icon.classList.remove('fa-minus');
+                icon.classList.add('fa-plus');
+            }
+        }
+        $(function () {
+            var path = window.location.pathname;
+            $('.sidebar-link').each(function () {
+                var href = $(this).attr('href');
+                if (href && path.indexOf(href) === 0) {
+                    $(this).addClass('active');
+                    var group = $(this).closest('.nav-group');
+                    if (group.length) {
+                        var btn = group.find('button').first();
+                        var submenu = group.find('.nav-submenu').first();
+                        submenu.removeClass('hidden');
+                        btn.find('.group-icon').removeClass('fa-plus').addClass('fa-minus');
+                    }
+                }
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

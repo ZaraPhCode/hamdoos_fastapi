@@ -1,0 +1,43 @@
+<div class="js-sidebar-category-tree sidebar-menu">
+    <div class="category-tree sidebar-category-tree js-sidebar-categories">
+        <ul>
+            {% for cat in categories or [] %}
+            <li>
+                    <a href="/Shop/Category/Index/{{ cat.en_title or cat.slug or cat.id }}" title="{{ cat.title }}" data-category-id="{{ cat.id }}">
+                        <span>{{ cat.title }}</span>
+                    </a>
+                    {% if cat.children %}
+                    <div class="collapse-icons js-collapse-trigger">
+                        <img src="/static/ThemeLayout/iconSVG/plus.svg" class="add" style="display:inline-block">
+                        <img src="/static/ThemeLayout/iconSVG/dash.svg" class="remove" style="display:none">
+                    </div>
+                    <div class="category-sub-menu js-sub-categories" style="display:none">
+                        <ul>
+                            {% for c1 in cat.children %}
+                            <li>
+                                <a href="/Shop/Category/Index/{{ c1.en_title or c1.slug or c1.id }}" title="{{ c1.title }}" data-category-id="{{ c1.id }}"><span>{{ c1.title }}</span></a>
+                                {% if c1.children %}
+                                <div class="collapse-icons js-collapse-trigger">
+                                    <img src="/static/ThemeLayout/iconSVG/plus.svg" class="add" style="display:inline-block">
+                                    <img src="/static/ThemeLayout/iconSVG/dash.svg" class="remove" style="display:none">
+                                </div>
+                                <div class="category-sub-menu js-sub-categories" style="display:none">
+                                    <ul>
+                                        {% for c2 in c1.children %}
+                                        <li>
+                                            <a href="/Shop/Category/Index/{{ c2.en_title or c2.slug or c2.id }}" title="{{ c2.title }}" data-category-id="{{ c2.id }}"><span>{{ c2.title }}</span></a>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>

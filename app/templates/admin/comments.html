@@ -1,0 +1,76 @@
+?{% extends "admin/base.html" %}
+{% block title %}نظرات{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">مدیریت نظرات</h1>
+        <div class="flex items-center gap-3">
+            <a href="/administration/comments" class="btn-sm {{ 'btn-secondary' if pending_only else 'btn-primary' }}">همه</a>
+            <a href="/administration/comments?pending=1" class="btn-sm {{ 'btn-primary' if pending_only else 'btn-secondary' }}">در انتظار تأیید</a>
+        </div>
+    </div>
+    <div class="card">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="table-header">#</th>
+                        <th class="table-header">محصول</th>
+                        <th class="table-header">کاربر</th>
+                        <th class="table-header">متن</th>
+                        <th class="table-header">امتیاز</th>
+                        <th class="table-header">تاریخ</th>
+                        <th class="table-header">وضعیت</th>
+                        <th class="table-header">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for comment in comments %}
+                    <tr class="table-row-hover">
+                        <td class="table-cell">{{ comment.id }}</td>
+                        <td class="table-cell font-medium text-sm max-w-[150px] truncate">
+                            <a href="/administration/products/{{ comment.product_id }}/edit" class="text-blue-600 hover:underline">{{ comment.product_name or comment.product.name if comment.product else '---' }}</a>
+                        </td>
+                        <td class="table-cell text-sm">{{ comment.user_name or comment.user.name if comment.user else comment.guest_name or '---' }}</td>
+                        <td class="table-cell text-sm text-gray-600 max-w-[250px] truncate">{{ comment.text or comment.comment_text }}</td>
+                        <td class="table-cell">
+                            {% if comment.rate %}
+                            <div class="star-rating flex items-center gap-0.5">
+                                {% for i in range(5) %}
+                                <i class="fas fa-star {{ 'star' if i < comment.rate else 'empty' }} text-sm"></i>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="text-gray-400 text-sm">---</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell text-sm">{{ comment.insert_date }}</td>
+                        <td class="table-cell">
+                            {% if comment.is_approved %}
+                            <span class="badge bg-emerald-100 text-emerald-800">تأیید شده</span>
+                            {% else %}
+                            <span class="badge bg-amber-100 text-amber-800">در انتظار</span>
+                            {% endif %}
+                        </td>
+                        <td class="table-cell">
+                            <div class="flex items-center gap-2">
+                                {% if not comment.is_approved %}
+                                <form method="POST" action="/administration/comments/{{ comment.id }}/approve" style="display:inline">
+                                    <button type="submit" class="text-emerald-600 hover:text-emerald-800" title="تأیید"><i class="fas fa-check-circle"></i></button>
+                                </form>
+                                {% endif %}
+                                <form method="POST" action="/administration/comments/{{ comment.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                                    <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">هیچ نظری یافت نشد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

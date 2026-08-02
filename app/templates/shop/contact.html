@@ -1,0 +1,28 @@
+{% extends "shop/base.html" %}
+{% block title %}تماس با ما - آشا شاپ{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">تماس با ما</h1>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h3 class="font-bold mb-4">اطلاعات تماس</h3>
+            <div class="space-y-4">
+                <p><i class="fas fa-phone ml-2 text-indigo-600"></i>۰۲۱-۱۲۳۴۵۶۷۸</p>
+                <p><i class="fas fa-envelope ml-2 text-indigo-600"></i>info@asha-shop.ir</p>
+                <p><i class="fas fa-map-marker-alt ml-2 text-indigo-600"></i>تهران، ایران</p>
+                <p><i class="fas fa-clock ml-2 text-indigo-600"></i>شنبه تا پنجشنبه ۹:۰۰ تا ۱۸:۰۰</p>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h3 class="font-bold mb-4">فرم تماس</h3>
+            <form method="POST" action="/tickets" class="space-y-3">
+                <div><input name="name" placeholder="نام و نام خانوادگی" required class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+                <div><input name="email" type="email" placeholder="ایمیل" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+                <div><input name="telephone" placeholder="شماره تماس" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
+                <div><textarea name="description" placeholder="پیام شما" required rows="4" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea></div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">ارسال پیام</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

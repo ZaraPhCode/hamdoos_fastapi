@@ -1,0 +1,36 @@
+{% extends "shop/base.html" %}
+{% block title %}کیف پول - آشا شاپ{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="bg-white rounded-lg shadow-sm border p-6 text-center">
+        <i class="fas fa-wallet text-indigo-500 text-4xl mb-3"></i>
+        <h2 class="text-lg font-bold mb-2">کیف پول</h2>
+        <p class="text-3xl font-bold text-indigo-600">{{ "{:,.0f}".format(wallet.amount or 0) }} <span class="text-sm">تومان</span></p>
+        <a href="/receipts/upload" class="inline-block mt-4 bg-indigo-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-indigo-700">
+            <i class="fas fa-arrow-up ml-1"></i>افزایش اعتبار
+        </a>
+    </div>
+    <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border p-6">
+        <h3 class="font-bold mb-4">تاریخچه تراکنش‌ها</h3>
+        {% if transfers %}
+        <div class="space-y-2">
+            {% for t in transfers %}
+            <div class="flex justify-between items-center p-3 border-b text-sm">
+                <div>
+                    <p class="{% if t.amount > 0 %}text-green-600{% else %}text-red-600{% endif %} font-medium">
+                        {{ '+' if t.amount > 0 }}{{ "{:,.0f}".format(t.amount) }} تومان
+                    </p>
+                    <p class="text-xs text-gray-500">{{ t.insert_date }}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded text-xs {% if t.status == 'Confirmed' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                    {{ t.status }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400 text-center py-8">تراکنشی وجود ندارد</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

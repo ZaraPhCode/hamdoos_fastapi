@@ -1,0 +1,234 @@
+<header id="header">
+    <div class="desktop-header-version">
+        <div class="header-banner clearfix"></div>
+        <div class="header-nav clearfix">
+            <div class="container">
+                <div class="header-nav-wrapper d-flex align-items-center justify-content-between">
+                    <div class="left-nav d-flex"></div>
+                    <div class="right-nav d-flex"></div>
+                </div>
+            </div>
+        </div>
+        <div class="main-header clearfix">
+            <div class="container">
+                <div class="header-wrapper d-flex align-items-center">
+                    <div class="header-logo">
+                        <a href="/" title="فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس">
+                            <img class="logo" src="/static/ThemeLayout/img/logo.jpg" alt="فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس" width="334" height="100">
+                        </a>
+                    </div>
+                    <div class="header-right flex-grow-1">
+                        <div class="display-top align-items-center d-flex flex-wrap flex-lg-nowrap justify-content-end">
+                            <div class="searchbar-wrapper">
+                                <div id="search_widget" class="js-search-source" data-search-controller-url="/search/autocomplete">
+                                    <div class="search-widget ui-front">
+                                        <form method="get" action="/search">
+                                            <span role="status" aria-live="polite" class="ui-helper-hidden-accessible"></span>
+                                            <input class="form-control ui-autocomplete-input" type="text" name="q" value="" placeholder="جستجوی محصول مورد نظر ..." aria-label="جستجو" autocomplete="off">
+                                            <button type="submit" class="btn-primary">
+                                                <img src="/static/ThemeLayout/iconSVG/search-normal.svg" alt="جستجو">
+                                            </button>
+                                        </form>
+                                        <ul class="ui-autocomplete ui-front ui-menu ui-widget ui-widget-content ui-corner-all" id="ui-id-1" tabindex="0" style="display: none;"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if current_user and current_user.is_authenticated %}
+                            <div class="customer-signin-module">
+                                <div class="user-info">
+                                    <div class="customer-logged">
+                                        <div class="js-account-source">
+                                            <ul>
+                                                <li>
+                                                    <div class="account-link account">
+                                                        <a href="/profile" title="حساب کاربری من" rel="nofollow">
+                                                            <img src="/static/ThemeLayout/iconSVG/user.svg" alt="user">
+                                                            <span>{{ current_user.full_name or current_user.phone_number or 'کاربر' }}</span>
+                                                        </a>
+                                                    </div>
+                                                    <a href="/auth/logout" class="logout-link">
+                                                        <i class="fa fa-sign-out" aria-hidden="true"></i>
+                                                        <span>خروج</span>
+                                                    </a>
+                                                    <div class="dropdown-customer-account-links">
+                                                        <ul class="dropdown-menu mt-2 dropdown-menu-right">
+                                                            <li><a href="/profile" class="dropdown-item"><span>اطلاعات من</span><img src="/static/ThemeLayout/iconSVG/profile-circle.svg"></a></li>
+                                                            <li><a href="/orders" class="dropdown-item"><span>تاریخچه سفارشات</span><img src="/static/ThemeLayout/iconSVG/calendar-1.svg"></a></li>
+                                                            <li><a href="/orders/next" class="dropdown-item"><span>سفارش بعدی</span><img src="/static/ThemeLayout/iconSVG/basket-fill.svg"></a></li>
+                                                            <li><a href="/profile/favorites" class="dropdown-item"><span>علاقه‌مندی‌ها</span><img src="/static/ThemeLayout/iconSVG/heart.svg"></a></li>
+                                                            <li><a href="#" class="dropdown-item"><span>خریدهای من</span><img src="/static/ThemeLayout/iconSVG/local-offer.svg"></a></li>
+                                                            <li><a href="#" class="dropdown-item"><span>نظرات</span><img src="/static/ThemeLayout/iconSVG/message.svg"></a></li>
+                                                            <li><a href="/profile/addresses" class="dropdown-item"><span>آدرس‌ها</span><img src="/static/ThemeLayout/iconSVG/location-on.svg"></a></li>
+                                                            <li><a href="/profile/phones" class="dropdown-item"><span>شماره‌های من</span><img src="/static/ThemeLayout/iconSVG/contact-phone.svg"></a></li>
+                                                            <li><a href="/profile/change-password" class="dropdown-item"><span>عملیات رمز عبور</span><img src="/static/ThemeLayout/iconSVG/vpn-key.svg"></a></li>
+                                                            <li><a href="/profile/bank-info" class="dropdown-item"><span>اطلاعات حساب بانکی</span><img src="/static/ThemeLayout/iconSVG/bank.svg"></a></li>
+                                                            <li class="logout"><a href="/auth/logout" rel="nofollow"><span>خروج</span></a></li>
+                                                        </ul>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="customer-signin-module">
+                                <div class="user-info">
+                                    <div class="js-account-source">
+                                        <ul>
+                                            <li>
+                                                <div class="account-link">
+                                                    <a href="/auth/login" title="ورود" rel="nofollow">
+                                                        <span>ورود</span>
+                                                        <img src="/static/ThemeLayout/iconSVG/user.svg" alt="user">
+                                                    </a>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="shopping-cart-module">
+                                <div class="blockcart cart-preview" data-sidebar-cart-trigger>
+                                    <ul class="cart-header">
+                                        <li data-header-cart-source>
+                                            <a style="border-radius: 10px" rel="nofollow" href="/cart" class="cart-link btn-primary">
+                                                <span class="cart-design">
+                                                    <i class="fa fa-shopping-basket" aria-hidden="true"></i>
+                                                    <span class="cart-products-count js-cart-count" id="cart-badge-header">{{ cart_count or 0 }}</span>
+                                                </span>
+                                                <span class="cart-total-value">{{ cart_total or 0 }} ریال</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                    <div class="cart-dropdown" data-shopping-cart-source>
+                                        <div class="cart-dropdown-wrapper">
+                                            <div class="cart-title h4">سبد خرید</div>
+                                            <ul class="cart-items _allow-update-quantity">
+                                                {% for item in cart_items or [] %}
+                                                <li class="cart-product-line">
+                                                    <a class="product-image" href="/product/{{ item.product_id }}">
+                                                        <img src="{{ item.image_url or '/static/ThemeLayout/img/placeholder.png' }}" alt="{{ item.name }}" class="img-fluid">
+                                                    </a>
+                                                    <div class="product-infos">
+                                                        <a class="product-name" href="/product/{{ item.product_id }}">{{ item.name }}</a>
+                                                        <div class="product-attributes"></div>
+                                                        <div class="product-price-quantity">
+                                                            <div class="product-quantity-touchspin">
+                                                                <input class="js-cart-line-product-quantity" type="number" value="{{ item.quantity }}" name="product-sidebar-quantity-spin" min="1">
+                                                            </div>
+                                                            <div class="product-cart-price">
+                                                                <div style="display: grid">
+                                                                    {% if item.regular_price and item.regular_price > item.price %}
+                                                                    <span class="regular-price">{{ item.regular_price }} ریال</span>
+                                                                    {% endif %}
+                                                                    <span class="product-price">{{ item.price }} ریال</span>
+                                                                </div>
+                                                                <span class="x-character">x</span>
+                                                                <span class="product-qty">{{ item.quantity }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <a class="remove-from-cart icon-link" rel="nofollow" href="#" title="حذف">
+                                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                                    </a>
+                                                </li>
+                                                {% else %}
+                                                <li class="text-center py-3 text-muted">سبد خرید شما خالی است</li>
+                                                {% endfor %}
+                                            </ul>
+                                            <div class="cart-bottom">
+                                                <p class="cart-products-count alert-info">{{ cart_count or 0 }} کالا در سبد خرید شما</p>
+                                                <div class="cart-summary-subtotals">
+                                                    <div class="cart-summary-line cart-subtotal-products">
+                                                        <label>جمع محصولات</label>
+                                                        <span class="price price-total">{{ cart_total or 0 }} ریال</span>
+                                                    </div>
+                                                    <div class="cart-summary-line shipping-hook"></div>
+                                                </div>
+                                                <div class="cart-action">
+                                                    <div class="text-center">
+                                                        <a href="/cart" class="btn btn-primary">مشاهده و پرداخت &nbsp;<i class="caret-right"></i></a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="header-bottom clearfix">
+            <div class="desktop-sticky-wrapper">
+                <div class="header-main-menu" data-sticky-menu>
+                    <div class="container">
+                        <div class="header-main-menu-wrapper">
+                            <div class="left-nav-trigger" data-left-nav-trigger>
+                                <div class="left-nav-icon d-flex align-items-center justify-content-center" style="width: 100px;">
+                                    <div class="category-btn-header-body">
+                                        <i class="material-icons">view_headline</i>
+                                        <span>دسته‌بندی</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sticky-icon-cart" data-sticky-cart data-sidebar-cart-trigger style="display:none;">
+                                <a style="border-radius:10px" rel="nofollow" href="#" class="cart-link btn-primary">
+                                    <span class="cart-design">
+                                        <img src="/static/ThemeLayout/iconSVG/shopping_cart_icon.svg" alt="cart">
+                                        <span class="cart-products-count js-cart-count">0</span>
+                                    </span>
+                                    <span class="cart-total-value">0 ریال</span>
+                                </a>
+                            </div>
+                            <div id="amegamenu" class="amegamenu_rtl">
+                                <ul class="anav-top">
+                                    <li class="amenu-item mm1">
+                                        <a href="/" class="amenu-link">
+                                            <span><img src="/static/ThemeLayout/iconSVG/home.svg" alt="home">&nbsp; خانه</span>
+                                        </a>
+                                    </li>
+                                    {% if header_categories %}
+                                    {% for cat in header_categories %}
+                                    <li class="amenu-item mm2 plex">
+                                        <a href="/Shop/Category/Index/{{ cat.en_title or cat.slug or cat.id }}" class="amenu-link">
+                                            <span>{{ cat.title or cat.name }}</span>
+                                        </a>
+                                        {% if cat.children or cat.childs %}
+                                        <div class="adropdown adrd3">
+                                            <div class="dropdown-wrapper">
+                                                <div class="dropdown-bgimage"></div>
+                                                <div class="dropdown-content acot3 dd9 category-horizontally">
+                                                    <div class="content-grid acategory-content">
+                                                        <div class="aitem">
+                                                            <p class="category-title h5">
+                                                                <a href="/Shop/Category/Index/{{ cat.en_title or cat.slug or cat.id }}"><span>{{ cat.title or cat.name }}</span></a>
+                                                            </p>
+                                                            <ul class="category-subs">
+                                                                {% for child in cat.children or cat.childs %}
+                                                                <li>
+                                                                    <a href="/Shop/Category/Index/{{ child.en_title or child.slug or child.id }}"><span>{{ child.title or child.name }}</span></a>
+                                                                </li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </li>
+                                    {% endfor %}
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>

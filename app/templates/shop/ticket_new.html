@@ -1,0 +1,17 @@
+{% extends "shop/base.html" %}
+{% block title %}تیکت جدید - آشا شاپ{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+        <h1 class="text-xl font-bold mb-6">تیکت جدید</h1>
+        <form method="POST" action="/tickets/new" class="space-y-4">
+            <div><label class="block text-sm mb-1">موضوع</label><input name="subject" class="w-full border rounded-lg px-3 py-2"></div>
+            <div><label class="block text-sm mb-1">نام</label><input name="name" required class="w-full border rounded-lg px-3 py-2" value="{{ current_user.full_name if current_user else '' }}"></div>
+            <div><label class="block text-sm mb-1">ایمیل</label><input name="email" type="email" class="w-full border rounded-lg px-3 py-2" value="{{ current_user.email if current_user else '' }}"></div>
+            <div><label class="block text-sm mb-1">شماره تماس</label><input name="telephone" class="w-full border rounded-lg px-3 py-2" value="{{ current_user.phone_number if current_user else '' }}"></div>
+            <div><label class="block text-sm mb-1">توضیحات</label><textarea name="description" required rows="5" class="w-full border rounded-lg px-3 py-2"></textarea></div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700">ثبت تیکت</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

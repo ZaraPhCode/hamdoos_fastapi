@@ -1,0 +1,91 @@
+/* Asha Shop — Custom Styles */
+
+body {
+    font-family: 'Vazirmatn', system-ui, sans-serif;
+    scroll-behavior: smooth;
+}
+
+/* Product Card */
+.product-card {
+    transition: all 0.2s ease;
+}
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Image Aspect Ratio */
+.aspect-square {
+    aspect-ratio: 1 / 1;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* Status Badges */
+.status-badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+.status-Ordering { @apply bg-yellow-100 text-yellow-800; }
+.status-AwaitingPayment { @apply bg-orange-100 text-orange-800; }
+.status-Paid { @apply bg-blue-100 text-blue-800; }
+.status-ConfirmedPayment { @apply bg-indigo-100 text-indigo-800; }
+.status-Processing { @apply bg-purple-100 text-purple-800; }
+.status-Posted { @apply bg-green-100 text-green-800; }
+.status-Canceled { @apply bg-red-100 text-red-800; }
+
+/* Transition */
+.transition-fast {
+    transition: all 0.15s ease;
+}
+
+/* Price */
+.price {
+    font-feature-settings: "tnum";
+}
+
+/* RTL Fixes */
+[dir="rtl"] .mr-2 { margin-left: 0.5rem; margin-right: 0; }
+[dir="rtl"] .ml-2 { margin-right: 0.5rem; margin-left: 0; }
+[dir="rtl"] .space-x-2 > * + * { margin-right: 0.5rem; margin-left: 0; }
+
+/* Loading Spinner */
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #4f46e5;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+}
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}

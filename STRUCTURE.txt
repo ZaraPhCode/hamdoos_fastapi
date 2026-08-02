@@ -1,0 +1,82 @@
+# Asha Shop FastAPI — Project Structure
+
+```
+/asha-shop-fastapi/
+├── alembic/                   # Database migrations
+│   ├── versions/              # Migration scripts
+│   ├── env.py                 # Alembic environment config
+│   └── alembic.ini            # Alembic config
+├── app/
+│   ├── __init__.py
+│   ├── main.py                # FastAPI app entry point
+│   ├── database.py            # Async SQLAlchemy engine & session
+│   ├── api/
+│   │   └── v1/                # API version 1 routes
+│   │       ├── auth.py, products.py, categories.py,
+│   │       │   orders.py, invoices.py, users.py,
+│   │       │   admin.py, payments.py
+│   ├── config/
+│   │   └── settings.py        # Pydantic Settings (env vars)
+│   ├── core/
+│   │   ├── base.py            # SQLAlchemy Base & BaseEntityMixin
+│   │   ├── security.py        # JWT, password hashing
+│   │   └── dependencies.py    # FastAPI dependencies
+│   ├── models/                # SQLAlchemy ORM models
+│   │   ├── user.py, role.py, product.py, category.py,
+│   │   │   brand.py, variety.py, order.py, invoice.py,
+│   │   │   finance.py, wallet.py, warehouse.py,
+│   │   │   support.py, customer.py, common.py,
+│   │   │   content.py, manufacturer.py
+│   ├── schemas/               # Pydantic request/response schemas
+│   │   ├── user.py, product.py, order.py, invoice.py, common.py
+│   ├── services/              # Business logic layer
+│   │   ├── auth_service.py, product_service.py,
+│   │   │   order_service.py, invoice_service.py,
+│   │   │   payment_service.py, sms_service.py,
+│   │   │   email_service.py, seo_service.py
+│   ├── templates/             # Jinja2 templates (Razor View equivalents)
+│   │   ├── shop/              # Public storefront
+│   │   ├── admin/             # Admin panel
+│   │   ├── identity/          # Login/Register/Password
+│   │   └── email/             # Email templates
+│   ├── static/                # Static assets
+│   │   ├── css/, js/, img/, fonts/
+│   │   └── uploads/           # User uploads (products, medias, receipts)
+│   └── utils/                 # Shared utilities
+│       ├── operation_result.py    # OperationResult (from 0_Framework)
+│       └── persian_tools.py       # Persian date/number utils (from Tools.cs)
+├── .env                       # Environment variables
+├── .gitignore
+├── alembic.ini                # Root alembic config
+├── docker-compose.yml         # App + PostgreSQL containers
+├── Dockerfile                 # Python 3.12-slim image
+└── requirements.txt           # Python dependencies
+```
+
+## Architecture (Onion / Clean)
+
+```
+Domain (models/) ← Services (business logic) ← API (routes) ← Templates (Jinja2)
+     ↑                            ↑
+     └── shared via BaseEntityMixin & utils/
+```
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Python 3.12 |
+| Web Framework | FastAPI 0.104 |
+| ORM | SQLAlchemy 2.0 (async) |
+| Migrations | Alembic 1.13 |
+| Database | PostgreSQL 16 |
+| Auth | JWT (python-jose) + bcrypt (passlib) |
+| Validation | Pydantic v2 |
+| Templates | Jinja2 |
+| API Docs | Swagger / ReDoc (auto) |
+| Container | Docker + docker-compose |
+| SMS | FarazSMS / Melipayamak / Bale |
+| Email | aiosmtplib (Outlook SMTP) |
+| Payment | ZarinPal |
+| Persian Date | jdatetime |
+| SEO | JSON-LD (manual schema generation) |

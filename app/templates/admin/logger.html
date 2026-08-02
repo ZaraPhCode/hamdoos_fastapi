@@ -1,0 +1,187 @@
+{% extends "admin/base.html" %}
+{% block title %}سوابق{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">لیست لاگ‌ها</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">مشاهده سوابق و تاریخچه عملیات</p>
+                </div>
+            </div>
+            <a href="/administration/categories" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <i class="fas fa-filter"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold text-gray-800">فیلتر لاگ‌ها</h2>
+                    <p class="text-xs text-gray-500">با استفاده از فیلترهای زیر لاگ‌های مورد نظر خود را جستجو کنید</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <form method="GET" action="/administration/logs/{{ record_id }}" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <input type="hidden" name="record_id" value="{{ record_id }}">
+                <div>
+                    <label class="form-label">نام جدول</label>
+                    <input type="text" class="form-input bg-gray-50" value="{{ table_name }}" readonly>
+                </div>
+                <div>
+                    <label class="form-label" for="user_id">کاربران</label>
+                    <select id="user_id" name="user_id" class="form-input">
+                        <option value="all">— همه کاربران —</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}" {{ 'selected' if filter_user_id == u.id|string else '' }}>{{ u.full_name or u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="log_type">نوع لاگ</label>
+                    <select id="log_type" name="log_type" class="form-input">
+                        <option value="all">— همه —</option>
+                        <option value="Create" {{ 'selected' if filter_log_type == 'Create' else '' }}>ایجاد</option>
+                        <option value="Update" {{ 'selected' if filter_log_type == 'Update' else '' }}>بروزرسانی</option>
+                        <option value="Delete" {{ 'selected' if filter_log_type == 'Delete' else '' }}>حذف</option>
+                        <option value="DeleteFromDatabase" {{ 'selected' if filter_log_type == 'DeleteFromDatabase' else '' }}>حذف از پایگاه داده</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label block md:hidden">&nbsp;</label>
+                    <button type="submit" class="btn-primary flex items-center gap-2 w-full justify-center">
+                        <i class="fas fa-search"></i> جستجو
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                    <i class="fas fa-list"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold text-gray-800">نتایج</h2>
+                    <p class="text-xs text-gray-500">{{ logs|length }} رکورد</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                <span>نمایش</span>
+                <select id="log-page-size" class="form-input w-auto py-1.5">
+                    <option value="25" selected>۲۵</option>
+                    <option value="50">۵۰</option>
+                    <option value="100">۱۰۰</option>
+                </select>
+                <span>رکورد</span>
+            </div>
+            {% if logs %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="logs-table">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2">تاریخ ایجاد</th>
+                            <th class="text-right py-3 px-2">جدول</th>
+                            <th class="text-right py-3 px-2">نوع</th>
+                            <th class="text-right py-3 px-2">توضیح</th>
+                            <th class="text-right py-3 px-2">ایجاد شده توسط کاربر</th>
+                            <th class="text-center py-3 px-2 w-32">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500 log-index">{{ loop.index }}</td>
+                            <td class="py-3 px-2 text-gray-600">{{ log.insert_date.strftime('%Y/%m/%d %H:%M') if log.insert_date else '—' }}</td>
+                            <td class="py-3 px-2">
+                                <span class="badge bg-gray-100 text-gray-700">{{ log.table_name or '—' }}</span>
+                            </td>
+                            <td class="py-3 px-2">
+                                {% if log.type == 'Create' %}
+                                <span class="badge bg-green-100 text-green-700">ایجاد</span>
+                                {% elif log.type == 'Update' %}
+                                <span class="badge bg-amber-100 text-amber-700">بروزرسانی</span>
+                                {% elif log.type == 'Delete' %}
+                                <span class="badge bg-red-100 text-red-700">حذف</span>
+                                {% else %}
+                                <span class="badge bg-gray-100 text-gray-700">{{ log.type or '—' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-gray-600 max-w-md truncate">{{ log.description or log.desc or '—' }}</td>
+                            <td class="py-3 px-2">
+                                <span class="text-gray-800">{{ user_map.get(log.created_by_user_id|string, '—') }}</span>
+                            </td>
+                            <td class="py-3 px-2 text-center">
+                                <span class="text-xs text-gray-400">{{ log.id|string|truncate(8, True, '...') }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-12 text-gray-400">
+                <i class="fas fa-inbox text-4xl mb-3"></i>
+                <p class="text-sm">هیچ لاگی با این فیلترها یافت نشد.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    var $allRows = $('#logs-table tbody tr').filter(function () {
+        return $(this).find('td').length > 1;
+    });
+    var $pageSize = $('#log-page-size');
+    var currentPage = 1;
+    var pageSize = parseInt($pageSize.val(), 10);
+
+    function applyPagination() {
+        var total = $allRows.length;
+        if (isNaN(pageSize) || total === 0) {
+            $allRows.show();
+            return;
+        }
+        var totalPages = Math.ceil(total / pageSize);
+        if (currentPage > totalPages) { currentPage = totalPages; }
+        if (currentPage < 1) { currentPage = 1; }
+        var start = (currentPage - 1) * pageSize;
+        var end = Math.min(start + pageSize, total);
+        $allRows.hide();
+        $allRows.slice(start, end).show();
+        $allRows.each(function (i) {
+            $(this).find('.log-index').text(i + 1);
+        });
+    }
+
+    $pageSize.on('change', function () {
+        pageSize = $(this).val() === 'all' ? NaN : parseInt($(this).val(), 10);
+        currentPage = 1;
+        applyPagination();
+    });
+
+    applyPagination();
+});
+</script>
+{% endblock %}

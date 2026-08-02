@@ -1,0 +1,83 @@
+?{% extends "admin/base.html" %}
+{% block title %}فاکتور {{ invoice.reference_code or invoice.id }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">فاکتور {{ invoice.reference_code or invoice.id }}</h1>
+        <div class="flex items-center gap-3">
+            <button onclick="window.print()" class="btn-primary flex items-center gap-2">
+                <i class="fas fa-print"></i> پرینت
+            </button>
+            <a href="/administration/invoices" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت
+            </a>
+        </div>
+    </div>
+    <div class="card mb-6">
+        <div class="card-body">
+            <div class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4">
+                <div>
+                    <h2 class="text-xl font-bold">آسا‌شاپ</h2>
+                    <p class="text-sm text-gray-500">فاکتور فروش</p>
+                </div>
+                <div class="text-left">
+                    <p class="text-sm text-gray-500">کد: <span class="font-medium" dir="ltr">{{ invoice.reference_code or invoice.id }}</span></p>
+                    <p class="text-sm text-gray-500">تاریخ: <span class="font-medium">{{ invoice.insert_date }}</span></p>
+                    <p class="text-sm text-gray-500">نوع: <span class="font-medium">{{ invoice.type_name or invoice.invoice_type or '---' }}</span></p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-8 mb-6">
+                <div>
+                    <h3 class="font-semibold text-sm text-gray-600 mb-2">فروشنده</h3>
+                    <p class="font-medium">{{ invoice.seller_name or 'آسا‌شاپ' }}</p>
+                    <p class="text-sm text-gray-500">{{ invoice.seller_address or '---' }}</p>
+                    <p class="text-sm text-gray-500" dir="ltr">{{ invoice.seller_economic_code or '---' }}</p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-sm text-gray-600 mb-2">خریدار</h3>
+                    <p class="font-medium">{{ invoice.buyer_name or invoice.customer.name if invoice.customer else '---' }}</p>
+                    <p class="text-sm text-gray-500">{{ invoice.buyer_address or '---' }}</p>
+                    {% if invoice.customer and invoice.customer.mobile %}<p class="text-sm text-gray-500" dir="ltr">{{ invoice.customer.mobile }}</p>{% endif %}
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full border border-gray-200 rounded-lg">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="table-header border-b">#</th>
+                            <th class="table-header border-b">کالا/خدمت</th>
+                            <th class="table-header border-b">تعداد</th>
+                            <th class="table-header border-b">قیمت واحد</th>
+                            <th class="table-header border-b">تخفیف</th>
+                            <th class="table-header border-b">مالیات</th>
+                            <th class="table-header border-b">جمع</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for item in invoice.items %}
+                        <tr class="table-row-hover">
+                            <td class="table-cell">{{ loop.index }}</td>
+                            <td class="table-cell font-medium">{{ item.product_name or item.product.name if item.product else '---' }}</td>
+                            <td class="table-cell">{{ item.quantity }}</td>
+                            <td class="table-cell">{{ "{:,}".format(item.unit_price) }}</td>
+                            <td class="table-cell">{{ "{:,}".format(item.discount or 0) }}</td>
+                            <td class="table-cell">{{ "{:,}".format(item.tax or 0) }}</td>
+                            <td class="table-cell font-medium">{{ "{:,}".format(item.total_price) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-gray-50 border-t border-gray-200">
+                        <tr><td colspan="5" class="px-4 py-2"></td><td class="px-4 py-2 text-sm font-medium">جمع کل:</td><td class="px-4 py-2 font-medium text-blue-600">{{ "{:,}".format(invoice.total_price) }} تومان</td></tr>
+                        {% if invoice.tax_total %}<tr><td colspan="5" class="px-4 py-2"></td><td class="px-4 py-2 text-sm font-medium">مالیات:</td><td class="px-4 py-2">{{ "{:,}".format(invoice.tax_total) }}</td></tr>{% endif %}
+                        {% if invoice.discount_total %}<tr><td colspan="5" class="px-4 py-2"></td><td class="px-4 py-2 text-sm font-medium">تخفیف:</td><td class="px-4 py-2 text-red-600">{{ "{:,}".format(invoice.discount_total) }}</td></tr>{% endif %}
+                        <tr class="border-t border-gray-300"><td colspan="5" class="px-4 py-2"></td><td class="px-4 py-2 text-sm font-bold">قابل پرداخت:</td><td class="px-4 py-2 font-bold text-lg text-blue-600">{{ "{:,}".format(invoice.final_price) }} تومان</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500 text-center">
+                <p>این فاکتور به صورت الکترونیکی صادر شده و به امضا نیاز ندارد.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

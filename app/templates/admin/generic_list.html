@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}مدیریت {{ title }}{% endblock %}
+{% block header %}مدیریت {{ title }}{% endblock %}
+{% block content %}
+<div class="bg-white rounded-lg shadow">
+    <div class="px-5 py-4 border-b flex justify-between items-center">
+        <h3 class="font-semibold">{{ title }} <span class="text-sm text-gray-500">({{ items|length }})</span></h3>
+        {% if create_url %}
+        <a href="{{ create_url }}" class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-indigo-700"><i class="fas fa-plus ml-1"></i>{{ create_label or 'جدید' }}</a>
+        {% endif %}
+    </div>
+    <div class="p-5">
+        <table class="w-full text-sm">
+            <thead><tr class="text-gray-500 border-b">
+                {% for col in columns %}
+                <th class="text-right py-3 px-2">{{ col.label }}</th>
+                {% endfor %}
+                <th class="text-center py-3 px-2">عملیات</th>
+            </tr></thead>
+            <tbody>
+                {% for item in items %}
+                <tr class="border-b hover:bg-gray-50">
+                    {% for col in columns %}
+                    <td class="py-3 px-2">{{ col.render(item) if col.render else item[col.key] or '-' }}</td>
+                    {% endfor %}
+                    <td class="py-3 px-2 text-center">
+                        {% if edit_url %}<a href="{{ edit_url }}/{{ item.id }}" class="text-indigo-600 hover:underline ml-2"><i class="fas fa-edit"></i></a>{% endif %}
+                        {% if delete_url %}<a href="{{ delete_url }}/{{ item.id }}/delete" class="text-red-600 hover:underline" onclick="return confirm('حذف شود؟')"><i class="fas fa-trash"></i></a>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not items %}
+                <tr><td colspan="{{ columns|length + 1 }}" class="text-center py-8 text-gray-400">موردی یافت نشد</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

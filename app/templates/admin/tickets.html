@@ -1,0 +1,68 @@
+?{% extends "admin/base.html" %}
+{% block title %}تیکت‌ها{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">مدیریت تیکت‌ها</h1>
+        <div class="flex items-center gap-3">
+            <a href="/administration/tickets" class="btn-sm {{ 'btn-secondary' if not status_filter else 'btn-primary' }}">همه</a>
+            <a href="/administration/tickets?status=open" class="btn-sm {{ 'btn-primary' if status_filter == 'open' else 'btn-secondary' }}">باز</a>
+            <a href="/administration/tickets?status=answered" class="btn-sm {{ 'btn-primary' if status_filter == 'answered' else 'btn-secondary' }}">پاسخ داده شده</a>
+            <a href="/administration/tickets?status=closed" class="btn-sm {{ 'btn-primary' if status_filter == 'closed' else 'btn-secondary' }}">بسته شده</a>
+        </div>
+    </div>
+    <div class="card">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="table-header">#</th>
+                        <th class="table-header">نام</th>
+                        <th class="table-header">ایمیل</th>
+                        <th class="table-header">موضوع</th>
+                        <th class="table-header">وضعیت</th>
+                        <th class="table-header">تاریخ</th>
+                        <th class="table-header">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for ticket in tickets %}
+                    <tr class="table-row-hover">
+                        <td class="table-cell">{{ ticket.id }}</td>
+                        <td class="table-cell font-medium">{{ ticket.name or '---' }}</td>
+                        <td class="table-cell text-sm" dir="ltr">{{ ticket.email or '---' }}</td>
+                        <td class="table-cell text-sm max-w-[200px] truncate">{{ ticket.subject }}</td>
+                        <td class="table-cell">
+                            {% if ticket.status == 'open' %}<span class="badge bg-blue-100 text-blue-800">باز</span>
+                            {% elif ticket.status == 'answered' %}<span class="badge bg-emerald-100 text-emerald-800">پاسخ داده شده</span>
+                            {% elif ticket.status == 'closed' %}<span class="badge bg-gray-100 text-gray-800">بسته شده</span>
+                            {% else %}<span class="badge bg-gray-100 text-gray-800">{{ ticket.status }}</span>{% endif %}
+                        </td>
+                        <td class="table-cell text-sm">{{ ticket.insert_date }}</td>
+                        <td class="table-cell">
+                            <div class="flex items-center gap-2">
+                                <a href="/administration/tickets/{{ ticket.id }}" class="text-blue-600 hover:text-blue-800" title="مشاهده"><i class="fas fa-eye"></i></a>
+                                {% if ticket.status != 'closed' %}
+                                <form method="POST" action="/administration/tickets/{{ ticket.id }}/close" style="display:inline">
+                                    <button type="submit" class="text-gray-500 hover:text-red-700" title="بستن"><i class="fas fa-times"></i></button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="px-4 py-8 text-center text-gray-500">هیچ تیکتی یافت نشد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-center gap-2 mt-6">
+        {% for p in range(1, total_pages + 1) %}
+        <a href="/administration/tickets?page={{ p }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="pagination-btn {{ 'active' if p == page else '' }}">{{ p }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

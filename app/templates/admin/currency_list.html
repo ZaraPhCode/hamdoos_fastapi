@@ -1,0 +1,67 @@
+?{% extends "admin/base.html" %}
+{% block title %}نرخ ارز{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">مدیریت نرخ ارز</h1>
+    </div>
+    <div class="card mb-6">
+        <div class="card-header"><h2 class="text-lg font-semibold">افزودن ارز جدید</h2></div>
+        <div class="card-body">
+            <form method="POST" action="/administration/currencies/create" class="flex items-end gap-3">
+                <div class="flex-1">
+                    <label class="form-label" for="title">عنوان</label>
+                    <input type="text" id="title" name="title" class="form-input" placeholder="مثلاً دلار آمریکا" required>
+                </div>
+                <div class="w-32">
+                    <label class="form-label" for="code">کد</label>
+                    <input type="text" id="code" name="code" class="form-input" placeholder="USD" dir="ltr" required>
+                </div>
+                <div class="w-40">
+                    <label class="form-label" for="price">نرخ (تومان)</label>
+                    <input type="number" id="price" name="price" class="form-input" placeholder="0" min="0" required>
+                </div>
+                <button type="submit" class="btn-primary whitespace-nowrap"><i class="fas fa-plus ml-2"></i> افزودن</button>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2 class="text-lg font-semibold">لیست ارزها</h2></div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="table-header">عنوان</th>
+                        <th class="table-header">کد</th>
+                        <th class="table-header">نرخ (تومان)</th>
+                        <th class="table-header">آخرین بروزرسانی</th>
+                        <th class="table-header">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for cur in currencies %}
+                    <tr class="table-row-hover">
+                        <td class="table-cell font-medium">{{ cur.title }}</td>
+                        <td class="table-cell"><span class="badge bg-blue-100 text-blue-800" dir="ltr">{{ cur.code }}</span></td>
+                        <td class="table-cell">
+                            <form method="POST" action="/administration/currencies/{{ cur.id }}/update-price" class="flex items-center gap-2">
+                                <input type="number" name="price" value="{{ cur.price }}" class="form-input w-32 text-left" min="0" dir="ltr">
+                                <button type="submit" class="text-blue-600 hover:text-blue-800"><i class="fas fa-save"></i></button>
+                            </form>
+                        </td>
+                        <td class="table-cell text-sm text-gray-500">{{ cur.update_date or '---' }}</td>
+                        <td class="table-cell">
+                            <form method="POST" action="/administration/currencies/{{ cur.id }}/delete" onsubmit="return confirm('حذف شود؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">هیچ ارزی تعریف نشده است.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+?{% extends "admin/base.html" %}
+{% block title %}تنظیمات{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">تنظیمات سایت</h1>
+    <form method="POST" action="/administration/settings" enctype="multipart/form-data" class="space-y-6">
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات عمومی</h2></div>
+            <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label" for="site_title">عنوان سایت</label>
+                    <input type="text" id="site_title" name="site_title" value="{{ settings.site_title if settings else '' }}" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label" for="site_description">توضیحات سایت</label>
+                    <input type="text" id="site_description" name="site_description" value="{{ settings.site_description if settings else '' }}" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label" for="logo">لوگو (URL)</label>
+                    <input type="text" id="logo" name="logo" value="{{ settings.logo if settings else '' }}" class="form-input" placeholder="https://...">
+                </div>
+                <div>
+                    <label class="form-label" for="favicon">فاوآیکون (URL)</label>
+                    <input type="text" id="favicon" name="favicon" value="{{ settings.favicon if settings else '' }}" class="form-input" placeholder="https://...">
+                </div>
+                <div>
+                    <label class="form-label" for="logo_file">آپلود لوگو</label>
+                    <input type="file" id="logo_file" name="logo_file" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label" for="favicon_file">آپلود فاوآیکون</label>
+                    <input type="file" id="favicon_file" name="favicon_file" class="form-input">
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات تماس</h2></div>
+            <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label" for="phone">تلفن</label>
+                    <input type="text" id="phone" name="phone" value="{{ settings.phone if settings else '' }}" class="form-input" dir="ltr">
+                </div>
+                <div>
+                    <label class="form-label" for="mobile">موبایل</label>
+                    <input type="text" id="mobile" name="mobile" value="{{ settings.mobile if settings else '' }}" class="form-input" dir="ltr">
+                </div>
+                <div>
+                    <label class="form-label" for="email">ایمیل</label>
+                    <input type="email" id="email" name="email" value="{{ settings.email if settings else '' }}" class="form-input" dir="ltr">
+                </div>
+                <div>
+                    <label class="form-label" for="address">آدرس</label>
+                    <input type="text" id="address" name="address" value="{{ settings.address if settings else '' }}" class="form-input">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="form-label" for="map_iframe">کد نقشه (iframe)</label>
+                    <textarea id="map_iframe" name="map_iframe" rows="3" class="form-input" dir="ltr">{{ settings.map_iframe if settings else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات بانکی</h2></div>
+            <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label" for="bank_name">نام بانک</label>
+                    <input type="text" id="bank_name" name="bank_name" value="{{ settings.bank_name if settings else '' }}" class="form-input">
+                </div>
+                <div>
+                    <label class="form-label" for="card_number">شماره کارت</label>
+                    <input type="text" id="card_number" name="card_number" value="{{ settings.card_number if settings else '' }}" class="form-input" dir="ltr">
+                </div>
+                <div>
+                    <label class="form-label" for="account_number">شماره حساب</label>
+                    <input type="text" id="account_number" name="account_number" value="{{ settings.account_number if settings else '' }}" class="form-input" dir="ltr">
+                </div>
+                <div>
+                    <label class="form-label" for="shaba_number">شماره شبا</label>
+                    <input type="text" id="shaba_number" name="shaba_number" value="{{ settings.shaba_number if settings else '' }}" class="form-input" dir="ltr">
+                </div>
+                <div>
+                    <label class="form-label" for="bank_owner">صاحب حساب</label>
+                    <input type="text" id="bank_owner" name="bank_owner" value="{{ settings.bank_owner if settings else '' }}" class="form-input">
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">تنظیمات حمل و نقل</h2></div>
+            <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label" for="shipping_cost_per_kg">هزینه ارسال به ازای هر کیلوگرم (تومان)</label>
+                    <input type="number" id="shipping_cost_per_kg" name="shipping_cost_per_kg" value="{{ settings.shipping_cost_per_kg if settings else '0' }}" class="form-input" min="0">
+                </div>
+                <div>
+                    <label class="form-label" for="free_shipping_min">ارسال رایگان از مبلغ (تومان)</label>
+                    <input type="number" id="free_shipping_min" name="free_shipping_min" value="{{ settings.free_shipping_min if settings else '0' }}" class="form-input" min="0">
+                </div>
+                <div>
+                    <label class="form-label" for="shipping_base_cost">هزینه پایه ارسال (تومان)</label>
+                    <input type="number" id="shipping_base_cost" name="shipping_base_cost" value="{{ settings.shipping_base_cost if settings else '0' }}" class="form-input" min="0">
+                </div>
+                <div>
+                    <label class="form-label" for="max_shipping_days">حداکثر روز ارسال</label>
+                    <input type="number" id="max_shipping_days" name="max_shipping_days" value="{{ settings.max_shipping_days if settings else '3' }}" class="form-input" min="1">
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">متون</h2></div>
+            <div class="card-body space-y-4">
+                <div>
+                    <label class="form-label" for="about_text">درباره ما</label>
+                    <textarea id="about_text" name="about_text" rows="6" class="form-input">{{ settings.about_text if settings else '' }}</textarea>
+                </div>
+                <div>
+                    <label class="form-label" for="contact_text">متن صفحه تماس</label>
+                    <textarea id="contact_text" name="contact_text" rows="6" class="form-input">{{ settings.contact_text if settings else '' }}</textarea>
+                </div>
+                <div>
+                    <label class="form-label" for="rules_text">قوانین و مقررات</label>
+                    <textarea id="rules_text" name="rules_text" rows="6" class="form-input">{{ settings.rules_text if settings else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button type="submit" class="btn-primary text-lg px-6 py-3">
+                <i class="fas fa-save ml-2"></i> ذخیره تنظیمات
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
