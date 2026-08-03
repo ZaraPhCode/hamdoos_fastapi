@@ -1,0 +1,175 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ form_title }} تنظیمات سایت{% endblock %}
+{% macro val(name) %}{{ form.get(name, '') }}{% endmacro %}
+{% macro chk(name) %}{{ 'checked' if form.get(name) == 'on' else '' }}{% endmacro %}
+{% macro selval(name, val) %}{{ 'selected' if form.get(name, '') == val|string else '' }}{% endmacro %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">مدیریت تنظیمات سایت</h1>
+                <h4 class="text-sm text-gray-500 mt-0.5">{{ form_title }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3 class="font-semibold text-gray-700">فرم تنظیمات</h3></div>
+        <div class="card-body">
+            {% if errors %}
+            <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4">
+                <ul class="text-sm text-red-700 space-y-1">
+                    {% for e in errors %}<li><i class="fas fa-exclamation-circle text-xs ml-1"></i>{{ e }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ action_url }}" class="space-y-6">
+                <div class="card">
+                    <div class="card-header"><h2 class="font-semibold text-gray-700">اطلاعات تماس</h2></div>
+                    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label">ایمیل</label>
+                            <input type="text" name="Email" value="{{ val('Email') }}" class="form-input" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="form-label">تلفن</label>
+                            <input type="text" name="Telephone" value="{{ val('Telephone') }}" class="form-input" dir="ltr">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="form-label">نشانی</label>
+                            <textarea name="Address" rows="2" class="form-input">{{ val('Address') }}</textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="form-label">کد پستی</label>
+                            <input type="text" name="PostalCode" value="{{ val('PostalCode') }}" class="form-input" dir="ltr" maxlength="10">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="font-semibold text-gray-700">اطلاعات بانکی</h2></div>
+                    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label">نام بانک</label>
+                            <input type="text" name="BankName" value="{{ val('BankName') }}" class="form-input">
+                        </div>
+                        <div>
+                            <label class="form-label">شماره حساب</label>
+                            <input type="text" name="AccountNumber" value="{{ val('AccountNumber') }}" class="form-input" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="form-label">شماره کارت</label>
+                            <input type="text" name="CardNumber" value="{{ val('CardNumber') }}" class="form-input" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="form-label">شماره شبا</label>
+                            <input type="text" name="ShebaNumber" value="{{ val('ShebaNumber') }}" class="form-input" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="form-label">صاحب حساب</label>
+                            <input type="text" name="AccountOwner" value="{{ val('AccountOwner') }}" class="form-input">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="font-semibold text-gray-700">متون</h2></div>
+                    <div class="card-body space-y-4">
+                        <div>
+                            <label class="form-label">نحوه خرید</label>
+                            <textarea name="HowToBuy" rows="3" class="form-input">{{ val('HowToBuy') }}</textarea>
+                        </div>
+                        <div>
+                            <label class="form-label">پشتیبانی و مشاوره فنی</label>
+                            <textarea name="TechnicalSupport" rows="3" class="form-input">{{ val('TechnicalSupport') }}</textarea>
+                        </div>
+                        <div>
+                            <label class="form-label">ارسال رایگان</label>
+                            <textarea name="FreeDelivery" rows="3" class="form-input">{{ val('FreeDelivery') }}</textarea>
+                        </div>
+                        <div>
+                            <label class="form-label">تماس با ما</label>
+                            <textarea name="ContactUs" rows="3" class="form-input">{{ val('ContactUs') }}</textarea>
+                        </div>
+                        <div>
+                            <label class="form-label">کپی رایت</label>
+                            <textarea name="CopyRight" rows="2" class="form-input">{{ val('CopyRight') }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="font-semibold text-gray-700">دسته‌بندی‌ها و جدول فنی</h2></div>
+                    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for field, label in [
+                            ('TopCategoryId','دسته بندی بالایی'),
+                            ('MiddleCategoryId','دسته‌بندی میانی'),
+                            ('BottomCategoryId','دسته بندی پایینی'),
+                            ('TopPosterCategoryId','پوستر دسته بندی بالایی'),
+                            ('MidLeftPosterCategoryId','پوستر دسته‌بندی چپ میانی'),
+                            ('MidRightPosterCategoryId','پوستر دسته‌بندی راست میانی'),
+                            ('MiddlePosterCategoryId','پوستر دسته‌بندی میانی'),
+                            ('BottomPosterCategoryId','پوستر دسته بندی پایینی'),
+                        ] %}
+                        <div>
+                            <label class="form-label">{{ label }}</label>
+                            <select name="{{ field }}" class="form-input">
+                                <option value="">انتخاب</option>
+                                {% for c in cats %}
+                                <option value="{{ c.id }}" {{ selval(field, c.id) }}>{{ c.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endfor %}
+                        <div>
+                            <label class="form-label">جدول فنی</label>
+                            <select name="TechnicalTableId" class="form-input">
+                                <option value="">انتخاب</option>
+                                {% for t in tables %}
+                                <option value="{{ t.id }}" {{ selval('TechnicalTableId', t.id) }}>{{ t.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="font-semibold text-gray-700">سایر تنظیمات</h2></div>
+                    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label">محدودیت پست رایگان</label>
+                            <input type="text" name="FreePostageLimitStr" value="{{ val('FreePostageLimitStr') }}" class="form-input" dir="ltr">
+                        </div>
+                        <div>
+                            <label class="form-label">وضعیت سفارش در ساعت</label>
+                            <input type="text" name="PaymentStatusPerHour" value="{{ val('PaymentStatusPerHour') }}" class="form-input" dir="ltr">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" name="DisableCaptcha" id="DisableCaptcha" {{ chk('DisableCaptcha') }} class="form-checkbox">
+                            <label for="DisableCaptcha" class="form-label mb-0">غیر فعال سازی کپچا</label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" name="FreePackaging" id="FreePackaging" {{ chk('FreePackaging') }} class="form-checkbox">
+                            <label for="FreePackaging" class="form-label mb-0">بسته بندی رایگان</label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" name="FreePostage" id="FreePostage" {{ chk('FreePostage') }} class="form-checkbox">
+                            <label for="FreePostage" class="form-label mb-0">پست رایگان</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button type="submit" class="btn-primary inline-flex items-center gap-2"><i class="fas fa-save"></i> ذخیره</button>
+                    <a href="/administration/settings" class="inline-flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">بازگشت به لیست</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

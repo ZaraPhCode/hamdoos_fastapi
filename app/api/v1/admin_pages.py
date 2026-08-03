@@ -24,9 +24,17 @@ from app.models.customer_content import Comment, Media, NotifiedProduct
 from app.models.support import Ticket, Chat
 from app.models.common import Log, AdminParameter, SmsCode, MobileNumber, BankInfo, SiteSetting
 from app.models.manufacturer import Manufacturer
+from app.models.log_enums import (
+    LOG_TABLE_ORDER as TABLE_OPTIONS,
+    LOG_TYPE_INT as LOG_TYPE_OPTIONS,
+    LOG_TYPE_NAME as LOG_TYPE_NAME_MAP,
+    LOG_TABLE_NAME as LOG_TABLE_NAME_MAP,
+    resolve_table_int,
+    resolve_type_int,
+)
 from app.schemas.product import CategoryCreate, CategoryUpdate
 from app.utils.common_works import generate_slug
-from app.utils.persian_tools import to_farsi, to_farsi_full, from_farsi_date
+from app.utils.persian_tools import to_farsi, to_farsi_full, from_farsi_date, is_phone_number, is_email
 from app.services import admin_service, product_service, order_service, invoice_service, warehouse_service, finance_service, support_service, identity_service
 
 templates = Jinja2Templates(directory="app/templates")
@@ -2597,19 +2605,411 @@ async def admin_comments(
     })
 
 
-# ── Settings ──
+# ── Settings (SiteSettings) ──
+
+def _price_str(value) -> str:
+    if value is None:
+        return ""
+    try:
+        return f"{float(value):,.0f}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _parse_form_bool(v) -> bool:
+    return v in ("on", "true", "True", "1")
+
+
+def _parse_form_uuid(v):
+    v = (v or "").strip()
+    if not v:
+        return None
+    try:
+        return uuid.UUID(v)
+    except ValueError:
+        return None
+
+
+def _parse_form_float(v, default=0.0) -> float:
+    v = (v or "").strip().replace(",", "")
+    if not v:
+        return default
+    try:
+        return float(v)
+    except ValueError:
+        return default
+
+
+def _apply_site_settings(s: SiteSetting, form) -> str | None:
+    """Apply form values onto a SiteSetting. Returns an error message, or None."""
+    s.bank_name = form.get("BankName") or None
+    s.account_number = form.get("AccountNumber") or None
+    s.card_number = form.get("CardNumber") or None
+    s.sheba_number = form.get("ShebaNumber") or None
+    s.account_owner = form.get("AccountOwner") or None
+    s.how_to_buy = form.get("HowToBuy") or None
+    s.free_delivery = form.get("FreeDelivery") or None
+    s.contact_us = form.get("ContactUs") or None
+    s.technical_support = form.get("TechnicalSupport") or None
+    s.email = form.get("Email") or None
+    s.telephone = form.get("Telephone") or None
+    s.address = form.get("Address") or None
+    s.copy_right = form.get("CopyRight") or None
+    s.disable_captcha = _parse_form_bool(form.get("DisableCaptcha"))
+    s.free_packaging = _parse_form_bool(form.get("FreePackaging"))
+    s.free_postage = _parse_form_bool(form.get("FreePostage"))
+    s.top_category_id = _parse_form_uuid(form.get("TopCategoryId"))
+    s.middle_category_id = _parse_form_uuid(form.get("MiddleCategoryId"))
+    s.bottom_category_id = _parse_form_uuid(form.get("BottomCategoryId"))
+    s.top_poster_category_id = _parse_form_uuid(form.get("TopPosterCategoryId"))
+    s.mid_left_poster_category_id = _parse_form_uuid(form.get("MidLeftPosterCategoryId"))
+    s.mid_right_poster_category_id = _parse_form_uuid(form.get("MidRightPosterCategoryId"))
+    s.middle_poster_category_id = _parse_form_uuid(form.get("MiddlePosterCategoryId"))
+    s.bottom_poster_category_id = _parse_form_uuid(form.get("BottomPosterCategoryId"))
+    s.technical_table_id = _parse_form_uuid(form.get("TechnicalTableId"))
+    free_limit_str = (form.get("FreePostageLimitStr") or "").strip().replace(",", "")
+    if free_limit_str and not free_limit_str.replace(".", "", 1).isdigit():
+        return "خطا در عملیات"
+    s.free_postage_limit = float(free_limit_str) if free_limit_str else 0
+    s.payment_status_per_hour = _parse_form_float(form.get("PaymentStatusPerHour"))
+    s.postal_code = (form.get("PostalCode") or "").strip() or None
+    return None
+
+
+async def _get_site_setting(db) -> SiteSetting | None:
+    return (await db.execute(
+        select(SiteSetting).where(SiteSetting.is_removed == False).limit(1)
+    )).scalar_one_or_none()
+
+
+async def _site_setting_related(db, setting) -> dict | None:
+    if setting is None:
+        return None
+    cat_ids = {setting.top_category_id, setting.middle_category_id, setting.bottom_category_id,
+               setting.top_poster_category_id, setting.mid_left_poster_category_id,
+               setting.mid_right_poster_category_id, setting.middle_poster_category_id,
+               setting.bottom_poster_category_id}
+    cat_ids = {c for c in cat_ids if c}
+    names = {}
+    if cat_ids:
+        rows = (await db.execute(select(Category).where(Category.id.in_(cat_ids)))).scalars().all()
+        names = {str(c.id): c.title or "" for c in rows}
+    table_title = ""
+    if setting.technical_table_id:
+        tt = (await db.execute(select(TechnicalTable).where(TechnicalTable.id == setting.technical_table_id))).scalars().first()
+        table_title = tt.title if tt else ""
+    return {
+        "top_category": names.get(str(setting.top_category_id), ""),
+        "middle_category": names.get(str(setting.middle_category_id), ""),
+        "bottom_category": names.get(str(setting.bottom_category_id), ""),
+        "top_poster_category": names.get(str(setting.top_poster_category_id), ""),
+        "mid_left_poster_category": names.get(str(setting.mid_left_poster_category_id), ""),
+        "mid_right_poster_category": names.get(str(setting.mid_right_poster_category_id), ""),
+        "middle_poster_category": names.get(str(setting.middle_poster_category_id), ""),
+        "bottom_poster_category": names.get(str(setting.bottom_poster_category_id), ""),
+        "technical_table": table_title,
+        "free_postage_limit_str": _price_str(setting.free_postage_limit),
+    }
+
+
+async def _settings_form_data(db):
+    cats = (await db.execute(
+        select(Category).where(Category.is_removed == False).order_by(Category.title)
+    )).scalars().all()
+    tables = (await db.execute(
+        select(TechnicalTable).where(TechnicalTable.is_removed == False).order_by(TechnicalTable.title)
+    )).scalars().all()
+    return cats, tables
+
+
+def _settings_form_values(s) -> dict:
+    def uuid_str(v):
+        return str(v) if v else ""
+    empty = s is None
+    if empty:
+        s = SiteSetting()
+    return {
+        "BankName": s.bank_name or "",
+        "AccountNumber": s.account_number or "",
+        "CardNumber": s.card_number or "",
+        "ShebaNumber": s.sheba_number or "",
+        "AccountOwner": s.account_owner or "",
+        "HowToBuy": s.how_to_buy or "",
+        "TechnicalSupport": s.technical_support or "",
+        "FreeDelivery": s.free_delivery or "",
+        "ContactUs": s.contact_us or "",
+        "Email": s.email or "",
+        "Telephone": s.telephone or "",
+        "Address": s.address or "",
+        "CopyRight": s.copy_right or "",
+        "PostalCode": s.postal_code or "",
+        "DisableCaptcha": "on" if s.disable_captcha else "",
+        "FreePackaging": "on" if s.free_packaging else "",
+        "FreePostage": "on" if s.free_postage else "",
+        "FreePostageLimitStr": _price_str(s.free_postage_limit),
+        "PaymentStatusPerHour": str(s.payment_status_per_hour) if s.payment_status_per_hour is not None else "",
+        "TopCategoryId": uuid_str(s.top_category_id),
+        "MiddleCategoryId": uuid_str(s.middle_category_id),
+        "BottomCategoryId": uuid_str(s.bottom_category_id),
+        "TopPosterCategoryId": uuid_str(s.top_poster_category_id),
+        "MidLeftPosterCategoryId": uuid_str(s.mid_left_poster_category_id),
+        "MidRightPosterCategoryId": uuid_str(s.mid_right_poster_category_id),
+        "MiddlePosterCategoryId": uuid_str(s.middle_poster_category_id),
+        "BottomPosterCategoryId": uuid_str(s.bottom_poster_category_id),
+        "TechnicalTableId": uuid_str(s.technical_table_id),
+    }
+
+
+# Fields on SiteSetting marked [Logged] in .NET (used to build create/update log descriptions)
+_SITE_LOGGED_FIELDS = [
+    ("top_category_id", "TopCategoryId"),
+    ("middle_category_id", "MiddleCategoryId"),
+    ("bottom_category_id", "BottomCategoryId"),
+    ("top_poster_category_id", "TopPosterCategoryId"),
+    ("mid_left_poster_category_id", "MidLeftPosterCategoryId"),
+    ("mid_right_poster_category_id", "MidRightPosterCategoryId"),
+    ("middle_poster_category_id", "MiddlePosterCategoryId"),
+    ("bottom_poster_category_id", "BottomPosterCategoryId"),
+    ("bank_name", "BankName"),
+    ("account_number", "AccountNumber"),
+    ("card_number", "CardNumber"),
+    ("sheba_number", "ShebaNumber"),
+    ("account_owner", "AccountOwner"),
+    ("how_to_buy", "HowToBuy"),
+    ("free_delivery", "FreeDelivery"),
+    ("contact_us", "ContactUs"),
+    ("technical_support", "TechnicalSupport"),
+    ("email", "Email"),
+    ("telephone", "Telephone"),
+    ("address", "Address"),
+    ("copy_right", "CopyRight"),
+    ("disable_captcha", "DisableCaptcha"),
+    ("technical_table_id", "TechnicalTableId"),
+    ("free_postage_limit", "FreePostageLimit"),
+    ("postal_code", "PostalCode"),
+]
+
+
+def _log_val(v) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "True" if v else "False"
+    return str(v)
+
+
+def _site_logged_snapshot(s) -> dict:
+    return {name: getattr(s, attr) for attr, name in _SITE_LOGGED_FIELDS}
+
+
+def _site_create_desc(s) -> str:
+    return "\n".join(f"{name}: {_log_val(getattr(s, attr))}" for attr, name in _SITE_LOGGED_FIELDS)
+
+
+def _site_update_desc(before: dict, after: dict) -> str:
+    lines = []
+    for attr, name in _SITE_LOGGED_FIELDS:
+        oldv = _log_val(before.get(name))
+        newv = _log_val(after.get(name))
+        if oldv != newv:
+            lines.append(f"{name} : {oldv} --> {newv}")
+    return "\n".join(lines)
+
 
 @router.get("/settings", response_class=HTMLResponse)
-async def admin_settings(
+async def admin_settings_details(
     request: Request,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.models.common import SiteSetting
-    settings = (await db.execute(select(SiteSetting).where(SiteSetting.is_removed == False).limit(1))).scalar_one_or_none()
-    return templates.TemplateResponse("admin/settings.html", {
-        "request": request, "current_user": current_user, "settings": settings,
+    setting = await _get_site_setting(db)
+    related = await _site_setting_related(db, setting)
+    return templates.TemplateResponse("admin/site_settings_details.html", {
+        "request": request, "current_user": current_user,
+        "settings": setting, "related": related,
     })
+
+
+@router.get("/settings/create", response_class=HTMLResponse)
+async def admin_settings_create_page(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    cats, tables = await _settings_form_data(db)
+    return templates.TemplateResponse("admin/site_settings_form.html", {
+        "request": request, "current_user": current_user,
+        "settings": None, "cats": cats, "tables": tables,
+        "action_url": "/administration/settings/create", "form_title": "ایجاد", "errors": [],
+        "form": _settings_form_values(None),
+    })
+
+
+@router.post("/settings/create", response_class=HTMLResponse)
+async def admin_settings_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    setting = SiteSetting()
+    err = _apply_site_settings(setting, form)
+    if err:
+        cats, tables = await _settings_form_data(db)
+        return templates.TemplateResponse("admin/site_settings_form.html", {
+            "request": request, "current_user": current_user,
+            "settings": None, "cats": cats, "tables": tables,
+            "action_url": "/administration/settings/create", "form_title": "ایجاد", "errors": [err],
+            "form": form,
+        })
+    db.add(setting)
+    db.add(Log(record_id=setting.id, table_name="site_settings",
+               description=_site_create_desc(setting),
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url="/administration/settings", status_code=303)
+
+
+@router.get("/settings/{settings_id}/edit", response_class=HTMLResponse)
+async def admin_settings_edit_page(
+    settings_id: str,
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        sid = uuid.UUID(settings_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid settings ID")
+    setting = (await db.execute(
+        select(SiteSetting).where(SiteSetting.id == sid, SiteSetting.is_removed == False)
+    )).scalars().first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Site settings not found")
+    cats, tables = await _settings_form_data(db)
+    return templates.TemplateResponse("admin/site_settings_form.html", {
+        "request": request, "current_user": current_user,
+        "settings": setting, "cats": cats, "tables": tables,
+        "action_url": f"/administration/settings/{settings_id}/edit", "form_title": "ویرایش", "errors": [],
+        "form": _settings_form_values(setting),
+    })
+
+
+@router.post("/settings/{settings_id}/edit", response_class=HTMLResponse)
+async def admin_settings_edit(
+    settings_id: str,
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        sid = uuid.UUID(settings_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid settings ID")
+    setting = (await db.execute(
+        select(SiteSetting).where(SiteSetting.id == sid, SiteSetting.is_removed == False)
+    )).scalars().first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Site settings not found")
+    form = await request.form()
+    before = _site_logged_snapshot(setting)
+    err = _apply_site_settings(setting, form)
+    if err:
+        cats, tables = await _settings_form_data(db)
+        return templates.TemplateResponse("admin/site_settings_form.html", {
+            "request": request, "current_user": current_user,
+            "settings": setting, "cats": cats, "tables": tables,
+            "action_url": f"/administration/settings/{settings_id}/edit", "form_title": "ویرایش",
+            "errors": [err], "form": form,
+        })
+    update_desc = _site_update_desc(before, _site_logged_snapshot(setting))
+    setting.update_date = datetime.now(timezone.utc)
+    db.add(setting)
+    if update_desc:
+        db.add(Log(record_id=setting.id, table_name="site_settings",
+                   description=update_desc,
+                   created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url="/administration/settings", status_code=303)
+
+
+@router.post("/settings/{settings_id}/delete", response_class=HTMLResponse)
+async def admin_settings_delete(
+    settings_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        sid = uuid.UUID(settings_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid settings ID")
+    setting = (await db.execute(
+        select(SiteSetting).where(SiteSetting.id == sid, SiteSetting.is_removed == False)
+    )).scalars().first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Site settings not found")
+    setting.is_removed = True
+    setting.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=setting.id, table_name="site_settings",
+               description="حذف تنظیمات سایت",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/settings", status_code=303)
+
+
+@router.get("/settings/restore", response_class=HTMLResponse)
+async def admin_settings_restore(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    setting = await _get_site_setting(db)
+    if setting is None:
+        db.add(SiteSetting(free_postage_limit=0, payment_status_per_hour=0))
+    else:
+        setting.update_date = datetime.now(timezone.utc)
+    db.add(setting)
+    db.add(Log(record_id=setting.id, table_name="site_settings",
+               description=_site_create_desc(setting),
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url="/administration/settings", status_code=303)
+
+
+@router.get("/settings/update-products-by-variety", response_class=HTMLResponse)
+async def admin_settings_update_products_by_variety(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mirrors .NET SiteSettingsController.UpdateProductByVariety."""
+    products = (await db.execute(
+        select(Product).options(selectinload(Product.varieties)).where(Product.is_removed == False)
+    )).scalars().all()
+    for p in products:
+        varieties = [v for v in (p.varieties or []) if not getattr(v, "is_removed", False)]
+        p.number_of_variations = len(varieties)
+        if not varieties:
+            p.price = 0
+            p.discount_amount = 0
+            p.discount_percentage = 0
+            p.stock_quantity = 0
+            p.max_price = None
+            db.add(p)
+            continue
+        min_v = min(varieties, key=lambda v: v.price_after_discount if v.price_after_discount is not None else float("inf"))
+        p.price = min_v.price
+        p.discount_amount = min_v.discount_amount
+        p.discount_percentage = None
+        p.stock_quantity = min_v.stock_quantity
+        if len(varieties) > 1:
+            max_v = max(varieties, key=lambda v: v.price_after_discount if v.price_after_discount is not None else float("-inf"))
+            if (max_v.price_after_discount or 0) != (min_v.price_after_discount or 0):
+                p.max_price = max_v.price_after_discount
+            p.stock_quantity = sum(v.stock_quantity or 0 for v in varieties)
+        db.add(p)
+    await db.commit()
+    return RedirectResponse(url="/administration/settings", status_code=303)
 
 
 # ── Invoices ──
@@ -4641,46 +5041,356 @@ async def admin_manufacturers(
 
 # ── Admin Parameters ──
 
+_admin_param_defaults = {"ConfirmOrderPN": "09930003120", "ConfrimOrderEm": "hamdoos@outlook.com"}
+
+
+def _admin_param_items(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [x.strip() for x in value.split(";") if x.strip()]
+
+
+def _validate_admin_param(confirm_pn: str, confirm_em: str) -> list[str]:
+    """Validate ';'-separated phone numbers / emails. Mirrors .NET Tools checks."""
+    errors: list[str] = []
+    for num in _admin_param_items(confirm_pn):
+        if not is_phone_number(num):
+            errors.append("شماره تلفن تأیید سفارش معتبر نیست")
+            break
+    for email in _admin_param_items(confirm_em):
+        if not is_email(email):
+            errors.append("ایمیل تأیید سفارش معتبر نیست")
+            break
+    return errors
+
+
+async def _get_admin_param(db: AsyncSession) -> AdminParameter | None:
+    return (await db.execute(
+        select(AdminParameter)
+        .where(AdminParameter.is_removed == False)
+        .order_by(AdminParameter.insert_date.asc())
+    )).scalars().first()
+
+
+async def _get_admin_param_by_id(db, param_id) -> AdminParameter | None:
+    try:
+        pid = uuid.UUID(param_id)
+    except ValueError:
+        return None
+    return (await db.execute(
+        select(AdminParameter).where(AdminParameter.id == pid, AdminParameter.is_removed == False)
+    )).scalars().first()
+
+
 @router.get("/admin-parameters", response_class=HTMLResponse)
-async def admin_parameters_page(
+async def admin_parameters_details(
     request: Request,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    params = (await db.execute(
-        select(AdminParameter).where(AdminParameter.is_removed == False).limit(10)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "پارامترهای مدیریت", "items": params,
-        "columns": [
-            {"key": "confirm_order_pn", "label": "تلفن تأیید سفارش"},
-            {"key": "confirm_order_em", "label": "ایمیل تأیید سفارش"},
-        ],
+    param = await _get_admin_param(db)
+    return templates.TemplateResponse("admin/admin_parameter_details.html", {
+        "request": request, "current_user": current_user, "param": param,
     })
 
 
-# ── Logs ──
+@router.get("/admin-parameters/create", response_class=HTMLResponse)
+async def admin_parameters_create_page(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    return templates.TemplateResponse("admin/admin_parameter_form.html", {
+        "request": request, "current_user": current_user,
+        "param": None, "action_url": "/administration/admin-parameters/create",
+        "form_title": "ایجاد", "errors": [],
+    })
+
+
+@router.post("/admin-parameters/create", response_class=HTMLResponse)
+async def admin_parameters_create(
+    request: Request,
+    ConfirmOrderPN: str = Form(""),
+    ConfrimOrderEm: str = Form(""),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    errors = _validate_admin_param(ConfirmOrderPN, ConfrimOrderEm)
+    if errors:
+        return templates.TemplateResponse("admin/admin_parameter_form.html", {
+            "request": request, "current_user": current_user,
+            "param": None, "action_url": "/administration/admin-parameters/create",
+            "form_title": "ایجاد", "errors": errors,
+            "ConfirmOrderPN": ConfirmOrderPN, "ConfrimOrderEm": ConfrimOrderEm,
+        })
+    param = AdminParameter(ConfirmOrderPN=ConfirmOrderPN, ConfrimOrderEm=ConfrimOrderEm)
+    db.add(param)
+    db.add(Log(record_id=param.id, table_name="admin_parameters",
+               description=f"ConfirmOrderPN: {ConfirmOrderPN}\nConfrimOrderEm: {ConfrimOrderEm}",
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url="/administration/admin-parameters", status_code=303)
+
+
+@router.get("/admin-parameters/{param_id}/edit", response_class=HTMLResponse)
+async def admin_parameters_edit_page(
+    param_id: str,
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    param = await _get_admin_param_by_id(db, param_id)
+    if not param:
+        raise HTTPException(status_code=404, detail="Admin parameter not found")
+    return templates.TemplateResponse("admin/admin_parameter_form.html", {
+        "request": request, "current_user": current_user,
+        "param": param, "action_url": f"/administration/admin-parameters/{param_id}/edit",
+        "form_title": "ویرایش", "errors": [],
+    })
+
+
+@router.post("/admin-parameters/{param_id}/edit", response_class=HTMLResponse)
+async def admin_parameters_edit(
+    param_id: str,
+    request: Request,
+    ConfirmOrderPN: str = Form(""),
+    ConfrimOrderEm: str = Form(""),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    param = await _get_admin_param_by_id(db, param_id)
+    if not param:
+        raise HTTPException(status_code=404, detail="Admin parameter not found")
+    errors = _validate_admin_param(ConfirmOrderPN, ConfrimOrderEm)
+    if errors:
+        return templates.TemplateResponse("admin/admin_parameter_form.html", {
+            "request": request, "current_user": current_user,
+            "param": param, "action_url": f"/administration/admin-parameters/{param_id}/edit",
+            "form_title": "ویرایش", "errors": errors,
+            "ConfirmOrderPN": ConfirmOrderPN, "ConfrimOrderEm": ConfrimOrderEm,
+        })
+    old_pn = param.ConfirmOrderPN or ""
+    old_em = param.ConfrimOrderEm or ""
+    param.ConfirmOrderPN = ConfirmOrderPN
+    param.ConfrimOrderEm = ConfrimOrderEm
+    param.update_date = datetime.now(timezone.utc)
+    db.add(param)
+
+    update_lines = []
+    if old_pn != ConfirmOrderPN:
+        update_lines.append(f"ConfirmOrderPN : {old_pn} --> {ConfirmOrderPN}")
+    if old_em != ConfrimOrderEm:
+        update_lines.append(f"ConfrimOrderEm : {old_em} --> {ConfrimOrderEm}")
+    if update_lines:
+        db.add(Log(record_id=param.id, table_name="admin_parameters",
+                   description="\n".join(update_lines),
+                   created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url="/administration/admin-parameters", status_code=303)
+
+
+@router.post("/admin-parameters/{param_id}/delete", response_class=HTMLResponse)
+async def admin_parameters_delete(
+    param_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    param = await _get_admin_param_by_id(db, param_id)
+    if not param:
+        raise HTTPException(status_code=404, detail="Admin parameter not found")
+    param.is_removed = True
+    param.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=param.id, table_name="admin_parameters",
+               description=f"حذف پارامتر ادمین: {param.ConfrimOrderEm}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/admin-parameters", status_code=303)
+
+
+@router.get("/admin-parameters/restore", response_class=HTMLResponse)
+async def admin_parameters_restore(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    param = await _get_admin_param(db)
+    if param is None:
+        db.add(AdminParameter(
+            ConfirmOrderPN=_admin_param_defaults["ConfirmOrderPN"],
+            ConfrimOrderEm=_admin_param_defaults["ConfrimOrderEm"],
+        ))
+    else:
+        param.ConfirmOrderPN = _admin_param_defaults["ConfirmOrderPN"]
+        param.ConfrimOrderEm = _admin_param_defaults["ConfrimOrderEm"]
+        param.update_date = datetime.now(timezone.utc)
+        db.add(param)
+    await db.commit()
+    return RedirectResponse(url="/administration/admin-parameters", status_code=303)
+
+
+# ── Logs (Logger) ──
+
+def _log_user_map(users) -> dict:
+    return {str(u.id): (u.full_name or u.username or "") for u in users}
+
 
 @router.get("/logs", response_class=HTMLResponse)
 async def admin_logs(
     request: Request,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(Log).where(Log.is_removed == False).order_by(Log.insert_date.desc()).limit(200)
+    """Logger index matching .NET — filter section + paginated table."""
+    q = request.query_params
+    filter_type = (q.get("type") or "").strip()          # Table_t name
+    filter_u_id = (q.get("u_id") or q.get("uid") or "").strip()
+    filter_log_type = (q.get("log_type") or "").strip()  # LogType_t name
+
+    try:
+        page = max(1, int(q.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
+    try:
+        page_size = int(q.get("page_size") or 25)
+        if page_size <= 0:
+            page_size = 25
+    except (TypeError, ValueError):
+        page_size = 25
+
+    filters = [Log.is_removed == False]
+
+    if filter_type and filter_type != "all":
+        filters.append(Log.table == resolve_table_int(filter_type))
+    if filter_log_type and filter_log_type != "all":
+        filters.append(Log.type == resolve_type_int(filter_log_type))
+    if filter_u_id and filter_u_id != "all":
+        try:
+            filters.append(Log.created_by_user_id == uuid.UUID(filter_u_id))
+        except (ValueError, AttributeError):
+            pass
+
+    total_stmt = select(func.count(Log.id)).select_from(Log).where(*filters)
+    total = (await db.execute(total_stmt)).scalar_one()
+
+    stmt = (
+        select(Log)
+        .where(*filters)
+        .order_by(Log.insert_date.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    logs = (await db.execute(stmt)).scalars().all()
+
+    user_ids = {l.created_by_user_id for l in logs if l.created_by_user_id}
+    users = []
+    if user_ids:
+        users = (await db.execute(
+            select(User).where(User.id.in_(user_ids))
+        )).scalars().all()
+    user_map = _log_user_map(users)
+
+    # Droplists
+    all_users = (await db.execute(
+        select(User).where(User.is_removed == False).order_by(User.first_name)
     )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
+
+    table_options = TABLE_OPTIONS                                   # Table_t enum names
+    log_type_options = list(LOG_TYPE_OPTIONS.keys())                # LogType_t enum names
+
+    total_pages = (total + page_size - 1) // page_size if total else 1
+    if page > total_pages:
+        page = total_pages
+    start_index = (page - 1) * page_size + 1
+
+    rows = []
+    for i, log in enumerate(logs, start=start_index):
+        rows.append({
+            "index": i,
+            "id": str(log.id),
+            "insert_date": to_farsi_full(log.insert_date),
+            "table_name": log.table_name,
+            "type_name": log.type_name,
+            "description": log.description or "",
+            "user_name": user_map.get(str(log.created_by_user_id), ""),
+        })
+
+    def page_url(p: int) -> str:
+        params = {"u_id": filter_u_id, "log_type": filter_log_type, "type": filter_type, "page": p, "page_size": page_size}
+        keep = "&".join(f"{k}={v}" for k, v in params.items() if v not in ("", None))
+        return "/administration/logs?" + keep
+
+    return templates.TemplateResponse("admin/logs.html", {
         "request": request, "current_user": current_user,
-        "title": "لاگ‌ها", "items": items,
-        "columns": [
-            {"key": "table_name", "label": "جدول"},
-            {"key": "type", "label": "نوع"},
-            {"key": "desc", "label": "توضیحات"},
-            {"key": "insert_date", "label": "تاریخ"},
-        ],
+        "rows": rows, "total": total, "page": page, "page_size": page_size,
+        "total_pages": total_pages,
+        "filter_type": filter_type, "filter_u_id": filter_u_id, "filter_log_type": filter_log_type,
+        "table_options": table_options,
+        "user_options": all_users,
+        "log_type_options": log_type_options,
+        "page_url": page_url,
+        "page_numbers": _page_numbers(page, total_pages),
     })
+
+
+def _page_numbers(page: int, total_pages: int) -> list:
+    if total_pages <= 1:
+        return [1]
+    start = max(1, min(page - 2, total_pages - 4))
+    end = min(total_pages, start + 4)
+    return list(range(start, end + 1))
+
+
+@router.get("/logs/detail/{log_id}", response_class=HTMLResponse)
+async def admin_log_detail(
+    log_id: str,
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Single log detail page matching .NET Logger/Details."""
+    try:
+        lid = uuid.UUID(log_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid log ID")
+    log = (await db.execute(select(Log).where(Log.id == lid, Log.is_removed == False))).scalars().first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    user = None
+    if log.created_by_user_id:
+        user = (await db.execute(select(User).where(User.id == log.created_by_user_id))).scalars().first()
+
+    lines = [ln for ln in (log.description or "").split("\n") if ln.strip()]
+
+    return templates.TemplateResponse("admin/log_detail.html", {
+        "request": request, "current_user": current_user,
+        "log": log,
+        "user_name": (user.full_name or user.username or "") if user else "",
+        "insert_date": to_farsi_full(log.insert_date),
+        "lines": lines,
+    })
+
+
+@router.post("/logs/{log_id}/delete", response_class=HTMLResponse)
+async def admin_log_delete(
+    log_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        lid = uuid.UUID(log_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid log ID")
+    log = (await db.execute(select(Log).where(Log.id == lid, Log.is_removed == False))).scalars().first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+    log.is_removed = True
+    log.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=log.id, table_name="logs",
+               description=f"حذف لاگ: {log.type_name} - {log.table_name}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/logs", status_code=303)
 
 
 # ── Logger (سوابق) dedicated page matching .NET ──
@@ -4714,7 +5424,7 @@ async def admin_logger(
         pass
 
     if log_type and log_type != "all":
-        filters.append(Log.type == log_type)
+        filters.append(Log.type == resolve_type_int(log_type))
 
     # Fetch logs
     stmt = (

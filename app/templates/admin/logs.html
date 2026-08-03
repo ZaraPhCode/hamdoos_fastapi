@@ -1,0 +1,199 @@
+{% extends "admin/base.html" %}
+{% block title %}لیست لاگ‌ها{% endblock %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">لیست لاگ‌ها</h1>
+            <p class="text-sm text-gray-500 mt-1">گزارش رویدادها و تغییرات انجام‌شده در سیستم</p>
+        </div>
+    </div>
+
+    <!-- Filter card -->
+    <div class="card">
+        <div class="card-header">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-filter text-gray-400"></i>
+                <h3 class="font-semibold text-gray-700">فیلتر</h3>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="/administration/logs" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label class="form-label">نام جدول</label>
+                    <select name="type" class="form-input">
+                        <option value="">انتخاب</option>
+                        {% for t in table_options %}
+                        <option value="{{ t }}" {{ 'selected' if filter_type == t else '' }}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">کاربران</label>
+                    <select name="u_id" class="form-input">
+                        <option value="">انتخاب</option>
+                        {% for u in user_options %}
+                        <option value="{{ u.id }}" {{ 'selected' if filter_u_id == u.id|string else '' }}>{{ u.full_name or u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">نوع لاگ</label>
+                    <select name="log_type" class="form-input">
+                        <option value="">انتخاب</option>
+                        {% for t in log_type_options %}
+                        <option value="{{ t }}" {{ 'selected' if filter_log_type == t else '' }}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="md:col-span-3 flex flex-wrap items-center gap-3">
+                    <button type="submit" class="btn-primary flex items-center gap-2">
+                        <i class="fas fa-search"></i> جستجو
+                    </button>
+                    <a href="/administration/logs" class="inline-flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-times"></i> حذف فیلتر
+                    </a>
+                    <div class="flex items-center gap-2 ms-auto text-sm text-gray-500">
+                        <span>نمایش</span>
+                        <select name="page_size" class="form-input w-auto py-1.5" onchange="this.form.submit()">
+                            {% for ps in [10, 25, 50, 100] %}
+                            <option value="{{ ps }}" {{ 'selected' if page_size == ps else '' }}>{{ ps }}</option>
+                            {% endfor %}
+                        </select>
+                        <span>رکورد</span>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results table -->
+    <div class="card">
+        <div class="card-header flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <h3 class="font-semibold text-gray-700">لاگ‌ها</h3>
+                <span class="badge bg-gray-100 text-gray-500">{{ total }} مورد</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="logs-table">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2">تاریخ ایجاد</th>
+                            <th class="text-right py-3 px-2">جدول</th>
+                            <th class="text-right py-3 px-2">نوع</th>
+                            <th class="text-right py-3 px-2">توضیح</th>
+                            <th class="text-right py-3 px-2">ایجاد شده توسط کاربر</th>
+                            <th class="text-center py-3 px-2 w-40">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for row in rows %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2 text-center text-gray-500">{{ row.index }}</td>
+                            <td class="py-3 px-2 text-gray-600">{{ row.insert_date }}</td>
+                            <td class="py-3 px-2">
+                                <span class="badge bg-gray-100 text-gray-700">{{ row.table_name }}</span>
+                            </td>
+                            <td class="py-3 px-2">
+                                {% if row.type_name == 'Create' %}
+                                <span class="badge bg-green-100 text-green-700">Create</span>
+                                {% elif row.type_name == 'Update' %}
+                                <span class="badge bg-amber-100 text-amber-700">Update</span>
+                                {% elif row.type_name == 'Delete' %}
+                                <span class="badge bg-red-100 text-red-700">Delete</span>
+                                {% elif row.type_name == 'DeleteFromDatabase' %}
+                                <span class="badge bg-purple-100 text-purple-700">DeleteFromDatabase</span>
+                                {% elif row.type_name == 'Recovery' %}
+                                <span class="badge bg-sky-100 text-sky-700">Recovery</span>
+                                {% else %}
+                                <span class="badge bg-gray-100 text-gray-700">{{ row.type_name }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-gray-600 max-w-md truncate" dir="ltr" style="text-align:right">{{ row.description }}</td>
+                            <td class="py-3 px-2 text-gray-800">{{ row.user_name }}</td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="/administration/logs/detail/{{ row.id }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors"><i class="fas fa-eye"></i> جزییات</a>
+                                    <a href="#" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors delete-btn" data-id="{{ row.id }}" data-name="{{ row.table_name }} - {{ row.type_name }}"><i class="fas fa-trash"></i> حذف</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="py-12 text-center text-gray-400">
+                                <i class="fas fa-inbox text-3xl mb-3"></i>
+                                <p>لاگی مطابق فیلتر یافت نشد.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if total_pages > 1 %}
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                <div class="text-sm text-gray-500">
+                    صفحه {{ page }} از {{ total_pages }} — {{ total }} رکورد
+                </div>
+                <div class="flex items-center gap-1">
+                    {% if page > 1 %}
+                    <a href="{{ page_url(1) }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50">&laquo;</a>
+                    <a href="{{ page_url(page-1) }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50">&lsaquo;</a>
+                    {% endif %}
+                    {% for p in page_numbers %}
+                        {% if p == page %}
+                        <span class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm">{{ p }}</span>
+                        {% else %}
+                        <a href="{{ page_url(p) }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50">{{ p }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page < total_pages %}
+                    <a href="{{ page_url(page+1) }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50">&rsaquo;</a>
+                    <a href="{{ page_url(total_pages) }}" class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-sm hover:bg-gray-50">&raquo;</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+        <div class="text-center">
+            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trash text-red-500 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">حذف لاگ</h3>
+            <p class="text-sm text-gray-500 mb-6">آیا از حذف <span id="delete-name" class="font-semibold text-gray-700"></span> اطمینان دارید؟</p>
+            <form id="delete-form" method="POST" action="">
+                <div class="flex items-center gap-3 justify-center">
+                    <button type="button" id="delete-cancel" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    var $modal = $('#delete-modal');
+    $('.delete-btn').on('click', function (e) {
+        e.preventDefault();
+        $('#delete-name').text($(this).data('name'));
+        $('#delete-form').attr('action', '/administration/logs/' + $(this).data('id') + '/delete');
+        $modal.removeClass('hidden');
+    });
+    $('#delete-cancel').on('click', function () { $modal.addClass('hidden'); });
+    $modal.on('click', function (e) { if (e.target === this) $modal.addClass('hidden'); });
+});
+</script>
+{% endblock %}

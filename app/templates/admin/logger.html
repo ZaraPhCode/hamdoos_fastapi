@@ -115,17 +115,21 @@
                                 <span class="badge bg-gray-100 text-gray-700">{{ log.table_name or '—' }}</span>
                             </td>
                             <td class="py-3 px-2">
-                                {% if log.type == 'Create' %}
+                                {% if log.type_name == 'Create' %}
                                 <span class="badge bg-green-100 text-green-700">ایجاد</span>
-                                {% elif log.type == 'Update' %}
+                                {% elif log.type_name == 'Update' %}
                                 <span class="badge bg-amber-100 text-amber-700">بروزرسانی</span>
-                                {% elif log.type == 'Delete' %}
+                                {% elif log.type_name == 'Delete' %}
                                 <span class="badge bg-red-100 text-red-700">حذف</span>
+                                {% elif log.type_name == 'DeleteFromDatabase' %}
+                                <span class="badge bg-purple-100 text-purple-700">حذف از دیتابیس</span>
+                                {% elif log.type_name == 'Recovery' %}
+                                <span class="badge bg-sky-100 text-sky-700">بازیابی</span>
                                 {% else %}
-                                <span class="badge bg-gray-100 text-gray-700">{{ log.type or '—' }}</span>
+                                <span class="badge bg-gray-100 text-gray-700">{{ log.type_name or '—' }}</span>
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-2 text-gray-600 max-w-md truncate">{{ log.description or log.desc or '—' }}</td>
+                            <td class="py-3 px-2 text-gray-600 max-w-md truncate">{{ log.description or '—' }}</td>
                             <td class="py-3 px-2">
                                 <span class="text-gray-800">{{ user_map.get(log.created_by_user_id|string, '—') }}</span>
                             </td>

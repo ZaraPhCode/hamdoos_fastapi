@@ -1,0 +1,74 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات لاگ{% endblock %}
+{% block content %}
+<div class="max-w-4xl space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">لاگ‌ها</h1>
+                    <h4 class="text-sm text-gray-500 mt-0.5">جزئیات</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details card -->
+    <div class="card">
+        <div class="card-header">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-info-circle text-gray-400"></i>
+                <h3 class="font-semibold text-gray-700">جزئیات لاگ</h3>
+            </div>
+        </div>
+        <div class="card-body">
+            <dl class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <dt class="text-sm font-medium text-gray-500 md:col-span-2">ایجاد شده توسط کاربر</dt>
+                    <dd class="text-sm text-gray-800 md:col-span-2">{{ user_name }}</dd>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <dt class="text-sm font-medium text-gray-500 md:col-span-2">نوع</dt>
+                    <dd class="text-sm text-gray-800 md:col-span-2">
+                        {% if log.type_name == 'Create' %}<span class="badge bg-green-100 text-green-700">Create</span>
+                        {% elif log.type_name == 'Update' %}<span class="badge bg-amber-100 text-amber-700">Update</span>
+                        {% elif log.type_name == 'Delete' %}<span class="badge bg-red-100 text-red-700">Delete</span>
+                        {% elif log.type_name == 'DeleteFromDatabase' %}<span class="badge bg-purple-100 text-purple-700">DeleteFromDatabase</span>
+                        {% elif log.type_name == 'Recovery' %}<span class="badge bg-sky-100 text-sky-700">Recovery</span>
+                        {% else %}{{ log.type_name }}{% endif %}
+                    </dd>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <dt class="text-sm font-medium text-gray-500 md:col-span-2">جدول</dt>
+                    <dd class="text-sm text-gray-800 md:col-span-2">
+                        <span class="badge bg-gray-100 text-gray-700">{{ log.table_name }}</span>
+                    </dd>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <dt class="text-sm font-medium text-gray-500 md:col-span-2">تاریخ ایجاد</dt>
+                    <dd class="text-sm text-gray-800 md:col-span-2">{{ insert_date }}</dd>
+                </div>
+            </dl>
+            <hr class="my-5 border-gray-200">
+            <div class="space-y-3">
+                {% for line in lines %}
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <dt class="text-sm font-medium text-gray-500 md:col-span-2">توضیح</dt>
+                    <dd class="text-sm text-gray-800 md:col-span-2" dir="ltr" style="text-align:right">{{ line }}</dd>
+                </div>
+                {% else %}
+                <div class="text-sm text-gray-500">—</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <a href="/administration/logs" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+        <i class="fas fa-arrow-right"></i> بازگشت به لیست
+    </a>
+</div>
+{% endblock %}

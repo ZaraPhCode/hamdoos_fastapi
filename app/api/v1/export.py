@@ -156,7 +156,7 @@ async def get_audit_logs(
     result = await db.execute(stmt)
     logs = result.scalars().all()
     return {
-        "items": [{"id": str(l.id), "table": l.table_name, "description": l.description, "type": l.type, "date": l.insert_date} for l in logs],
+        "items": [{"id": str(l.id), "table": l.table_name, "description": l.description, "type": l.type_name, "date": l.insert_date} for l in logs],
         "total": total, "page": page, "page_size": page_size,
         "total_pages": max(1, (total + page_size - 1) // page_size),
     }

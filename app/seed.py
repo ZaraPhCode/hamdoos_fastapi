@@ -355,7 +355,7 @@ async def seed_database():
         # 8. Default Admin Parameter
         existing_ap = await db.execute(select(AdminParameter).limit(1))
         if not existing_ap.scalar_one_or_none():
-            ap = AdminParameter(id=uuid.uuid4(), confirm_order_pn="09930003120", confirm_order_em="hamdoos@outlook.com",
+            ap = AdminParameter(id=uuid.uuid4(), ConfirmOrderPN="09930003120", ConfrimOrderEm="hamdoos@outlook.com",
                                 insert_date=datetime.now(timezone.utc), update_date=datetime.now(timezone.utc))
             db.add(ap)
 

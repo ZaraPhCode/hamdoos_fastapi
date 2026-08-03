@@ -1,0 +1,71 @@
+{% extends "admin/base.html" %}
+{% block title %}مدیریت پارامتر ادمین{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-sliders-h"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">مدیریت پارامتر ادمین</h1>
+                    <h4 class="text-sm text-gray-500 mt-0.5">جزئیات</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if param %}
+    <!-- Values -->
+    <div class="card">
+        <div class="card-header">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-cog text-gray-400"></i>
+                <h3 class="font-semibold text-gray-700">پارامترهای مدیریت</h3>
+            </div>
+        </div>
+        <div class="card-body">
+            <dl class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <dt class="text-sm font-medium text-gray-500">تلفن تأیید سفارش</dt>
+                    <dd class="text-sm text-gray-800 md:col-span-3" dir="ltr" style="text-align:left">{{ param.ConfirmOrderPN }}</dd>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <dt class="text-sm font-medium text-gray-500">ایمیل تأیید سفارش</dt>
+                    <dd class="text-sm text-gray-800 md:col-span-3" dir="ltr" style="text-align:left">{{ param.ConfrimOrderEm }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+        <a href="/administration/admin-parameters/{{ param.id }}/edit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-100 text-amber-800 text-sm font-medium hover:bg-amber-200 transition-colors">
+            <i class="fas fa-edit"></i> ویرایش
+        </a>
+        <form method="POST" action="/administration/admin-parameters/{{ param.id }}/delete" class="inline"
+              onsubmit="return confirm('آیا از حذف پارامتر ادمین مطمئن هستید؟');">
+            <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-100 text-red-700 text-sm font-medium hover:bg-red-200 transition-colors">
+                <i class="fas fa-trash"></i> حذف
+            </button>
+        </form>
+        <a href="/administration/admin-parameters/restore" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+            <i class="fas fa-undo"></i> بازنشانی
+        </a>
+    </div>
+    {% else %}
+    <!-- Empty state -->
+    <div class="card">
+        <div class="card-body py-12 text-center">
+            <i class="fas fa-sliders-h text-4xl text-gray-300 mb-3"></i>
+            <p class="text-gray-500 mb-4">پارامتری تعریف نشده است.</p>
+            <a href="/administration/admin-parameters/create" class="btn-success inline-flex items-center gap-2">
+                <i class="fas fa-plus"></i> ایجاد
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

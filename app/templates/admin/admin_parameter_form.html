@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ form_title }} پارامتر ادمین{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                <i class="fas fa-sliders-h"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">مدیریت پارامتر ادمین</h1>
+                <h4 class="text-sm text-gray-500 mt-0.5">{{ form_title }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="card">
+        <div class="card-header">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-cog text-gray-400"></i>
+                <h3 class="font-semibold text-gray-700">پارامترهای مدیریت</h3>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if errors %}
+            <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-4">
+                <ul class="text-sm text-red-700 space-y-1">
+                    {% for e in errors %}<li><i class="fas fa-exclamation-circle text-xs ml-1"></i>{{ e }}</li>{% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ action_url }}" class="space-y-5">
+                {% if param %}<input type="hidden" name="id" value="{{ param.id }}">{% endif %}
+                <div>
+                    <label class="form-label">تلفن تأیید سفارش</label>
+                    <input type="text" name="ConfirmOrderPN" value="{{ ConfirmOrderPN or (param.ConfirmOrderPN if param else '') }}" class="form-input" dir="ltr" placeholder="مثال: 09930003120">
+                    <p class="text-xs text-gray-400 mt-1">برای چند شماره از ; جدا کنید</p>
+                </div>
+                <div>
+                    <label class="form-label">ایمیل تأیید سفارش</label>
+                    <input type="text" name="ConfrimOrderEm" value="{{ ConfrimOrderEm or (param.ConfrimOrderEm if param else '') }}" class="form-input" dir="ltr" placeholder="مثال: admin@example.com">
+                    <p class="text-xs text-gray-400 mt-1">برای چند ایمیل از ; جدا کنید</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="submit" class="btn-primary inline-flex items-center gap-2"><i class="fas fa-save"></i> ذخیره</button>
+                    <a href="/administration/admin-parameters" class="inline-flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">بازگشت به لیست</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
