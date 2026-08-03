@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% block title %}ویرایش سابقه وضعیت{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">ویرایش سابقه وضعیت</h1>
+        <a href="/administration/order-status-records/{{ rec.id }}" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت</a>
+    </div>
+
+    <form method="POST" action="/administration/order-status-records/{{ rec.id }}/edit" class="space-y-6">
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">مشخصات سابقه وضعیت</h2></div>
+            <div class="card-body grid grid-cols-1 gap-4">
+                <div>
+                    <label class="form-label" for="status">وضعیت</label>
+                    <select id="status" name="status" class="form-input">
+                        {% for value, name in order_status_names.items() %}
+                        <option value="{{ value }}" {{ 'selected' if rec.status == value else '' }}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="comment">توضیح</label>
+                    <textarea id="comment" name="comment" rows="4" class="form-input">{{ rec.comment or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button type="submit" class="btn-primary flex items-center gap-2"><i class="fas fa-save"></i> ذخیره</button>
+            <a href="/administration/order-status-records/{{ rec.id }}" class="btn-secondary">انصراف</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

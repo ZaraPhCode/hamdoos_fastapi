@@ -59,6 +59,8 @@ class OrderModel(Base, BaseEntityMixin):
     order_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     count: Mapped[int] = mapped_column(Integer, default=0)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    weight: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    postage_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     paper_invoice: Mapped[bool] = mapped_column(Boolean, default=False)
     email: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
@@ -97,6 +99,8 @@ class OrderModel(Base, BaseEntityMixin):
     identity_information_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("identity_informations.id", ondelete="NO ACTION"), nullable=True)
 
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id], back_populates="orders")
+    pay_method: Mapped[Optional["PayMethod"]] = relationship("PayMethod", foreign_keys=[pay_method_id])
+    post_type: Mapped[Optional["PostType"]] = relationship("PostType", foreign_keys=[post_type_id])
     order_products: Mapped[list["OrderProduct"]] = relationship("OrderProduct", back_populates="order", lazy="selectin", cascade="all, delete-orphan")
     order_status_records: Mapped[list["OrderStatusRecord"]] = relationship("OrderStatusRecord", back_populates="order", lazy="selectin", cascade="all, delete-orphan")
     receipts: Mapped[list["Receipt"]] = relationship("Receipt", back_populates="order", lazy="selectin")

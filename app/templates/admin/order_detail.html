@@ -1,131 +1,283 @@
-?{% extends "admin/base.html" %}
-{% block title %}جزئیات سفارش #{{ order.id }}{% endblock %}
+{% extends "admin/base.html" %}
+{% block title %}جزئیات سفارش #{{ order.reference_code or order.id[:8] }}{% endblock %}
 {% block content %}
-<div class="max-w-6xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">جزئیات سفارش #{{ order.id }}</h1>
-        <a href="/administration/orders" class="btn-secondary flex items-center gap-2">
-            <i class="fas fa-arrow-right"></i> بازگشت
-        </a>
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div class="card lg:col-span-2">
-            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات سفارش</h2></div>
-            <div class="card-body grid grid-cols-2 gap-4">
-                <div><span class="text-gray-500 text-sm">کد سفارش:</span><p class="font-medium">{{ order.reference_code or order.id }}</p></div>
-                <div><span class="text-gray-500 text-sm">تاریخ ثبت:</span><p class="font-medium">{{ order.insert_date }}</p></div>
-                <div><span class="text-gray-500 text-sm">وضعیت:</span>
-                    <p><span class="badge
-                        {%- if order.status == 'delivered' %} bg-emerald-100 text-emerald-800
-                        {%- elif order.status == 'canceled' %} bg-red-100 text-red-800
-                        {%- elif order.status == 'processing' %} bg-blue-100 text-blue-800
-                        {%- elif order.status == 'shipped' %} bg-indigo-100 text-indigo-800
-                        {%- else %} bg-gray-100 text-gray-800{% endif %}">
-                        {{ order.status_name or order.status }}
-                    </span></p>
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-blue-500">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-blue-200"><i class="fas fa-shopping-cart"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">جزئیات سفارش #{{ order.reference_code or order.id[:8] }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5 flex items-center gap-2">
+                        <span class="badge
+                            {%- if order.order_status == 'Ordering' %} bg-yellow-100 text-yellow-800
+                            {%- elif order.order_status in ['Paid', 'ConfirmedPayment'] %} bg-blue-100 text-blue-800
+                            {%- elif order.order_status == 'Posted' %} bg-green-100 text-green-800
+                            {%- elif order.order_status == 'Canceled' %} bg-red-100 text-red-800
+                            {%- elif order.order_status in ['Processing', 'Collecting', 'Packing', 'Sending'] %} bg-indigo-100 text-indigo-800
+                            {%- else %} bg-gray-100 text-gray-800{% endif %}">
+                            {{ order.order_status_name }}
+                        </span>
+                        <span class="text-gray-400">|</span>
+                        <span>ثبت: {{ order.insert_date_str or order.insert_date }}</span>
+                    </p>
                 </div>
-                <div><span class="text-gray-500 text-sm">روش پرداخت:</span><p class="font-medium">{{ order.pay_method_title or order.pay_method }}</p></div>
-                <div><span class="text-gray-500 text-sm">نحوه ارسال:</span><p class="font-medium">{{ order.post_type_title or order.post_type }}</p></div>
-                <div><span class="text-gray-500 text-sm">مبلغ کل:</span><p class="font-medium text-lg text-blue-600">{{ "{:,}".format(order.total_price) }} تومان</p></div>
+            </div>
+            <a href="/administration/orders" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+        </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-2">
+        <a href="/administration/orders/{{ order.id }}/edit" class="btn-secondary flex items-center gap-2 text-sm"><i class="fas fa-edit"></i> ویرایش</a>
+        <a href="/administration/orders/{{ order.id }}/factor" target="_blank" class="btn-success flex items-center gap-2 text-sm"><i class="fas fa-file-invoice"></i> فاکتور کاغذی</a>
+        <a href="/administration/orders/{{ order.id }}/labels" target="_blank" class="btn-secondary flex items-center gap-2 text-sm"><i class="fas fa-tags"></i> برچسب‌ها</a>
+        <a href="/administration/orders/{{ order.id }}/post-info" target="_blank" class="btn-secondary flex items-center gap-2 text-sm"><i class="fas fa-truck"></i> نوع ارسال</a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Order info -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+                <h2 class="font-semibold text-gray-800"><i class="fas fa-info-circle ml-2 text-blue-500"></i>اطلاعات سفارش</h2>
+            </div>
+            <div class="p-6">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div><dt class="text-xs text-gray-500 mb-1">کاربر</dt><dd class="text-sm font-medium">{% if order.user_id %}<a href="/administration/users/{{ order.user_id }}" class="text-indigo-600 hover:underline">{{ order.user_full_name or order.user_id[:8] }}</a>{% else %}—{% endif %}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">کد سفارش</dt><dd class="text-sm font-medium">{{ order.reference_code or order.id }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">شماره پیگیری پستی</dt><dd class="text-sm font-medium">{% if order.tracking_number %}<a href="https://tracking.post.ir/search.aspx?id={{ order.tracking_number }}" target="_blank" class="text-indigo-600 hover:underline ltr-input">{{ order.tracking_number }}</a>{% else %}—{% endif %}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">تاریخ سفارش</dt><dd class="text-sm font-medium">{{ order.date_str or order.insert_date_str or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">وزن</dt><dd class="text-sm font-medium">{{ order.weight or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">تاریخ پست</dt><dd class="text-sm font-medium">{{ order.postage_date_str or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">نوع ارسال</dt><dd class="text-sm font-medium">{{ order.post_type_name or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">روش پرداخت</dt><dd class="text-sm font-medium">{{ order.pay_method_name or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">اطلاعات هویتی</dt><dd class="text-sm font-medium">{% if order.identity_information_id %}<a href="/administration/identity-informations/{{ order.identity_information_id }}" class="text-indigo-600 hover:underline">{{ order.identity_information_name or order.identity_information_id[:8] }}</a>{% else %}—{% endif %}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">فاکتور کاغذی</dt><dd class="text-sm font-medium">{{ 'بله' if order.paper_invoice else 'خیر' }}{% if invoice %} <a href="/administration/invoices/{{ invoice.id }}" class="text-indigo-600 hover:underline text-sm">(فاکتور)</a>{% endif %}</dd></div>
+                    <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">آدرس</dt><dd class="text-sm">{{ order.address_description or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">کد پستی</dt><dd class="text-sm font-medium ltr-input">{{ order.postal_code or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">موبایل</dt><dd class="text-sm font-medium ltr-input">{{ order.phone_number or '—' }}</dd></div>
+                    <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">یادداشت‌ها</dt><dd class="text-sm bg-gray-50 rounded-lg p-3">{{ order.notes or '—' }}</dd></div>
+                </dl>
             </div>
         </div>
-        <div class="card">
-            <div class="card-header"><h2 class="text-lg font-semibold">مشتری</h2></div>
-            <div class="card-body space-y-3">
-                <div><span class="text-gray-500 text-sm">نام:</span><p class="font-medium">{{ order.customer.name if order.customer else '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">موبایل:</span><p class="font-medium" dir="ltr">{{ order.customer.mobile if order.customer else '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">ایمیل:</span><p class="font-medium" dir="ltr">{{ order.customer.email if order.customer else '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">آدرس:</span><p class="text-sm">{{ order.address or '---' }}</p></div>
+
+        <!-- Summary -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden self-start">
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-gray-200 px-6 py-4">
+                <h2 class="font-semibold text-gray-800"><i class="fas fa-file-invoice-dollar ml-2 text-emerald-500"></i>صورت‌حساب</h2>
+            </div>
+            <div class="p-6 space-y-3">
+                <div class="flex justify-between"><span class="text-gray-500 text-sm">مبلغ کل</span><span class="font-medium">{{ "{:,}".format(order.total_price) }} تومان</span></div>
+                <div class="flex justify-between"><span class="text-gray-500 text-sm">مبلغ پس از تخفیف</span><span class="font-medium">{{ "{:,}".format(order.total_price_after_discount) }} تومان</span></div>
+                <div class="flex justify-between"><span class="text-gray-500 text-sm">تخفیف</span><span class="font-medium text-red-500">{{ "{:,}".format(order.discount_price or order.total_discount_price) }} تومان</span></div>
+                <div class="flex justify-between"><span class="text-gray-500 text-sm">ارسال (بدون مالیات)</span><span class="font-medium">{{ "{:,}".format(order.postage_fee) }} تومان</span></div>
+                <div class="flex justify-between"><span class="text-gray-500 text-sm">مالیات ارسال</span><span class="font-medium">{{ "{:,}".format(order.post_vat) }} تومان</span></div>
+                <div class="flex justify-between"><span class="text-gray-500 text-sm">مالیات ارزش افزوده</span><span class="font-medium">{{ "{:,}".format(order.vat) }} تومان</span></div>
+                <div class="flex justify-between items-center border-t border-dashed border-gray-300 pt-3"><span class="text-gray-700 font-semibold">قابل پرداخت</span><span class="font-bold text-lg text-blue-600">{{ "{:,}".format(order.payable) }} تومان</span></div>
+                <div class="flex justify-between"><span class="text-gray-500 text-sm">تعداد اقلام</span><span class="badge bg-gray-100 text-gray-700">{{ order.count }}</span></div>
             </div>
         </div>
     </div>
-    <div class="card mb-6">
-        <div class="card-header"><h2 class="text-lg font-semibold">محصولات سفارش</h2></div>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="table-header">محصول</th>
-                        <th class="table-header">کد</th>
-                        <th class="table-header">قیمت واحد</th>
-                        <th class="table-header">تعداد</th>
-                        <th class="table-header">قیمت کل</th>
+
+    <!-- Status update -->
+    {% if order.order_status not in ['Posted', 'Canceled'] %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-sync-alt ml-2 text-amber-500"></i>مدیریت وضعیت</h2>
+        </div>
+        <div class="p-6">
+            <form method="POST" action="/administration/orders/{{ order.id }}/status" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label class="form-label" for="status">وضعیت جدید</label>
+                    <select id="status" name="status" class="form-input">
+                        {% for value, name in order_status_names.items() %}
+                        <option value="{{ value }}" {{ 'selected' if order.order_status == value else '' }}>{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="tracking_number">شماره پیگیری پستی</label>
+                    <input type="text" id="tracking_number" name="tracking_number" value="{{ order.tracking_number or '' }}" class="form-input ltr-input">
+                </div>
+                <div>
+                    <label class="form-label" for="comment">توضیحات</label>
+                    <input type="text" id="comment" name="comment" class="form-input" placeholder="توضیح تغییر وضعیت...">
+                </div>
+                <div class="md:col-span-3">
+                    <button type="submit" class="btn-primary flex items-center gap-2"><i class="fas fa-check"></i> اعمال وضعیت</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Order products -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-boxes ml-2 text-teal-500"></i>لیست سفارشات کالا</h2>
+            <a href="/administration/order-products/create/{{ order.id }}" class="btn-primary text-sm py-1.5"><i class="fas fa-plus ml-1"></i> ایجاد سفارش کالا</a>
+        </div>
+        <div class="p-5 overflow-x-auto">
+            <div class="mb-3 text-sm text-gray-500">نمایش {{ order.order_products|length }} رکورد</div>
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-2 px-2">#</th>
+                    <th class="text-right py-2 px-2">شناسه</th>
+                    <th class="text-right py-2 px-2">محصول</th>
+                    <th class="text-center py-2 px-2">تعداد</th>
+                    <th class="text-right py-2 px-2">قیمت واحد</th>
+                    <th class="text-right py-2 px-2">قیمت پس از تخفیف</th>
+                    <th class="text-right py-2 px-2">جمع پس از تخفیف</th>
+                    <th class="text-center py-2 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for op in order.order_products %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-2 px-2 text-gray-400">{{ loop.index }}</td>
+                        <td class="py-2 px-2 text-gray-500 ltr-input">{{ op.part_number or '—' }}</td>
+                        <td class="py-2 px-2 font-medium">{% if op.product_id %}<a href="/administration/products/{{ op.product_id }}/details" class="text-indigo-600 hover:underline">{{ op.product_name }}</a>{% else %}{{ op.product_name }}{% endif %}</td>
+                        <td class="py-2 px-2 text-center">{{ op.count }}</td>
+                        <td class="py-2 px-2">{{ "{:,}".format(op.unit_price) }}</td>
+                        <td class="py-2 px-2">{{ "{:,}".format(op.price_after_discount) }}</td>
+                        <td class="py-2 px-2 font-medium">{{ "{:,}".format(op.total_price_after_discount) }}</td>
+                        <td class="py-2 px-2 text-center whitespace-nowrap">
+                            <a href="/administration/order-products/{{ op.id }}" class="text-indigo-600 hover:underline ml-1" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/order-products/{{ op.id }}/edit" class="text-blue-600 hover:underline ml-1" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="/administration/order-products/{{ op.id }}/delete" onsubmit="return confirm('حذف این کالا از سفارش؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    {% for item in order.products %}
-                    <tr class="table-row-hover">
-                        <td class="table-cell font-medium">{{ item.product_name or item.product.name }}</td>
-                        <td class="table-cell text-gray-500">{{ item.part_number or '---' }}</td>
-                        <td class="table-cell">{{ "{:,}".format(item.price) }}</td>
-                        <td class="table-cell">{{ item.quantity }}</td>
-                        <td class="table-cell font-medium">{{ "{:,}".format(item.price * item.quantity) }}</td>
-                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center py-6 text-gray-400">کالایی ثبت نشده است.</td></tr>
                     {% endfor %}
                 </tbody>
-                <tfoot class="bg-gray-50 border-t border-gray-200">
-                    <tr>
-                        <td colspan="3" class="px-4 py-3 text-left font-medium text-gray-600">جمع کل</td>
-                        <td class="px-4 py-3 font-medium">{{ order.total_quantity }}</td>
-                        <td class="px-4 py-3 font-medium text-blue-600">{{ "{:,}".format(order.total_price) }} تومان</td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
     </div>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div class="card">
-            <div class="card-header"><h2 class="text-lg font-semibold">مدیریت وضعیت</h2></div>
-            <div class="card-body">
-                <form method="POST" action="/administration/orders/{{ order.id }}/status" class="flex items-end gap-3">
-                    <div class="flex-1">
-                        <label class="form-label" for="status">تغییر وضعیت</label>
-                        <select id="status" name="status" class="form-input">
-                            {% for st in order_statuses %}
-                            <option value="{{ st.value }}" {{ 'selected' if order.status == st.value else '' }}>{{ st.label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="submit" class="btn-primary whitespace-nowrap">اعمال</button>
-                </form>
-            </div>
+
+    <!-- Payments -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-credit-card ml-2 text-sky-500"></i>لیست پرداخت‌ها</h2>
+            <a href="/administration/payment-requests/create/{{ order.id }}" class="btn-primary text-sm py-1.5"><i class="fas fa-plus ml-1"></i> ایجاد پرداخت سفارش</a>
         </div>
-        <div class="card">
-            <div class="card-header"><h2 class="text-lg font-semibold">کد رهگیری</h2></div>
-            <div class="card-body">
-                <form method="POST" action="/administration/orders/{{ order.id }}/tracking" class="flex items-end gap-3">
-                    <div class="flex-1">
-                        <label class="form-label" for="tracking_code">کد رهگیری پستی</label>
-                        <input type="text" id="tracking_code" name="tracking_code" value="{{ order.tracking_code or '' }}" class="form-input" dir="ltr">
-                    </div>
-                    <button type="submit" class="btn-primary whitespace-nowrap">ذخیره</button>
-                </form>
-            </div>
+        <div class="p-5 overflow-x-auto">
+            <div class="mb-3 text-sm text-gray-500">نمایش {{ order.payment_requests|length }} رکورد</div>
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-2 px-2">#</th>
+                    <th class="text-right py-2 px-2">تاریخ پرداخت</th>
+                    <th class="text-right py-2 px-2">تائید</th>
+                    <th class="text-right py-2 px-2">مبلغ</th>
+                    <th class="text-center py-2 px-2">وضعیت</th>
+                    <th class="text-center py-2 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for pr in order.payment_requests %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-2 px-2 text-gray-400">{{ loop.index }}</td>
+                        <td class="py-2 px-2">{{ pr.pay_date_str or '—' }}</td>
+                        <td class="py-2 px-2">{{ pr.approval_str or '—' }}</td>
+                        <td class="py-2 px-2">{{ "{:,}".format(pr.amount) }}</td>
+                        <td class="py-2 px-2 text-center"><span class="badge
+                            {%- if pr.status == 'Success' %} bg-green-100 text-green-800
+                            {%- elif pr.status == 'Failed' %} bg-red-100 text-red-800
+                            {%- elif pr.status == 'Canceled' %} bg-gray-100 text-gray-800
+                            {%- else %} bg-yellow-100 text-yellow-800{% endif %}">{{ pr.status_name }}</span></td>
+                        <td class="py-2 px-2 text-center whitespace-nowrap">
+                            <a href="/administration/payment-requests/{{ pr.id }}" class="text-indigo-600 hover:underline ml-1" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/payment-requests/{{ pr.id }}/edit" class="text-blue-600 hover:underline ml-1" title="ویرایش"><i class="fas fa-edit"></i></a>
+                            <form method="POST" action="/administration/payment-requests/{{ pr.id }}/delete" onsubmit="return confirm('حذف این پرداخت؟')" style="display:inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700" title="حذف"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-6 text-gray-400">پرداختی ثبت نشده است.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-    <div class="card">
-        <div class="card-header"><h2 class="text-lg font-semibold">تاریخچه وضعیت</h2></div>
-        <div class="card-body">
-            {% if order.status_records %}
-            <div class="space-y-4">
-                {% for rec in order.status_records | sort(attribute='insert_date', reverse=True) %}
-                <div class="flex items-start gap-4">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                        <i class="fas fa-circle text-xs"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-medium text-sm">{{ rec.status_name or rec.status }}</p>
-                        <p class="text-xs text-gray-500 mt-1">{{ rec.insert_date }}</p>
-                        {% if rec.description %}
-                        <p class="text-sm text-gray-600 mt-1">{{ rec.description }}</p>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-gray-500 text-sm">تاریخچه‌ای ثبت نشده است.</p>
-            {% endif %}
+
+    <!-- Receipts -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-receipt ml-2 text-violet-500"></i>لیست فیش‌های پرداخت</h2>
+            <a href="/administration/receipts/create/{{ order.id }}" class="btn-primary text-sm py-1.5"><i class="fas fa-plus ml-1"></i> ایجاد فیش</a>
+        </div>
+        <div class="p-5 overflow-x-auto">
+            <div class="mb-3 text-sm text-gray-500">نمایش {{ order.receipts|length }} رکورد</div>
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-2 px-2">#</th>
+                    <th class="text-right py-2 px-2">کد مرجع</th>
+                    <th class="text-right py-2 px-2">مبلغ</th>
+                    <th class="text-center py-2 px-2">وضعیت</th>
+                    <th class="text-right py-2 px-2">بانک</th>
+                    <th class="text-right py-2 px-2">توضیحات</th>
+                    <th class="text-center py-2 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for r in order.receipts %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-2 px-2 text-gray-400">{{ loop.index }}</td>
+                        <td class="py-2 px-2 ltr-input">{{ r.reference_code or '—' }}</td>
+                        <td class="py-2 px-2">{{ "{:,}".format(r.price) }}</td>
+                        <td class="py-2 px-2 text-center"><span class="badge
+                            {%- if r.status == 'Confirmed' %} bg-green-100 text-green-800
+                            {%- elif r.status == 'Failed' %} bg-red-100 text-red-800
+                            {%- else %} bg-yellow-100 text-yellow-800{% endif %}">{{ r.status_name }}</span></td>
+                        <td class="py-2 px-2">{{ r.destination_bank or '—' }}</td>
+                        <td class="py-2 px-2 text-gray-500">{{ r.description or '—' }}</td>
+                        <td class="py-2 px-2 text-center whitespace-nowrap">
+                            <a href="/administration/receipts/{{ r.id }}" class="text-indigo-600 hover:underline" title="جزئیات"><i class="fas fa-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center py-6 text-gray-400">فیشی ثبت نشده است.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Status history -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-slate-50 to-gray-100 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-history ml-2 text-slate-500"></i>لیست سوابق وضعیت سفارش</h2>
+        </div>
+        <div class="p-5 overflow-x-auto">
+            <div class="mb-3 text-sm text-gray-500">نمایش {{ order.order_status_records|length }} رکورد</div>
+            <table class="w-full text-sm">
+                <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-2 px-2">#</th>
+                    <th class="text-right py-2 px-2">وضعیت</th>
+                    <th class="text-right py-2 px-2">تاریخ ثبت</th>
+                    <th class="text-right py-2 px-2">کاربر</th>
+                    <th class="text-right py-2 px-2">توضیح</th>
+                    <th class="text-center py-2 px-2">عملیات</th>
+                </tr></thead>
+                <tbody>
+                    {% for sr in order.order_status_records | sort(attribute='insert_date', reverse=True) %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-2 px-2 text-gray-400">{{ loop.index }}</td>
+                        <td class="py-2 px-2"><span class="badge bg-indigo-100 text-indigo-800">{{ sr.status_name }}</span></td>
+                        <td class="py-2 px-2">{{ sr.insert_date_str or sr.insert_date }}</td>
+                        <td class="py-2 px-2">{{ created_by_map.get(sr.created_by_user_id, '—') }}</td>
+                        <td class="py-2 px-2 text-gray-500">{{ sr.comment or '—' }}</td>
+                        <td class="py-2 px-2 text-center whitespace-nowrap">
+                            <a href="/administration/order-status-records/{{ sr.id }}" class="text-indigo-600 hover:underline ml-1" title="جزئیات"><i class="fas fa-eye"></i></a>
+                            <a href="/administration/order-status-records/{{ sr.id }}/edit" class="text-blue-600 hover:underline" title="ویرایش"><i class="fas fa-edit"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-6 text-gray-400">سابقه‌ای ثبت نشده است.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

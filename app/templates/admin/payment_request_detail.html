@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات پرداخت{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">جزئیات پرداخت</h1>
+        <div class="flex gap-2">
+            <a href="/administration/orders/{{ pr.order_id }}" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به سفارش</a>
+            <a href="/administration/payment-requests/{{ pr.id }}/edit" class="btn-secondary flex items-center gap-2"><i class="fas fa-edit"></i> ویرایش</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2 class="text-lg font-semibold">مشخصات پرداخت</h2></div>
+        <div class="card-body grid grid-cols-2 gap-4">
+            <div><span class="text-gray-500 text-sm">مبلغ:</span><p class="font-medium text-lg text-blue-600">{{ "{:,}".format(pr.amount) }} تومان</p></div>
+            <div><span class="text-gray-500 text-sm">وضعیت:</span>
+                <p><span class="badge
+                    {%- if pr.status == 'Success' %} bg-green-100 text-green-800
+                    {%- elif pr.status == 'Failed' %} bg-red-100 text-red-800
+                    {%- elif pr.status == 'Canceled' %} bg-gray-100 text-gray-800
+                    {%- else %} bg-yellow-100 text-yellow-800{% endif %}">{{ pr.status_name }}</span></p>
+            </div>
+            <div><span class="text-gray-500 text-sm">تاریخ پرداخت:</span><p class="font-medium">{{ pr.pay_date_str or '---' }}</p></div>
+            <div><span class="text-gray-500 text-sm">تاریخ تائید:</span><p class="font-medium">{{ pr.approval_str or '---' }}</p></div>
+            <div><span class="text-gray-500 text-sm">وضعیت پرداخت:</span><p class="font-medium">{{ 'پرداخت شده' if pr.is_pay else 'پرداخت نشده' }}</p></div>
+            <div><span class="text-gray-500 text-sm">کد مرجع (refId):</span><p class="font-medium" dir="ltr">{{ pr.ref_id or '---' }}</p></div>
+            <div><span class="text-gray-500 text-sm">شناسه کارت:</span><p class="font-medium" dir="ltr">{{ pr.card_pan or '---' }}</p></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

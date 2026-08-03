@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>فاکتور سفارش {{ order.reference_code or '' }}</title>
+    <style>
+        body { font-family: Vazirmatn, Tahoma, sans-serif; margin: 0; max-width: 297mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @media print { @page { size: A4 landscape; margin: 5mm; } }
+        .toolbar { padding: 10px; text-align: left; }
+        table { table-layout: fixed; width: 100%; border-spacing: 0; border-collapse: collapse; }
+        thead { font-size: 8pt; }
+        tbody, tfoot { font-size: 8pt; }
+        th, td { border: 0.4px solid #000; overflow-wrap: anywhere; }
+        .text-center { text-align: center; }
+        .table-header { text-align: center; font-size: 10pt; font-weight: bold; background-color: #bbb; }
+        .date-cell { direction: ltr; text-align: right; }
+        .signature-col { border-top: none; border-right: none; border-left: none; text-align: right; vertical-align: top; padding: 8px; height: 4rem; }
+        .pr-1 { padding-right: 8px; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button onclick="window.print()">چاپ فاکتور</button>
+    </div>
+
+    {% set inv = order.invoice if order.invoice else None %}
+    {% if inv %}
+        {% set products = inv.invoice_products if inv.invoice_products else [] %}
+    {% else %}
+        {% set products = order.order_products %}
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th colspan="12">شماره منحصر به فرد مالیاتی</th>
+                <td colspan="15">-</td>
+                <th colspan="8">شماره سفارش</th>
+                <td colspan="7">{{ order.reference_code or '-' }}</td>
+                <th colspan="2"></th>
+                <th colspan="12" rowspan="2" class="text-center invoice-type">صورتحساب {% if inv %}{{ inv.type or '' }}{% endif %}</th>
+                <th colspan="6"></th>
+                <th colspan="9">موضوع صورتحساب</th>
+                <td colspan="8">اصلی</td>
+                <th colspan="10">تاریخ صدور</th>
+                <td colspan="11" class="date-cell">{{ (inv.date.strftime('%Y/%m/%d') if inv and inv.date else order.date_str) or '-' }}</td>
+            </tr>
+            <tr>
+                <th colspan="19">شماره منحصر به فرد مالیاتی صورتحساب مرجع</th>
+                <td colspan="10">-</td>
+                <th colspan="15"></th>
+                <th colspan="6"></th>
+                <th colspan="9">الگوی صورتحساب</th>
+                <td colspan="8">فروش</td>
+                <th colspan="10">تاریخ ایجاد</th>
+                <td colspan="11" class="date-cell">{{ order.insert_date_str or '-' }}</td>
+            </tr>
+        </thead>
+        <thead>
+            <tr><th class="table-header" colspan="100">مشخصات فروشنده</th></tr>
+            <tr>
+                <th colspan="2">نام</th>
+                <td colspan="30">شرکت دانش‌بنیان نمایه پرتو آشا</td>
+                <th colspan="6"></th>
+                <th colspan="7">کد اقتصادی</th>
+                <td colspan="10">140004840572</td>
+                <th colspan="7"></th>
+                <th colspan="7">کد شعبه</th>
+                <td colspan="6">-</td>
+                <th colspan="25"></th>
+            </tr>
+            <tr>
+                <th colspan="7">شناسه ملی</th>
+                <td colspan="7">14004840572</td>
+                <th colspan="24"></th>
+                <th colspan="7">تلفن ثابت</th>
+                <td colspan="15">02188214641</td>
+                <th colspan="2"></th>
+                <th colspan="7">کد پستی</th>
+                <td colspan="6">1434663785</td>
+                <td colspan="25"></td>
+            </tr>
+            <tr>
+                <th colspan="4">استان</th>
+                <td colspan="6">تهران</td>
+                <th colspan="5">شهرستان</th>
+                <td colspan="6">تهران</td>
+                <th colspan="4">شهر</th>
+                <td colspan="6">تهران</td>
+                <th colspan="4">نشانی</th>
+                <td colspan="65">یوسف‌آباد، خیابان شهید عبدالمجید اکبری، خیابان سی و هفتم، پلاک ۱، طبقه سوم</td>
+            </tr>
+        </thead>
+        <thead>
+            <tr><th class="table-header text-center" colspan="100">مشخصات خریدار</th></tr>
+            <tr>
+                <th colspan="2">نام</th>
+                <td colspan="30">{% if inv %}{{ inv.identity_name or '' }}{% else %}{{ order.full_name }}{% endif %}</td>
+                <th colspan="6"></th>
+                <th colspan="7">کد اقتصادی</th>
+                <td colspan="10">{% if inv %}{{ inv.economic_code or '' }}{% endif %}</td>
+                <th colspan="7"></th>
+                <th colspan="7">کد شعبه</th>
+                <td colspan="6">-</td>
+                <th colspan="25"></th>
+            </tr>
+            <tr>
+                <th colspan="7">کد/شناسه ملی</th>
+                <td colspan="7">{% if inv %}{{ inv.national_code_or_id or '' }}{% endif %}</td>
+                <th colspan="24"></th>
+                <th colspan="7">تلفن</th>
+                <td colspan="15">{% if inv %}{{ inv.identity_phone_number or '' }}{% else %}{{ order.telephone or order.phone_number or '' }}{% endif %}</td>
+                <th colspan="2"></th>
+                <th colspan="7">کد پستی</th>
+                <td colspan="6">{% if inv %}{{ inv.identity_postal_code or '' }}{% else %}{{ order.postal_code or '' }}{% endif %}</td>
+                <th colspan="25"></th>
+            </tr>
+            <tr>
+                <th colspan="4">استان</th>
+                <td colspan="6">{% if inv %}{{ inv.identity_province or '' }}{% else %}{{ order.province or '' }}{% endif %}</td>
+                <th colspan="5">شهرستان</th>
+                <td colspan="6">-</td>
+                <th colspan="4">شهر</th>
+                <td colspan="6">{% if inv %}{{ inv.identity_city or '' }}{% else %}{{ order.city or '' }}{% endif %}</td>
+                <th colspan="4">نشانی</th>
+                <td colspan="65">{% if inv %}{{ inv.identity_address or '' }}{% else %}{{ order.address_description or '' }}{% endif %}</td>
+            </tr>
+        </thead>
+    </table>
+
+    <table id="item-table">
+        <thead>
+            <tr><th class="table-header" colspan="34">مشخصات کالا و خدمات مورد معامله</th></tr>
+            <tr>
+                <th colspan="1" class="text-center">ردیف</th>
+                <th colspan="5">شماره قطعه</th>
+                <th colspan="8">شرح کالا/خدمت</th>
+                <th colspan="3">واحد اندازه‌گیری</th>
+                <th colspan="2">تعداد / مقدار</th>
+                <th colspan="4">مبلغ واحد (ریال / ارز)</th>
+                <th colspan="2">نرخ مالیات بر ارزش افزوده</th>
+                <th colspan="4">مبلغ مالیات بر ارزش افزوده</th>
+                <th colspan="5">مبلغ کل کالا / خدمت</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in products %}
+            <tr>
+                <td colspan="1" class="text-center">{{ loop.index }}</td>
+                <td colspan="5" class="pr-1">{{ item.part_number or '' }}</td>
+                <td colspan="8">{{ item.name if inv else item.product_name }}</td>
+                <td colspan="3" class="text-center">{{ item.product_unit or '' }}</td>
+                <td colspan="2" class="text-center">{{ item.count }}</td>
+                <td colspan="4" class="pr-1">{{ "{:,}".format(item.unit_price or 0) }}</td>
+                <td colspan="2" class="text-center">{{ item.vat_rate or 0 }}</td>
+                <td colspan="4" class="pr-1">{{ "{:,}".format(item.taxes_and_duties if inv else 0) }}</td>
+                <td colspan="5" class="pr-1">{{ "{:,}".format(item.total_amount_plus_taxes if inv else item.total_price_after_discount) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="34" class="text-center">کالایی ثبت نشده است.</td></tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="6">جمع کل</th>
+                <th colspan="8">-</th>
+                <th colspan="3">-</th>
+                <th colspan="2">-</th>
+                <th colspan="4">-</th>
+                <th colspan="2">-</th>
+                <th colspan="4">{{ "{:,}".format(inv.total_taxes_and_duties if inv else order.vat) }}</th>
+                <th colspan="5">{{ "{:,}".format(inv.total_price_plus_taxes if inv else order.payable) }}</th>
+            </tr>
+            <tr>
+                <th colspan="34" style="text-align: right;">
+                    {{ "{:,}".format(inv.total_price_plus_taxes if inv else order.payable) }} ریال
+                </th>
+            </tr>
+            {% if inv and inv.description %}
+            <tr><td colspan="34"><strong>توضیحات</strong><br />{{ inv.description }}</td></tr>
+            {% endif %}
+            <tr>
+                <th class="signature-col" colspan="17">امضاء فروشنده</th>
+                <th class="signature-col" colspan="17">امضاء خریدار</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <script>window.onload = function(){ window.print(); };</script>
+</body>
+</html>

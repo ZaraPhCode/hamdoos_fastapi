@@ -1,74 +1,115 @@
-?{% extends "admin/base.html" %}
-{% block title %}رسیدها{% endblock %}
+{% extends "admin/base.html" %}
+{% block title %}فیش‌های پرداخت{% endblock %}
 {% block content %}
-<div class="max-w-6xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">رسیدها</h1>
-        <div class="flex items-center gap-3">
-            <a href="/administration/receipts?status=pending" class="btn-sm {{ 'btn-primary' if status_filter == 'pending' else 'btn-secondary' }}">در انتظار</a>
-            <a href="/administration/receipts?status=confirmed" class="btn-sm {{ 'btn-success' if status_filter == 'confirmed' else 'btn-secondary' }}">تأیید شده</a>
-            <a href="/administration/receipts?status=rejected" class="btn-sm {{ 'btn-danger' if status_filter == 'rejected' else 'btn-secondary' }}">رد شده</a>
-            <a href="/administration/receipts" class="btn-sm {{ 'btn-secondary' if not status_filter else 'btn-primary' }}">همه</a>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">فیش‌های پرداخت</h1>
+            <p class="text-sm text-gray-500 mt-1">مدیریت رسیدهای پرداخت مشتریان</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/administration/receipts?status=AwaitingConfirmation" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium {{ 'bg-amber-500 text-white' if status_filter == 'AwaitingConfirmation' else 'bg-amber-100 text-amber-700 hover:bg-amber-200' }} transition-colors">در انتظار تایید</a>
+            <a href="/administration/receipts?status=Confirmed" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium {{ 'bg-emerald-500 text-white' if status_filter == 'Confirmed' else 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' }} transition-colors">تایید شده</a>
+            <a href="/administration/receipts?status=Failed" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium {{ 'bg-red-500 text-white' if status_filter == 'Failed' else 'bg-red-100 text-red-700 hover:bg-red-200' }} transition-colors">ناموفق</a>
+            <a href="/administration/receipts" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium {{ 'bg-gray-700 text-white' if not status_filter else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }} transition-colors">همه</a>
         </div>
     </div>
+
     <div class="card">
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="table-header">#</th>
-                        <th class="table-header">کاربر</th>
-                        <th class="table-header">مبلغ</th>
-                        <th class="table-header">بانک</th>
-                        <th class="table-header">کد پیگیری</th>
-                        <th class="table-header">تاریخ</th>
-                        <th class="table-header">وضعیت</th>
-                        <th class="table-header">عملیات</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    {% for r in receipts %}
-                    <tr class="table-row-hover">
-                        <td class="table-cell">{{ r.id }}</td>
-                        <td class="table-cell">{{ r.user_name or r.user.name if r.user else '---' }}</td>
-                        <td class="table-cell font-medium">{{ "{:,}".format(r.amount) }} تومان</td>
-                        <td class="table-cell">{{ r.bank_name or '---' }}</td>
-                        <td class="table-cell" dir="ltr">{{ r.tracking_code or '---' }}</td>
-                        <td class="table-cell text-sm">{{ r.insert_date }}</td>
-                        <td class="table-cell">
-                            {% if r.status == 'pending' %}<span class="badge bg-amber-100 text-amber-800">در انتظار</span>
-                            {% elif r.status == 'confirmed' %}<span class="badge bg-emerald-100 text-emerald-800">تأیید شده</span>
-                            {% elif r.status == 'rejected' %}<span class="badge bg-red-100 text-red-800">رد شده</span>
-                            {% else %}<span class="badge bg-gray-100 text-gray-800">{{ r.status }}</span>{% endif %}
-                        </td>
-                        <td class="table-cell">
-                            {% if r.status == 'pending' %}
-                            <div class="flex items-center gap-2">
-                                <form method="POST" action="/administration/receipts/{{ r.id }}/confirm" style="display:inline">
-                                    <button type="submit" class="text-emerald-600 hover:text-emerald-800" title="تأیید"><i class="fas fa-check-circle"></i></button>
-                                </form>
-                                <form method="POST" action="/administration/receipts/{{ r.id }}/reject" style="display:inline">
-                                    <button type="submit" class="text-red-600 hover:text-red-800" title="رد"><i class="fas fa-times-circle"></i></button>
-                                </form>
-                            </div>
-                            {% else %}
-                            <span class="text-gray-400 text-sm">---</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">هیچ رسیدی یافت نشد.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="card-header flex items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <h3 class="font-semibold text-gray-700">لیست فیش‌های پرداخت</h3>
+                <span class="badge bg-gray-100 text-gray-500">{{ receipts|length }} مورد</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="relative">
+                    <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input id="r-search" type="text" placeholder="جستجو..." class="form-input max-w-xs pr-9">
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="r-table">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-center py-3 px-2 w-12">#</th>
+                            <th class="text-right py-3 px-2">کد پیگیری</th>
+                            <th class="text-right py-3 px-2">قیمت</th>
+                            <th class="text-right py-3 px-2">نام کامل کاربر</th>
+                            <th class="text-right py-3 px-2">ایمیل کاربر</th>
+                            <th class="text-center py-3 px-2">وضعیت</th>
+                            <th class="text-right py-3 px-2">قابل پرداخت</th>
+                            <th class="text-center py-3 px-2 w-64">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for r in receipts %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors" data-search="{{ r.reference_code or '' }} {{ r.user_full_name or '' }} {{ r.user_email or '' }}">
+                            <td class="py-3 px-2 text-center text-gray-500 r-index">{{ loop.index }}</td>
+                            <td class="py-3 px-2 font-medium ltr-input">{{ r.reference_code or '—' }}</td>
+                            <td class="py-3 px-2 font-medium">{{ "{:,}".format(r.price or 0) }} تومان</td>
+                            <td class="py-3 px-2">{{ r.user_full_name or '—' }}</td>
+                            <td class="py-3 px-2 ltr-input text-gray-600">{{ r.user_email or '—' }}</td>
+                            <td class="py-3 px-2 text-center">
+                                {% if r.status == 'Confirmed' %}<span class="badge bg-emerald-100 text-emerald-800">تایید شده</span>
+                                {% elif r.status == 'Failed' %}<span class="badge bg-red-100 text-red-800">ناموفق</span>
+                                {% else %}<span class="badge bg-amber-100 text-amber-800">در انتظار تایید</span>{% endif %}
+                            </td>
+                            <td class="py-3 px-2">{{ "{:,}".format(r.payable or 0) if r.payable is not none else '—' }} تومان</td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-1 whitespace-nowrap">
+                                    {% if r.status == 'AwaitingConfirmation' %}
+                                    <a href="/administration/receipts/{{ r.id }}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors"><i class="fas fa-eye"></i> جزییات</a>
+                                    <form method="POST" action="/administration/receipts/{{ r.id }}/confirm" class="inline-flex">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-medium hover:bg-emerald-200 transition-colors"><i class="fas fa-check-circle"></i> تایید</button>
+                                    </form>
+                                    <form method="POST" action="/administration/receipts/{{ r.id }}/reject" class="inline-flex">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium hover:bg-amber-200 transition-colors"><i class="fas fa-times-circle"></i> رد</button>
+                                    </form>
+                                    <form method="POST" action="/administration/receipts/{{ r.id }}/delete" onsubmit="return confirm('حذف این فیش پرداخت؟')" class="inline-flex">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors"><i class="fas fa-trash"></i> حذف</button>
+                                    </form>
+                                    {% else %}
+                                    <a href="/administration/receipts/{{ r.id }}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors"><i class="fas fa-eye"></i> جزییات</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="py-12 text-center text-gray-400"><i class="fas fa-receipt text-3xl mb-3"></i><p>فیش پرداختی یافت نشد.</p></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if total_pages > 1 %}
+            <div class="flex items-center justify-center gap-2 mt-6">
+                {% for p in range(1, total_pages + 1) %}
+                <a href="/administration/receipts?page={{ p }}{% if status_filter %}&status_filter={{ status_filter }}{% endif %}" class="pagination-btn {{ 'active' if p == page else '' }}">{{ p }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
         </div>
     </div>
-    {% if total_pages > 1 %}
-    <div class="flex items-center justify-center gap-2 mt-6">
-        {% for p in range(1, total_pages + 1) %}
-        <a href="/administration/receipts?page={{ p }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="pagination-btn {{ 'active' if p == page else '' }}">{{ p }}</a>
-        {% endfor %}
-    </div>
-    {% endif %}
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    var $rows = $('#r-table tbody tr').filter(function () { return $(this).find('td').length > 1; });
+    $('#r-search').on('keyup', function () {
+        var q = this.value.toLowerCase();
+        $rows.each(function (i) {
+            var row = $(this);
+            if (q === '' || (row.data('search') || '').toLowerCase().indexOf(q) !== -1) {
+                row.show();
+                row.find('.r-index').text(i + 1);
+            } else {
+                row.hide();
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

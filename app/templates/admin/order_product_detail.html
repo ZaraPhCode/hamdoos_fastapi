@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات سفارش کالا{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">جزئیات سفارش کالا</h1>
+        <div class="flex gap-2">
+            <a href="/administration/orders/{{ op.order_id }}" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به سفارش
+            </a>
+            <a href="/administration/order-products/{{ op.id }}/edit" class="btn-secondary flex items-center gap-2"><i class="fas fa-edit"></i> ویرایش</a>
+        </div>
+    </div>
+
+    <div class="card mb-6">
+        <div class="card-header"><h2 class="text-lg font-semibold">مشخصات کالا</h2></div>
+        <div class="card-body grid grid-cols-2 gap-4">
+            <div><span class="text-gray-500 text-sm">شناسه کالا:</span><p class="font-medium" dir="ltr">{{ op.part_number or '---' }}</p></div>
+            <div><span class="text-gray-500 text-sm">نام محصول:</span><p class="font-medium">{{ op.product_name or '---' }}</p></div>
+            <div><span class="text-gray-500 text-sm">تعداد:</span><p class="font-medium">{{ op.count }}</p></div>
+            <div><span class="text-gray-500 text-sm">واحد:</span><p class="font-medium">{{ op.product_unit or '---' }}</p></div>
+            <div><span class="text-gray-500 text-sm">قیمت واحد:</span><p class="font-medium">{{ "{:,}".format(op.unit_price) }} تومان</p></div>
+            <div><span class="text-gray-500 text-sm">تخفیف:</span><p class="font-medium">{{ "{:,}".format(op.discount) }} تومان</p></div>
+            <div><span class="text-gray-500 text-sm">قیمت پس از تخفیف:</span><p class="font-medium">{{ "{:,}".format(op.price_after_discount) }} تومان</p></div>
+            <div><span class="text-gray-500 text-sm">نرخ مالیات:</span><p class="font-medium">{{ op.vat_rate }}٪</p></div>
+            <div><span class="text-gray-500 text-sm">مبلغ کل:</span><p class="font-medium">{{ "{:,}".format(op.total_price) }} تومان</p></div>
+            <div><span class="text-gray-500 text-sm">مبلغ کل پس از تخفیف:</span><p class="font-medium text-blue-600">{{ "{:,}".format(op.total_price_after_discount) }} تومان</p></div>
+            <div class="col-span-2"><span class="text-gray-500 text-sm">تنوع:</span><p class="font-medium">{{ op.variety_values or '---' }}</p></div>
+        </div>
+    </div>
+
+    <div class="flex gap-2">
+        <form method="POST" action="/administration/order-products/{{ op.id }}/delete" onsubmit="return confirm('حذف این کالا از سفارش؟')">
+            <button type="submit" class="btn-primary bg-red-600 hover:bg-red-700"><i class="fas fa-trash ml-1"></i> حذف</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

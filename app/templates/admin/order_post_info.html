@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>اطلاعات ارسال سفارش {{ order.reference_code or '' }}</title>
+    <style>
+        body { font-family: Vazirmatn, Tahoma, sans-serif; }
+        .toolbar { padding: 10px; text-align: left; }
+        table, th, td { border: ridge; }
+        table { border-collapse: collapse; padding: 4px; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button onclick="window.print()">چاپ</button>
+    </div>
+
+    <div style="text-align: left; direction: rtl; margin-bottom: 20px;">
+        <strong>کد سفارش:</strong> {{ order.reference_code or '' }} <br />
+        <strong>فرستنده:</strong> فروشگاه همدوس www.Hamdoos.ir <br />
+        <strong>آدرس:</strong> {{ site_setting.address if site_setting else '' }} <br />
+        <strong>تلفن:</strong> {{ site_setting.telephone if site_setting else '' }}<br />
+        <strong>کد پستی:</strong> {{ site_setting.postal_code if site_setting else '' }}
+    </div>
+
+    <div style="text-align: left; direction: rtl;">
+        <strong>گیرنده:</strong> {{ order.full_name }} <br />
+        <strong>آدرس:</strong> {{ order.province or '' }} - {{ order.city or '' }} <br />
+        {{ order.address_description or '' }} <br />
+        <strong>موبایل:</strong> {{ order.phone_number or '' }} <br />
+        <strong>تلفن:</strong> {{ order.telephone or '' }} <br />
+        <strong>کد پستی:</strong> {{ order.postal_code or '' }}
+    </div>
+
+    <table style="margin-top: 24px; width: 100%;">
+        <tr><td colspan="2"><strong>اطلاعات سفارش</strong></td></tr>
+        <tr><td>تاریخ ثبت</td><td>{{ order.insert_date_str or '-' }}</td></tr>
+        <tr><td>نوع ارسال</td><td>{{ order.post_type_name or '-' }}</td></tr>
+        <tr><td>تعداد اقلام</td><td>{{ order.count }}</td></tr>
+        <tr><td>مبلغ قابل پرداخت</td><td>{{ "{:,}".format(order.payable) }} تومان</td></tr>
+    </table>
+</body>
+</html>

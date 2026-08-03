@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات سابقه وضعیت{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">جزئیات سابقه وضعیت</h1>
+        <div class="flex gap-2">
+            <a href="/administration/orders/{{ rec.order_id }}" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به سفارش</a>
+            <a href="/administration/order-status-records/{{ rec.id }}/edit" class="btn-secondary flex items-center gap-2"><i class="fas fa-edit"></i> ویرایش</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2 class="text-lg font-semibold">مشخصات سابقه وضعیت</h2></div>
+        <div class="card-body grid grid-cols-2 gap-4">
+            <div><span class="text-gray-500 text-sm">وضعیت:</span>
+                <p><span class="badge bg-indigo-100 text-indigo-800">{{ rec.status_name }}</span></p>
+            </div>
+            <div><span class="text-gray-500 text-sm">تاریخ ثبت:</span><p class="font-medium">{{ rec.insert_date_str or rec.insert_date }}</p></div>
+            <div><span class="text-gray-500 text-sm">کاربر ثبت‌کننده:</span><p class="font-medium">{{ rec.created_by or '---' }}</p></div>
+            <div><span class="text-gray-500 text-sm">کد رهگیری:</span><p class="font-medium" dir="ltr">{{ rec.tracking_number or '---' }}</p></div>
+            <div class="col-span-2"><span class="text-gray-500 text-sm">توضیح:</span><p class="font-medium">{{ rec.comment or '---' }}</p></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

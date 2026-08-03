@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات نوع ارسال{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-sky-500">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-sky-200"><i class="fas fa-truck"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ post_type.name or 'نوع ارسال' }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">جزئیات نوع ارسال</p>
+                </div>
+            </div>
+            <a href="/administration/post-types" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-info-circle ml-2 text-sky-500"></i>اطلاعات نوع ارسال</h2>
+        </div>
+        <div class="p-6">
+            <div class="flex items-start gap-5 mb-6">
+                {% if post_type.image_url %}
+                <img src="{{ post_type.image_url }}" alt="{{ post_type.name }}" class="w-24 h-24 rounded-xl object-cover bg-gray-100 border border-gray-200">
+                {% else %}
+                <div class="w-24 h-24 rounded-xl bg-gray-100 text-gray-400 flex items-center justify-center"><i class="fas fa-truck text-3xl"></i></div>
+                {% endif %}
+                <div>
+                    <h3 class="text-lg font-bold text-gray-800">{{ post_type.name or '—' }}</h3>
+                    <p class="text-sm text-gray-500 mt-1 max-w-md">{{ post_type.description or '—' }}</p>
+                </div>
+            </div>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 border-t border-gray-100 pt-6">
+                <div><dt class="text-xs text-gray-500 mb-1">هزینه</dt><dd class="text-sm font-bold text-gray-800">{{ "{:,}".format(post_type.price or 0) }} تومان</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">نرخ مالیات ارسال</dt><dd class="text-sm font-medium">{{ "%.1f"|format(post_type.post_vat_rate or 0) }}٪</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">سایت</dt><dd class="text-sm font-medium ltr-input">{{ post_type.site or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">تاریخ ثبت</dt><dd class="text-sm font-medium">{{ post_type.insert_date.strftime('%Y/%m/%d %H:%M') if post_type.insert_date else '—' }}</dd></div>
+            </dl>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3">
+            <a href="/administration/post-types/{{ post_type.id }}/edit" class="btn-primary flex items-center gap-2"><i class="fas fa-edit"></i> ویرایش</a>
+            <a href="/administration/post-types" class="btn-secondary">بازگشت</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

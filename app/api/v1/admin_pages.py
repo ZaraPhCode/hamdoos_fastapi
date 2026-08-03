@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func
@@ -14,17 +15,18 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.core.dependencies import get_admin_user, require_any_role
 from app.models.identity import User, Role, IdentityInformation, RoleClaim, UserRole
-from app.models.product import Product, Category, Brand, ProductType, ProductUnit, Currency, Tag, CategoryOption, PriceHistory, ProductTag, RelatedProduct, SimilarProduct, ProductImage, MenuDatasheet
+from app.models.product import Product, Category, Brand, ProductType, ProductUnit, Currency, Tag, CategoryOption, PriceHistory, ProductTag, RelatedProduct, SimilarProduct, ProductImage, MenuDatasheet, Variety
 from app.models.product_features import TechnicalFeature, TechnicalTable, CategoryTechnicalFeature, TechnicalTableProduct, TechnicalFeatureEnum, TechnicalFeatureValue
-from app.models.order import OrderModel as Order, PayMethod, PostType, Discount
-from app.models.invoice import Invoice, Supplier, SupplierProduct, PurchaseOrder
-from app.models.finance import Receipt, Wallet, CurrencyDetail, WarehouseMovement
+from app.models.order import OrderModel as Order, PayMethod, PostType, Discount, OrderProduct, OrderStatusRecord
+from app.models.invoice import Invoice, InvoiceProduct, Supplier, SupplierProduct, PurchaseOrder
+from app.models.finance import Receipt, Wallet, CurrencyDetail, WarehouseMovement, PaymentRequest
 from app.models.customer_content import Comment, Media, NotifiedProduct
 from app.models.support import Ticket, Chat
-from app.models.common import Log, AdminParameter, SmsCode, MobileNumber, BankInfo
+from app.models.common import Log, AdminParameter, SmsCode, MobileNumber, BankInfo, SiteSetting
 from app.models.manufacturer import Manufacturer
 from app.schemas.product import CategoryCreate, CategoryUpdate
 from app.utils.common_works import generate_slug
+from app.utils.persian_tools import to_farsi, to_farsi_full, from_farsi_date
 from app.services import admin_service, product_service, order_service, invoice_service, warehouse_service, finance_service, support_service, identity_service
 
 templates = Jinja2Templates(directory="app/templates")
@@ -1240,38 +1242,1068 @@ async def admin_orders(
     request: Request,
     page: int = Query(1),
     status_filter: str = Query(None),
+    part_number: str = Query(None),
     current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    orders, total = await order_service.get_all_orders(db, page, 20, status_filter)
+    orders, total = await order_service.get_admin_orders(db, page, 20, status_filter, part_number)
+    # compute has_invoice per order
+    result = []
+    for o in orders:
+        d = order_service.build_admin_order_response(o)
+        d["has_invoice"] = (await db.execute(
+            select(func.count(Invoice.id)).where(Invoice.order_id == o.id, Invoice.is_removed == False)
+        )).scalar() > 0
+        result.append(d)
     return templates.TemplateResponse("admin/orders.html", {
         "request": request, "current_user": current_user,
-        "orders": [order_service.build_order_response(o) for o in orders],
+        "orders": result,
         "total": total, "page": page, "total_pages": (total + 19) // 20,
-        "status_filter": status_filter,
+        "status_filter": status_filter, "part_number": part_number or "",
+        "order_status_names": order_service.ORDER_STATUS_NAMES,
     })
+
+
+@router.get("/orders/create", response_class=HTMLResponse)
+async def admin_order_create_form(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    users = (await db.execute(
+        select(User).where(User.is_removed == False).order_by(User.first_name)
+    )).scalars().all()
+    post_types = await order_service.get_post_types(db)
+    pay_methods = await order_service.get_pay_methods(db)
+    return templates.TemplateResponse("admin/order_form.html", {
+        "request": request, "current_user": current_user,
+        "order": None, "users": users, "post_types": post_types, "pay_methods": pay_methods,
+        "order_status_names": order_service.ORDER_STATUS_NAMES,
+        "default_status": "Ordering",
+    })
+
+
+@router.post("/orders/create", response_class=HTMLResponse)
+async def admin_order_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    user_id = form.get("user_id", "")
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user")
+    user = await db.get(User, uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    tracking_number = (form.get("tracking_number") or "").strip()
+    post_type_id = form.get("post_type_id") or None
+    weight = (form.get("weight") or "").strip() or None
+    postage_date_str = (form.get("postage_date_str") or "").strip()
+    date_str = (form.get("date_str") or "").strip()
+    notes = (form.get("notes") or "").strip() or None
+    status = form.get("order_status") or "Ordering"
+
+    postage_date = from_farsi_date(postage_date_str) if postage_date_str else None
+    date = from_farsi_date(date_str) if date_str else datetime.now(timezone.utc)
+
+    post_type = None
+    if post_type_id:
+        try:
+            post_type = await db.get(PostType, uuid.UUID(post_type_id))
+        except ValueError:
+            post_type = None
+
+    ref_code = await order_service._generate_reference_code(db)
+
+    order = Order(
+        id=uuid.uuid4(),
+        reference_code=ref_code,
+        user_id=uid,
+        email=user.email,
+        tracking_number=tracking_number,
+        order_status=status,
+        count=0,
+        notes=notes,
+        weight=weight,
+        postage_date=postage_date,
+        date=date or datetime.now(timezone.utc),
+        post_type_id=post_type.id if post_type else None,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    if post_type:
+        order.postage_fee = float(post_type.price or 0)
+        order.post_vat_rate = float(post_type.post_vat_rate or 0)
+        order.post_vat = float(post_type.post_vat or 0)
+        order.vat = order.post_vat
+        order.payable = order.vat + order.postage_fee
+
+    db.add(order)
+    await db.flush()
+
+    status_record = OrderStatusRecord(
+        id=uuid.uuid4(),
+        order_id=order.id,
+        status=status,
+        comment="سفارش ثبت شد",
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(status_record)
+
+    db.add(Log(record_id=order.id, table_name="orders",
+               description=f"ایجاد سفارش: {ref_code}",
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url="/administration/orders", status_code=303)
 
 
 @router.get("/orders/{order_id}", response_class=HTMLResponse)
 async def admin_order_detail(
     request: Request,
     order_id: str,
+    page_products: int = Query(1, alias="page"),
     current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    import uuid
-    oid = uuid.UUID(order_id)
-    order = await order_service.get_order_by_id(db, oid)
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    # Find the linked invoice (for factor link)
+    invoice = (await db.execute(
+        select(Invoice).where(Invoice.order_id == oid, Invoice.is_removed == False)
+    )).scalar_one_or_none()
+
+    # Resolve created-by users for status records
+    status_records = order_service.build_admin_order_response(order)["order_status_records"]
+    created_by_map = {}
+    ids = {sr["created_by_user_id"] for sr in status_records if sr["created_by_user_id"]}
+    if ids:
+        users = (await db.execute(select(User).where(User.id.in_(ids)))).scalars().all()
+        created_by_map = {u.id: u.full_name for u in users}
+
     return templates.TemplateResponse("admin/order_detail.html", {
         "request": request, "current_user": current_user,
-        "order": order_service.build_order_response(order),
-        "order_statuses": [
-            "Ordering", "AwaitingPayment", "Paid", "ConfirmedPayment",
-            "Processing", "Collecting", "Packing", "Sending", "Posted", "Canceled",
-        ],
+        "order": order_service.build_admin_order_response(order),
+        "invoice": invoice,
+        "order_status_names": order_service.ORDER_STATUS_NAMES,
+        "created_by_map": created_by_map,
     })
+
+
+@router.get("/orders/{order_id}/edit", response_class=HTMLResponse)
+async def admin_order_edit_form(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    users = (await db.execute(
+        select(User).where(User.is_removed == False).order_by(User.first_name)
+    )).scalars().all()
+    post_types = await order_service.get_post_types(db)
+    pay_methods = await order_service.get_pay_methods(db)
+    return templates.TemplateResponse("admin/order_form.html", {
+        "request": request, "current_user": current_user,
+        "order": order_service.build_admin_order_response(order),
+        "users": users, "post_types": post_types, "pay_methods": pay_methods,
+        "order_status_names": order_service.ORDER_STATUS_NAMES,
+    })
+
+
+@router.post("/orders/{order_id}/edit", response_class=HTMLResponse)
+async def admin_order_edit_submit(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    form = await request.form()
+
+    user_id = form.get("user_id", "")
+    try:
+        uid = uuid.UUID(user_id)
+        user = await db.get(User, uid)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        order.user_id = uid
+    except ValueError:
+        pass
+
+    order.tracking_number = (form.get("tracking_number") or "").strip() or None
+    order.notes = (form.get("notes") or "").strip() or None
+    order.weight = (form.get("weight") or "").strip() or None
+
+    post_type_id = form.get("post_type_id") or None
+    if post_type_id:
+        try:
+            post_type = await db.get(PostType, uuid.UUID(post_type_id))
+            if post_type:
+                order.post_type_id = post_type.id
+        except ValueError:
+            pass
+
+    pay_method_id = form.get("pay_method_id") or None
+    if pay_method_id:
+        try:
+            pay_method = await db.get(PayMethod, uuid.UUID(pay_method_id))
+            if pay_method:
+                order.pay_method_id = pay_method.id
+        except ValueError:
+            pass
+
+    postage_date_str = (form.get("postage_date_str") or "").strip()
+    if postage_date_str:
+        order.postage_date = from_farsi_date(postage_date_str)
+    date_str = (form.get("date_str") or "").strip()
+    if date_str:
+        order.date = from_farsi_date(date_str)
+
+    new_status = form.get("order_status")
+    if new_status and new_status != order.order_status:
+        order.order_status = new_status
+
+    order.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=order.id, table_name="orders",
+               description=f"ویرایش سفارش: {order.reference_code}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/orders/{order.id}", status_code=303)
+
+
+@router.post("/orders/{order_id}/status", response_class=HTMLResponse)
+async def admin_order_update_status(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await db.get(Order, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    form = await request.form()
+    status = form.get("status") or order.order_status
+    comment = (form.get("comment") or "").strip() or None
+    tracking_number = (form.get("tracking_number") or "").strip() or None
+
+    if status == "Sending" and not tracking_number:
+        tracking_number = order.tracking_number
+
+    order.order_status = status
+    if tracking_number:
+        order.tracking_number = tracking_number
+    order.update_date = datetime.now(timezone.utc)
+
+    status_record = OrderStatusRecord(
+        id=uuid.uuid4(),
+        order_id=order.id,
+        status=status,
+        comment=comment,
+        tracking_number=tracking_number,
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(status_record)
+    await db.commit()
+    return RedirectResponse(url=f"/administration/orders/{order.id}", status_code=303)
+
+
+@router.post("/orders/{order_id}/delete", response_class=HTMLResponse)
+async def admin_order_delete(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await db.get(Order, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    ref = order.reference_code
+    order.is_removed = True
+    order.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=order.id, table_name="orders",
+               description=f"حذف سفارش: {ref}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/orders", status_code=303)
+
+
+@router.get("/orders/{order_id}/factor", response_class=HTMLResponse)
+async def admin_order_factor(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Printable invoice (فاکتور) for an order — mirrors .NET Factor action."""
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    invoice = (await db.execute(
+        select(Invoice).options(selectinload(Invoice.invoice_products))
+        .where(Invoice.order_id == oid, Invoice.is_removed == False)
+    )).scalar_one_or_none()
+    data = order_service.build_admin_order_response(order)
+    data["invoice"] = invoice
+    return templates.TemplateResponse("admin/order_factor.html", {
+        "request": request, "current_user": current_user,
+        "order": data,
+    })
+
+
+@router.get("/orders/{order_id}/labels", response_class=HTMLResponse)
+async def admin_order_labels(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Shipping labels (برچسب‌ها) — mirrors .NET Labels action using the order's invoice."""
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    invoice = (await db.execute(
+        select(Invoice).options(selectinload(Invoice.invoice_products))
+        .where(Invoice.order_id == oid, Invoice.is_removed == False)
+    )).scalar_one_or_none()
+
+    labels = []
+    if invoice:
+        for ip in invoice.invoice_products:
+            if ip.type and ip.type != "Product":
+                continue
+            labels.append({
+                "part_number": ip.part_number or "-",
+                "name": ip.name or "",
+                "model": ip.model or "",
+                "count": ip.count,
+                "product_unit": ip.product_unit or "",
+                "variety": (ip.variety_value or "").strip(),
+            })
+    else:
+        data = order_service.build_admin_order_response(order)
+        for op in data["order_products"]:
+            labels.append({
+                "part_number": op["part_number"] or "-",
+                "name": op["product_name"] or "",
+                "model": "",
+                "count": op["count"],
+                "product_unit": "",
+                "variety": (op.get("variety_values") or "").strip(),
+            })
+
+    return templates.TemplateResponse("admin/order_labels.html", {
+        "request": request, "current_user": current_user,
+        "reference_code": order.reference_code or order.id[:8],
+        "labels": labels,
+    })
+
+
+@router.get("/orders/{order_id}/post-info", response_class=HTMLResponse)
+async def admin_order_post_info(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Post info page (نوع ارسال) — mirrors .NET PostInfo action."""
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    site_setting = (await db.execute(
+        select(SiteSetting).where(SiteSetting.is_removed == False).limit(1)
+    )).scalar_one_or_none()
+    data = order_service.build_admin_order_response(order)
+    return templates.TemplateResponse("admin/order_post_info.html", {
+        "request": request, "current_user": current_user,
+        "order": data, "site_setting": site_setting,
+    })
+
+
+# ── Order Products ──
+
+@router.get("/order-products/create/{order_id}", response_class=HTMLResponse)
+async def admin_order_product_create_form(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    products = (await db.execute(
+        select(Product).options(selectinload(Product.varieties))
+        .where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/order_product_form.html", {
+        "request": request, "current_user": current_user,
+        "op": None, "order": order_service.build_admin_order_response(order),
+        "products": order_service.product_picker_data(products),
+    })
+
+
+@router.post("/order-products/create", response_class=HTMLResponse)
+async def admin_order_product_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    try:
+        order_id = uuid.UUID(form.get("order_id"))
+        product_id = uuid.UUID(form.get("product_id"))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid order/product")
+    variety_id_str = form.get("variety_id") or ""
+    variety_id = None
+    if variety_id_str:
+        try:
+            variety_id = uuid.UUID(variety_id_str)
+        except ValueError:
+            variety_id = None
+    try:
+        count = int(form.get("count") or 1)
+    except ValueError:
+        count = 1
+
+    order = await db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    product = (await db.execute(
+        select(Product).options(selectinload(Product.varieties)).where(Product.id == product_id)
+    )).scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    variety = None
+    if variety_id:
+        variety = await db.get(Variety, variety_id)
+    if not variety and product.varieties:
+        variety = product.varieties[0]
+    if not variety:
+        raise HTTPException(status_code=400, detail="Product has no variety")
+
+    # prevent duplicate product/variety
+    existing = (await db.execute(
+        select(OrderProduct).where(
+            OrderProduct.order_id == order_id,
+            OrderProduct.product_id == product_id,
+            OrderProduct.variety_id == variety.id,
+            OrderProduct.is_removed == False,
+        )
+    )).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=400, detail="این کالا قبلاً به سفارش اضافه شده است")
+
+    unit_price = float(variety.price or 0)
+    discount = float(variety.discount_amount or 0)
+    price_after_discount = float(variety.price_after_discount or unit_price)
+    total_price = unit_price * count
+    total_price_after_discount = (price_after_discount * count) if discount != 0 else (unit_price * count)
+
+    op = OrderProduct(
+        id=uuid.uuid4(),
+        order_id=order_id,
+        product_id=product_id,
+        variety_id=variety.id,
+        count=count,
+        unit_price=unit_price,
+        discount=discount,
+        price_after_discount=price_after_discount,
+        total_price=total_price,
+        total_price_after_discount=total_price_after_discount,
+        vat_rate=float(product.vat_rate or 0),
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(op)
+    await db.flush()
+
+    # refresh order totals (mirror .NET Refresh + SetPayable)
+    order_products = (await db.execute(
+        select(OrderProduct).where(OrderProduct.order_id == order_id, OrderProduct.is_removed == False)
+    )).scalars().all()
+    order.total_price = sum(float(p.unit_price or 0) * p.count for p in order_products)
+    order.total_price_after_discount = sum(float(p.total_price_after_discount or 0) for p in order_products)
+    order.count = sum(p.count for p in order_products)
+    order.vat = sum(float(p.price_after_discount or 0) * p.count * float(p.vat_rate or 0) / 100 for p in order_products)
+    order.payable = order.total_price_after_discount + order.vat + float(order.postage_fee or 0) + float(order.packaging_cost or 0)
+    order.update_date = datetime.now(timezone.utc)
+
+    db.add(Log(record_id=op.id, table_name="order_products",
+               description=f"افزودن کالا {product.name} به سفارش {order.reference_code}",
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/orders/{order_id}", status_code=303)
+
+
+@router.get("/order-products/{op_id}", response_class=HTMLResponse)
+async def admin_order_product_detail(
+    request: Request,
+    op_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(op_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    op = (await db.execute(
+        select(OrderProduct).options(selectinload(OrderProduct.product), selectinload(OrderProduct.variety))
+        .where(OrderProduct.id == oid, OrderProduct.is_removed == False)
+    )).unique().scalar_one_or_none()
+    if not op:
+        raise HTTPException(status_code=404, detail="Order product not found")
+    return templates.TemplateResponse("admin/order_product_detail.html", {
+        "request": request, "current_user": current_user,
+        "op": order_service.order_product_detail(op),
+    })
+
+
+@router.get("/order-products/{op_id}/edit", response_class=HTMLResponse)
+async def admin_order_product_edit_form(
+    request: Request,
+    op_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(op_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    op = (await db.execute(
+        select(OrderProduct).options(selectinload(OrderProduct.product), selectinload(OrderProduct.variety))
+        .where(OrderProduct.id == oid, OrderProduct.is_removed == False)
+    )).unique().scalar_one_or_none()
+    if not op:
+        raise HTTPException(status_code=404, detail="Order product not found")
+    products = (await db.execute(
+        select(Product).options(selectinload(Product.varieties))
+        .where(Product.is_removed == False).order_by(Product.name)
+    )).scalars().all()
+    order = await db.get(Order, op.order_id)
+    return templates.TemplateResponse("admin/order_product_form.html", {
+        "request": request, "current_user": current_user,
+        "op": order_service.order_product_detail(op),
+        "order": order_service.build_admin_order_response(order) if order else None,
+        "products": order_service.product_picker_data(products),
+    })
+
+
+@router.post("/order-products/{op_id}/edit", response_class=HTMLResponse)
+async def admin_order_product_edit_submit(
+    request: Request,
+    op_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(op_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    op = (await db.execute(
+        select(OrderProduct).where(OrderProduct.id == oid, OrderProduct.is_removed == False)
+    )).scalar_one_or_none()
+    if not op:
+        raise HTTPException(status_code=404, detail="Order product not found")
+    form = await request.form()
+    try:
+        product_id = uuid.UUID(form.get("product_id"))
+        count = int(form.get("count") or op.count)
+    except (ValueError, TypeError):
+        product_id = op.product_id
+        count = op.count
+    variety_id_str = form.get("variety_id") or ""
+    variety_id = None
+    if variety_id_str:
+        try:
+            variety_id = uuid.UUID(variety_id_str)
+        except ValueError:
+            variety_id = None
+
+    product = (await db.execute(
+        select(Product).options(selectinload(Product.varieties)).where(Product.id == product_id)
+    )).scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    variety = None
+    if variety_id:
+        variety = await db.get(Variety, variety_id)
+    if not variety and product.varieties:
+        variety = product.varieties[0]
+
+    unit_price = float(variety.price or 0) if variety else float(op.unit_price or 0)
+    discount = float(variety.discount_amount or 0) if variety else float(op.discount or 0)
+    price_after_discount = float(variety.price_after_discount or unit_price) if variety else float(op.price_after_discount or unit_price)
+
+    op.product_id = product_id
+    op.variety_id = variety.id if variety else None
+    op.count = count
+    op.unit_price = unit_price
+    op.discount = discount
+    op.price_after_discount = price_after_discount
+    op.total_price = unit_price * count
+    op.total_price_after_discount = (price_after_discount * count) if discount != 0 else (unit_price * count)
+    op.vat_rate = float(product.vat_rate or 0)
+    op.update_date = datetime.now(timezone.utc)
+
+    order = await db.get(Order, op.order_id)
+    if order:
+        order_products = (await db.execute(
+            select(OrderProduct).where(OrderProduct.order_id == order.id, OrderProduct.is_removed == False)
+        )).scalars().all()
+        order.total_price = sum(float(p.unit_price or 0) * p.count for p in order_products)
+        order.total_price_after_discount = sum(float(p.total_price_after_discount or 0) for p in order_products)
+        order.count = sum(p.count for p in order_products)
+        order.vat = sum(float(p.price_after_discount or 0) * p.count * float(p.vat_rate or 0) / 100 for p in order_products)
+        order.payable = order.total_price_after_discount + order.vat + float(order.postage_fee or 0) + float(order.packaging_cost or 0)
+        order.update_date = datetime.now(timezone.utc)
+
+    db.add(Log(record_id=op.id, table_name="order_products",
+               description=f"ویرایش کالا در سفارش",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/orders/{op.order_id}", status_code=303)
+
+
+@router.post("/order-products/{op_id}/delete", response_class=HTMLResponse)
+async def admin_order_product_delete(
+    request: Request,
+    op_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(op_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    op = await db.get(OrderProduct, oid)
+    if not op:
+        raise HTTPException(status_code=404, detail="Order product not found")
+    order_id = op.order_id
+    op.is_removed = True
+    op.update_date = datetime.now(timezone.utc)
+
+    order = await db.get(Order, order_id)
+    if order:
+        order_products = (await db.execute(
+            select(OrderProduct).where(OrderProduct.order_id == order_id, OrderProduct.is_removed == False)
+        )).scalars().all()
+        order.total_price = sum(float(p.unit_price or 0) * p.count for p in order_products)
+        order.total_price_after_discount = sum(float(p.total_price_after_discount or 0) for p in order_products)
+        order.count = sum(p.count for p in order_products)
+        order.vat = sum(float(p.price_after_discount or 0) * p.count * float(p.vat_rate or 0) / 100 for p in order_products)
+        order.payable = order.total_price_after_discount + order.vat + float(order.postage_fee or 0) + float(order.packaging_cost or 0)
+        order.update_date = datetime.now(timezone.utc)
+
+    db.add(Log(record_id=op.id, table_name="order_products",
+               description="حذف کالا از سفارش",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/orders/{order_id}", status_code=303)
+
+
+# ── Payment Requests ──
+
+@router.get("/payment-requests/create/{order_id}", response_class=HTMLResponse)
+async def admin_payment_request_create_form(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return templates.TemplateResponse("admin/payment_request_form.html", {
+        "request": request, "current_user": current_user,
+        "pr": None, "order": order_service.build_admin_order_response(order),
+        "payment_status_names": order_service.PAYMENT_STATUS_NAMES,
+        "default_status": "Pending",
+    })
+
+
+@router.post("/payment-requests/create", response_class=HTMLResponse)
+async def admin_payment_request_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    try:
+        order_id = uuid.UUID(form.get("order_id"))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid order")
+    order = await db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    try:
+        amount = float(form.get("amount") or 0)
+    except ValueError:
+        amount = 0
+    status = (form.get("status") or "Pending").strip()
+    pr = PaymentRequest(
+        id=uuid.uuid4(),
+        order_id=order_id,
+        user_id=order.user_id,
+        amount=amount,
+        is_pay=False,
+        status=status,
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(pr)
+    db.add(Log(record_id=pr.id, table_name="payment_requests",
+               description=f"ایجاد پرداخت برای سفارش {order.reference_code}: {amount}",
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/orders/{order_id}", status_code=303)
+
+
+@router.get("/payment-requests/{pr_id}", response_class=HTMLResponse)
+async def admin_payment_request_detail(
+    request: Request,
+    pr_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(pr_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    pr = await db.get(PaymentRequest, pid)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Payment request not found")
+    return templates.TemplateResponse("admin/payment_request_detail.html", {
+        "request": request, "current_user": current_user,
+        "pr": {
+            "id": pr.id,
+            "amount": float(pr.amount or 0),
+            "pay_date": pr.pay_date,
+            "pay_date_str": to_farsi_full(pr.pay_date) if pr.pay_date else "",
+            "approval": pr.approval,
+            "approval_str": to_farsi_full(pr.approval) if pr.approval else "",
+            "status": pr.status,
+            "status_name": order_service.PAYMENT_STATUS_NAMES.get(pr.status, pr.status or "-"),
+            "is_pay": pr.is_pay,
+            "ref_id": pr.ref_id,
+            "authority": pr.authority,
+            "card_pan": pr.card_pan,
+            "order_id": pr.order_id,
+            "user_id": pr.user_id,
+        },
+    })
+
+
+@router.get("/payment-requests/{pr_id}/edit", response_class=HTMLResponse)
+async def admin_payment_request_edit_form(
+    request: Request,
+    pr_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(pr_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    pr = await db.get(PaymentRequest, pid)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Payment request not found")
+    return templates.TemplateResponse("admin/payment_request_form.html", {
+        "request": request, "current_user": current_user,
+        "pr": {
+            "id": pr.id,
+            "amount": float(pr.amount or 0),
+            "status": pr.status,
+            "status_name": order_service.PAYMENT_STATUS_NAMES.get(pr.status, pr.status or "-"),
+            "is_pay": pr.is_pay,
+            "order_id": pr.order_id,
+        },
+        "payment_status_names": order_service.PAYMENT_STATUS_NAMES,
+    })
+
+
+@router.post("/payment-requests/{pr_id}/edit", response_class=HTMLResponse)
+async def admin_payment_request_edit_submit(
+    request: Request,
+    pr_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(pr_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    pr = await db.get(PaymentRequest, pid)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Payment request not found")
+    form = await request.form()
+    status = form.get("status")
+    if status:
+        pr.status = status
+    try:
+        amount = float(form.get("amount"))
+        if amount >= 0:
+            pr.amount = amount
+    except (ValueError, TypeError):
+        pass
+    pr.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=pr.id, table_name="payment_requests",
+               description=f"ویرایش پرداخت: {pr.ref_id}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/payment-requests/{pr.id}", status_code=303)
+
+
+@router.post("/payment-requests/{pr_id}/delete", response_class=HTMLResponse)
+async def admin_payment_request_delete(
+    request: Request,
+    pr_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(pr_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    pr = await db.get(PaymentRequest, pid)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Payment request not found")
+    order_id = pr.order_id
+    pr.is_removed = True
+    pr.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=pr.id, table_name="payment_requests",
+               description="حذف پرداخت",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/orders/{order_id}", status_code=303)
+
+
+# ── Receipts (order scoped) ──
+
+@router.get("/receipts/create/{order_id}", response_class=HTMLResponse)
+async def admin_receipt_create_form(
+    request: Request,
+    order_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        oid = uuid.UUID(order_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid order ID")
+    order = await order_service.get_admin_order_detail(db, oid)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    users = (await db.execute(
+        select(User).where(User.is_removed == False).order_by(User.first_name)
+    )).scalars().all()
+    return templates.TemplateResponse("admin/receipt_form.html", {
+        "request": request, "current_user": current_user,
+        "order": order_service.build_admin_order_response(order),
+        "users": users,
+    })
+
+
+@router.post("/receipts/create", response_class=HTMLResponse)
+async def admin_receipt_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    try:
+        order_id = uuid.UUID(form.get("order_id"))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Invalid order")
+    order = await db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    user_id_str = form.get("user_id") or ""
+    user_id = None
+    if user_id_str:
+        try:
+            user_id = uuid.UUID(user_id_str)
+        except ValueError:
+            user_id = None
+    try:
+        price = float(form.get("price") or 0)
+    except ValueError:
+        price = 0
+    description = (form.get("description") or "").strip() or None
+    destination_bank = (form.get("destination_bank") or "").strip() or None
+    reference_code = (form.get("reference_code") or "").strip() or None
+
+    receipt = Receipt(
+        id=uuid.uuid4(),
+        order_id=order_id,
+        user_id=user_id,
+        price=price,
+        description=description,
+        destination_bank=destination_bank,
+        reference_code=reference_code or str(order.reference_code),
+        status="AwaitingConfirmation",
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(receipt)
+    db.add(Log(record_id=receipt.id, table_name="receipts",
+               description=f"ایجاد فیش پرداخت برای سفارش {order.reference_code}: {price}",
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/orders/{order_id}", status_code=303)
+
+
+# ── Order Status Records ──
+
+@router.get("/order-status-records/{record_id}", response_class=HTMLResponse)
+async def admin_order_status_record_detail(
+    request: Request,
+    record_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rid = uuid.UUID(record_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    rec = (await db.execute(
+        select(OrderStatusRecord).where(OrderStatusRecord.id == rid, OrderStatusRecord.is_removed == False)
+    )).scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Record not found")
+    created_by = None
+    if rec.created_by_user_id:
+        u = await db.get(User, rec.created_by_user_id)
+        created_by = u.full_name if u else None
+    return templates.TemplateResponse("admin/order_status_record_detail.html", {
+        "request": request, "current_user": current_user,
+        "rec": {
+            "id": rec.id,
+            "order_id": rec.order_id,
+            "status": rec.status,
+            "status_name": order_service.ORDER_STATUS_NAMES.get(rec.status, rec.status or "-"),
+            "comment": rec.comment,
+            "tracking_number": rec.tracking_number,
+            "insert_date": rec.insert_date,
+            "insert_date_str": to_farsi_full(rec.insert_date) if rec.insert_date else "",
+            "created_by": created_by,
+        },
+    })
+
+
+@router.get("/order-status-records/{record_id}/edit", response_class=HTMLResponse)
+async def admin_order_status_record_edit_form(
+    request: Request,
+    record_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rid = uuid.UUID(record_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    rec = (await db.execute(
+        select(OrderStatusRecord).where(OrderStatusRecord.id == rid, OrderStatusRecord.is_removed == False)
+    )).scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return templates.TemplateResponse("admin/order_status_record_form.html", {
+        "request": request, "current_user": current_user,
+        "rec": {
+            "id": rec.id,
+            "order_id": rec.order_id,
+            "status": rec.status,
+            "comment": rec.comment,
+        },
+        "order_status_names": order_service.ORDER_STATUS_NAMES,
+    })
+
+
+@router.post("/order-status-records/{record_id}/edit", response_class=HTMLResponse)
+async def admin_order_status_record_edit_submit(
+    request: Request,
+    record_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rid = uuid.UUID(record_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid ID")
+    rec = (await db.execute(
+        select(OrderStatusRecord).where(OrderStatusRecord.id == rid, OrderStatusRecord.is_removed == False)
+    )).scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Record not found")
+    form = await request.form()
+    rec.comment = (form.get("comment") or "").strip() or None
+    new_status = form.get("status")
+    if new_status:
+        rec.status = new_status
+    rec.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=rec.id, table_name="order_status_records",
+               description="ویرایش سابقه وضعیت سفارش",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/order-status-records/{rec.id}", status_code=303)
 
 
 # ── Users ──
@@ -2158,12 +3190,187 @@ async def admin_receipts(
     db: AsyncSession = Depends(get_db),
 ):
     receipts, total = await finance_service.get_all_receipts(db, page, 20, status_filter)
+    # Enrich each receipt with user full name/email and the linked order's payable
+    rows = []
+    for r in receipts:
+        d = finance_service.build_receipt_response(r)
+        user_full_name = ""
+        user_email = ""
+        if r.user_id:
+            u = await db.get(User, r.user_id)
+            if u:
+                user_full_name = u.full_name
+                user_email = u.email or ""
+        payable = None
+        if r.order_id:
+            o = await db.get(Order, r.order_id)
+            if o:
+                payable = float(o.payable or 0)
+        d["user_full_name"] = user_full_name
+        d["user_email"] = user_email
+        d["payable"] = payable
+        rows.append(d)
     return templates.TemplateResponse("admin/receipt_list.html", {
         "request": request, "current_user": current_user,
-        "receipts": [finance_service.build_receipt_response(r) for r in receipts],
+        "receipts": rows,
         "total": total, "page": page, "total_pages": (total + 19) // 20,
         "status_filter": status_filter,
     })
+
+
+def _build_admin_receipt_response(receipt: Receipt) -> dict:
+    return {
+        "id": str(receipt.id),
+        "reference_code": receipt.reference_code,
+        "price": float(receipt.price or 0),
+        "status": receipt.status,
+        "status_name": order_service.RECEIPT_STATUS_NAMES.get(receipt.status, receipt.status or "-"),
+        "tab": receipt.tab or "",
+        "description": receipt.description,
+        "deposit_date": receipt.deposit_date,
+        "deposit_date_str": to_farsi_full(receipt.deposit_date) if receipt.deposit_date else "",
+        "destination_bank": receipt.destination_bank,
+        "paya": receipt.paya,
+        "image_url": receipt.image_url,
+        "user_id": str(receipt.user_id) if receipt.user_id else None,
+        "user_full_name": receipt.user.full_name if receipt.user else "",
+        "order_id": str(receipt.order_id) if receipt.order_id else None,
+        "insert_date": receipt.insert_date,
+        "insert_date_str": to_farsi_full(receipt.insert_date) if receipt.insert_date else "",
+    }
+
+
+@router.get("/receipts/{receipt_id}", response_class=HTMLResponse)
+async def admin_receipt_detail(
+    request: Request,
+    receipt_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rid = uuid.UUID(receipt_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid receipt ID")
+    receipt = (await db.execute(
+        select(Receipt).options(selectinload(Receipt.user)).where(Receipt.id == rid, Receipt.is_removed == False)
+    )).scalar_one_or_none()
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    return templates.TemplateResponse("admin/receipt_detail.html", {
+        "request": request, "current_user": current_user,
+        "receipt": _build_admin_receipt_response(receipt),
+    })
+
+
+@router.post("/receipts/{receipt_id}/confirm", response_class=HTMLResponse)
+async def admin_receipt_confirm(
+    request: Request,
+    receipt_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rid = uuid.UUID(receipt_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid receipt ID")
+    receipt = (await db.execute(
+        select(Receipt).where(Receipt.id == rid, Receipt.is_removed == False)
+    )).scalar_one_or_none()
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    # Mirror .NET Accept: set receipt status to Confirmed, then update order status.
+    receipt.status = "Confirmed"
+    receipt.update_date = datetime.now(timezone.utc)
+
+    if receipt.order_id:
+        order = await db.get(Order, receipt.order_id)
+        if order and order.is_removed == False:
+            if order.order_status in ("AwaitingPayment", "Paid"):
+                rsum = (await db.execute(
+                    select(func.coalesce(func.sum(Receipt.price), 0))
+                    .where(Receipt.order_id == order.id, Receipt.status == "Confirmed", Receipt.is_removed == False)
+                )).scalar() or 0
+                psum = (await db.execute(
+                    select(func.coalesce(func.sum(PaymentRequest.amount), 0))
+                    .where(PaymentRequest.order_id == order.id, PaymentRequest.status == "Success", PaymentRequest.is_removed == False)
+                )).scalar() or 0
+                total = float(rsum) + float(psum)
+                payable = float(order.payable or 0)
+                if total == payable:
+                    order.order_status = "ConfirmedPayment"
+                    db.add(OrderStatusRecord(
+                        id=uuid.uuid4(), order_id=order.id, status="ConfirmedPayment",
+                        comment="Accept payment", created_by_user_id=current_user.id,
+                        insert_date=datetime.now(timezone.utc), update_date=datetime.now(timezone.utc),
+                    ))
+                elif total > payable:
+                    order.order_status = "NeedsToBeChecked"
+                    db.add(OrderStatusRecord(
+                        id=uuid.uuid4(), order_id=order.id, status="NeedsToBeChecked",
+                        comment="Need to be checked", created_by_user_id=current_user.id,
+                        insert_date=datetime.now(timezone.utc), update_date=datetime.now(timezone.utc),
+                    ))
+                order.update_date = datetime.now(timezone.utc)
+
+    db.add(Log(record_id=receipt.id, table_name="receipts",
+               description=f"تائید فیش پرداخت: {receipt.reference_code or receipt.id}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/receipts/{receipt.id}", status_code=303)
+
+
+@router.post("/receipts/{receipt_id}/reject", response_class=HTMLResponse)
+async def admin_receipt_reject(
+    request: Request,
+    receipt_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rid = uuid.UUID(receipt_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid receipt ID")
+    receipt = (await db.execute(
+        select(Receipt).where(Receipt.id == rid, Receipt.is_removed == False)
+    )).scalar_one_or_none()
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    receipt.status = "Failed"
+    receipt.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=receipt.id, table_name="receipts",
+               description=f"رد فیش پرداخت: {receipt.reference_code or receipt.id}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/receipts/{receipt.id}", status_code=303)
+
+
+@router.post("/receipts/{receipt_id}/delete", response_class=HTMLResponse)
+async def admin_receipt_delete(
+    request: Request,
+    receipt_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        rid = uuid.UUID(receipt_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid receipt ID")
+    receipt = (await db.execute(
+        select(Receipt).where(Receipt.id == rid, Receipt.is_removed == False)
+    )).scalar_one_or_none()
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    if receipt.status != "AwaitingConfirmation":
+        raise HTTPException(status_code=400, detail="فقط فیش‌های در انتظار تائید قابل حذف هستند")
+    ref = receipt.reference_code
+    receipt.is_removed = True
+    receipt.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=receipt.id, table_name="receipts",
+               description=f"حذف فیش پرداخت: {ref or receipt.id}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/receipts", status_code=303)
 
 
 # ── Currency ──
@@ -3041,6 +4248,40 @@ async def admin_pay_methods(
 
 # ── Post Types ──
 
+_POST_TYPE_UPLOAD_DIR = "app/static/uploads/post_types"
+
+
+async def _save_post_type_image(file) -> str | None:
+    """Save an uploaded image and return its public URL (or None)."""
+    filename = getattr(file, "filename", "")
+    if not filename:
+        return None
+    content = await file.read()
+    if not content:
+        return None
+    ext = (filename.split(".")[-1] or "jpg").lower()
+    if ext not in {"jpg", "jpeg", "png", "gif", "webp"}:
+        ext = "jpg"
+    os.makedirs(_POST_TYPE_UPLOAD_DIR, exist_ok=True)
+    fname = f"pt_{uuid.uuid4().hex[:12]}.{ext}"
+    import aiofiles
+    async with aiofiles.open(f"{_POST_TYPE_UPLOAD_DIR}/{fname}", "wb") as f:
+        await f.write(content)
+    return f"/static/uploads/post_types/{fname}"
+
+
+def _remove_post_type_image(image_url: str | None):
+    if not image_url:
+        return
+    rel = image_url.lstrip("/").replace("static/", "", 1)
+    path = os.path.join("app", "static", "uploads", "post_types", os.path.basename(image_url))
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+
 @router.get("/post-types", response_class=HTMLResponse)
 async def admin_post_types(
     request: Request,
@@ -3048,17 +4289,168 @@ async def admin_post_types(
     db: AsyncSession = Depends(get_db),
 ):
     items = (await db.execute(
-        select(PostType).where(PostType.is_removed == False).order_by(PostType.insert_date.desc()).limit(100)
+        select(PostType).where(PostType.is_removed == False).order_by(PostType.insert_date.desc()).limit(200)
     )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "روش‌های ارسال", "items": items,
-        "columns": [
-            {"key": "name", "label": "نام"},
-            {"key": "site", "label": "سایت"},
-            {"key": "price", "label": "هزینه"},
-        ],
+    return templates.TemplateResponse("admin/post_types.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
+
+
+@router.get("/post-types/create", response_class=HTMLResponse)
+async def admin_post_type_create_form(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+):
+    return templates.TemplateResponse("admin/post_type_form.html", {
+        "request": request, "current_user": current_user, "post_type": None,
+    })
+
+
+@router.post("/post-types/create", response_class=HTMLResponse)
+async def admin_post_type_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="نام الزامی است")
+
+    def _num(val):
+        try:
+            return float(val) if (val or "").strip() else None
+        except ValueError:
+            return None
+
+    image_file = form.get("image")
+    image_url = await _save_post_type_image(image_file) if image_file else None
+
+    pt = PostType(
+        id=uuid.uuid4(),
+        name=name,
+        site=(form.get("site") or "").strip() or None,
+        price=_num(form.get("price")),
+        post_vat_rate=_num(form.get("post_vat_rate")),
+        description=(form.get("description") or "").strip() or None,
+        image_url=image_url,
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(pt)
+    db.add(Log(record_id=pt.id, table_name="post_types",
+               description=f"ایجاد نوع ارسال: {pt.name}",
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url="/administration/post-types", status_code=303)
+
+
+@router.get("/post-types/{post_type_id}", response_class=HTMLResponse)
+async def admin_post_type_detail(
+    request: Request,
+    post_type_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(post_type_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid post type ID")
+    pt = await db.get(PostType, pid)
+    if not pt or pt.is_removed:
+        raise HTTPException(status_code=404, detail="Post type not found")
+    return templates.TemplateResponse("admin/post_type_detail.html", {
+        "request": request, "current_user": current_user, "post_type": pt,
+    })
+
+
+@router.get("/post-types/{post_type_id}/edit", response_class=HTMLResponse)
+async def admin_post_type_edit_form(
+    request: Request,
+    post_type_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(post_type_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid post type ID")
+    pt = await db.get(PostType, pid)
+    if not pt or pt.is_removed:
+        raise HTTPException(status_code=404, detail="Post type not found")
+    return templates.TemplateResponse("admin/post_type_form.html", {
+        "request": request, "current_user": current_user, "post_type": pt,
+    })
+
+
+@router.post("/post-types/{post_type_id}/edit", response_class=HTMLResponse)
+async def admin_post_type_edit_submit(
+    request: Request,
+    post_type_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(post_type_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid post type ID")
+    pt = await db.get(PostType, pid)
+    if not pt or pt.is_removed:
+        raise HTTPException(status_code=404, detail="Post type not found")
+    form = await request.form()
+
+    def _num(val):
+        try:
+            return float(val) if (val or "").strip() else None
+        except ValueError:
+            return None
+
+    name = (form.get("name") or "").strip()
+    if name:
+        pt.name = name
+    pt.site = (form.get("site") or "").strip() or None
+    pt.price = _num(form.get("price"))
+    pt.post_vat_rate = _num(form.get("post_vat_rate"))
+    pt.description = (form.get("description") or "").strip() or None
+
+    image_file = form.get("image")
+    if image_file and getattr(image_file, "filename", ""):
+        new_url = await _save_post_type_image(image_file)
+        if new_url:
+            _remove_post_type_image(pt.image_url)
+            pt.image_url = new_url
+
+    pt.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=pt.id, table_name="post_types",
+               description=f"ویرایش نوع ارسال: {pt.name}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/post-types/{pt.id}", status_code=303)
+
+
+@router.post("/post-types/{post_type_id}/delete", response_class=HTMLResponse)
+async def admin_post_type_delete(
+    request: Request,
+    post_type_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(post_type_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid post type ID")
+    pt = await db.get(PostType, pid)
+    if not pt or pt.is_removed:
+        raise HTTPException(status_code=404, detail="Post type not found")
+    name = pt.name
+    pt.is_removed = True
+    pt.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=pt.id, table_name="post_types",
+               description=f"حذف نوع ارسال: {name}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/post-types", status_code=303)
 
 
 # ── Media ──

@@ -1,0 +1,84 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش سفارش کالا" if op else "سفارش کالای جدید" }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش سفارش کالا" if op else "سفارش کالای جدید" }}</h1>
+        <a href="{{ '/administration/orders/' ~ order.id if order else '/administration/orders' }}" class="btn-secondary flex items-center gap-2">
+            <i class="fas fa-arrow-right"></i> بازگشت
+        </a>
+    </div>
+
+    <form method="POST" action="{{ '/administration/order-products/' ~ op.id ~ '/edit' if op else '/administration/order-products/create' }}" class="space-y-6">
+        {% if order %}
+        <input type="hidden" name="order_id" value="{{ order.id }}">
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">مشخصات کالا</h2></div>
+            <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% if order %}
+                <div>
+                    <label class="form-label">سفارش</label>
+                    <input type="text" value="سفارش #{{ order.reference_code or order.id[:8] }}" class="form-input" disabled>
+                </div>
+                {% endif %}
+                <div>
+                    <label class="form-label" for="product_id">محصول <span class="text-red-500">*</span></label>
+                    <select id="product_id" name="product_id" class="form-input" required onchange="updateVarieties()">
+                        <option value="">-- انتخاب محصول --</option>
+                        {% for p in products %}
+                        <option value="{{ p.id }}" {{ 'selected' if op and op.product_id == p.id else '' }}>{{ p.part_number }} - {{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="variety_id">تنوع</label>
+                    <select id="variety_id" name="variety_id" class="form-input">
+                        <option value="">-- انتخاب تنوع --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="count">تعداد <span class="text-red-500">*</span></label>
+                    <input type="number" id="count" name="count" min="1" value="{{ op.count or 1 }}" class="form-input" required>
+                </div>
+                <div id="price-preview" class="md:col-span-2">
+                    <span class="text-sm text-gray-500">برای نمایش قیمت، محصول و تنوع را انتخاب کنید.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button type="submit" class="btn-primary flex items-center gap-2"><i class="fas fa-save"></i> ذخیره</button>
+            <a href="{{ '/administration/orders/' ~ order.id if order else '/administration/orders' }}" class="btn-secondary">انصراف</a>
+        </div>
+    </form>
+</div>
+
+<script>
+const products = {{ products|tojson }};
+const selectedVarietyId = "{{ op.variety_id if op else '' }}";
+
+function updateVarieties() {
+    const pid = document.getElementById('product_id').value;
+    const varietySel = document.getElementById('variety_id');
+    const pricePreview = document.getElementById('price-preview');
+    varietySel.innerHTML = '<option value="">-- انتخاب تنوع --</option>';
+    const prod = products.find(p => p.id === pid);
+    if (!prod) { pricePreview.textContent = 'برای نمایش قیمت، محصول را انتخاب کنید.'; return; }
+    (prod.varieties || []).forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = (v.part_number || 'تنوع') + ' - ' + v.price + ' تومان';
+        if (v.id === selectedVarietyId) opt.selected = true;
+        varietySel.appendChild(opt);
+    });
+    const selVariety = (prod.varieties || []).find(v => v.id === selectedVarietyId);
+    if (selVariety) {
+        pricePreview.innerHTML = '<span class="text-sm text-gray-700">قیمت واحد: <strong>' + selVariety.price + '</strong> تومان</span>';
+    }
+}
+
+window.addEventListener('DOMContentLoaded', updateVarieties);
+</script>
+{% endblock %}

@@ -15,13 +15,46 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.identity import User
+from app.models.identity import User, IdentityInformation
 from app.models.product import Product, Variety
 from app.models.order import (
     OrderModel as Order,
     OrderProduct, OrderStatusRecord, Discount,
     PayMethod, PostType,
 )
+from app.models.finance import PaymentRequest, Receipt
+from app.models.invoice import Invoice, InvoiceProduct
+from app.utils.persian_tools import to_farsi, to_farsi_full, from_farsi_date
+
+# ── Order status display names (matches .NET OrderStatus_t enum) ──
+
+ORDER_STATUS_NAMES = {
+    "Ordering": "در حال سفارش",
+    "AwaitingPayment": "در انتظار پرداخت",
+    "Paid": "پرداخت شده",
+    "ConfirmedPayment": "تائید پرداخت",
+    "Processing": "در حال پردازش",
+    "Collecting": "در حال جمع‌آوری",
+    "Packing": "در حال بسته‌بندی",
+    "Sending": "در حال ارسال",
+    "Posted": "ارسال شده",
+    "Canceled": "لغو شده",
+    "NeedsToBeChecked": "نیاز به بررسی",
+    "NextOrder": "سفارش بعدی",
+}
+
+RECEIPT_STATUS_NAMES = {
+    "AwaitingConfirmation": "در انتظار تائید",
+    "Confirmed": "تائید شده",
+    "Failed": "ناموفق",
+}
+
+PAYMENT_STATUS_NAMES = {
+    "Success": "موفق",
+    "Failed": "ناموفق",
+    "Pending": "در انتظار",
+    "Canceled": "لغو شده",
+}
 from app.schemas.order import (
     CartItemCreate, CartItemUpdate, CartItemResponse,
     CreateOrderRequest, OrderAddressInput, OrderStatusUpdate,
@@ -488,3 +521,224 @@ def build_order_response(order: Order) -> dict:
             for sr in (order.order_status_records or [])
         ],
     }
+# -- Admin helpers (Orders section) --
+
+async def get_admin_orders(
+    db: AsyncSession,
+    page: int = 1,
+    page_size: int = 20,
+    status: Optional[str] = None,
+    part_number: Optional[str] = None,
+    search: Optional[str] = None,
+) -> tuple[list[Order], int]:
+    conditions = [Order.is_removed == False]
+    if status:
+        conditions.append(Order.order_status == status)
+    if part_number:
+        sub = select(OrderProduct.order_id).join(Product, OrderProduct.product_id == Product.id).where(
+            Product.part_number.ilike(f"%{part_number}%"), OrderProduct.is_removed == False
+        )
+        conditions.append(Order.id.in_(sub))
+    if search:
+        conditions.append(
+            or_(
+                Order.reference_code.cast(str).ilike(f"%{search}%"),
+                Order.first_name.ilike(f"%{search}%"),
+                Order.last_name.ilike(f"%{search}%"),
+                Order.tracking_number.ilike(f"%{search}%"),
+            )
+        )
+
+    count_stmt = select(func.count(Order.id)).where(*conditions)
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    stmt = (
+        select(Order)
+        .options(
+            selectinload(Order.user),
+            selectinload(Order.pay_method),
+            selectinload(Order.post_type),
+            selectinload(Order.order_products).selectinload(OrderProduct.product),
+            selectinload(Order.order_status_records),
+        )
+        .where(*conditions)
+        .order_by(Order.insert_date.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    result = await db.execute(stmt)
+    return list(result.unique().scalars().all()), total
+
+
+async def get_admin_order_detail(db: AsyncSession, order_id: uuid.UUID) -> Optional[Order]:
+    stmt = (
+        select(Order)
+        .options(
+            selectinload(Order.user),
+            selectinload(Order.pay_method),
+            selectinload(Order.post_type),
+            selectinload(Order.identity_information),
+            selectinload(Order.order_products).selectinload(OrderProduct.product),
+            selectinload(Order.order_products).selectinload(OrderProduct.variety),
+            selectinload(Order.order_status_records),
+            selectinload(Order.payment_requests),
+            selectinload(Order.receipts),
+        )
+        .where(Order.id == order_id, Order.is_removed == False)
+    )
+    result = await db.execute(stmt)
+    return result.unique().scalar_one_or_none()
+
+
+def build_admin_order_response(order: Order, has_invoice: bool = False) -> dict:
+    """Build the dict used by admin order list/detail templates."""
+    return {
+        "id": str(order.id),
+        "reference_code": order.reference_code,
+        "tracking_number": order.tracking_number,
+        "order_status": order.order_status,
+        "order_status_name": ORDER_STATUS_NAMES.get(order.order_status, order.order_status or "-"),
+        "count": order.count,
+        "notes": order.notes,
+        "weight": order.weight,
+        "postage_date": order.postage_date,
+        "postage_date_str": to_farsi(order.postage_date) if order.postage_date else "",
+        "date": order.date,
+        "date_str": to_farsi(order.date) if order.date else "",
+        "paper_invoice": order.paper_invoice,
+        "email": order.email,
+        "total_price": float(order.total_price or 0),
+        "total_price_plus_taxes": float(order.total_price_plus_taxes or 0),
+        "total_taxes_and_duties": float(order.total_taxes_and_duties or 0),
+        "total_discount_price": float(order.total_discount_price or 0),
+        "discount_price": float(order.discount_price or 0),
+        "total_price_after_discount": float(order.total_price_after_discount or 0),
+        "payable": float(order.payable or 0),
+        "vat": float(order.vat or 0),
+        "packaging_cost": float(order.packaging_cost or 0),
+        "packaging_vat": float(order.packaging_vat or 0),
+        "packaging_vat_rate": float(order.packaging_vat_rate or 0),
+        "postage_fee": float(order.postage_fee or 0),
+        "post_vat": float(order.post_vat or 0),
+        "post_vat_rate": float(order.post_vat_rate or 0),
+        "first_name": order.first_name,
+        "last_name": order.last_name,
+        "full_name": f"{order.first_name or ''} {order.last_name or ''}".strip(),
+        "phone_number": order.phone_number,
+        "telephone": order.telephone,
+        "address_description": order.address_description,
+        "postal_code": order.postal_code,
+        "province": order.province,
+        "city": order.city,
+        "alias": order.alias,
+        "country": order.country,
+        "user_id": str(order.user_id) if order.user_id else None,
+        "user_full_name": order.user.full_name if order.user else "",
+        "pay_method_id": str(order.pay_method_id) if order.pay_method_id else None,
+        "pay_method_name": order.pay_method.name if order.pay_method else "",
+        "post_type_id": str(order.post_type_id) if order.post_type_id else None,
+        "post_type_name": order.post_type.name if order.post_type else "",
+        "identity_information_id": str(order.identity_information_id) if order.identity_information_id else None,
+        "identity_information_name": order.identity_information.name if order.identity_information else "",
+        "insert_date": order.insert_date,
+        "insert_date_str": to_farsi_full(order.insert_date) if order.insert_date else "",
+        "has_invoice": has_invoice,
+        "order_products": [
+            {
+                "id": str(op.id),
+                "product_id": str(op.product_id) if op.product_id else None,
+                "variety_id": str(op.variety_id) if op.variety_id else None,
+                "part_number": op.product.part_number if op.product else (op.variety.part_number if op.variety else ""),
+                "product_name": op.product.name if op.product else "",
+                "count": op.count,
+                "unit_price": float(op.unit_price or 0),
+                "discount": float(op.discount or 0),
+                "price_after_discount": float(op.price_after_discount or 0),
+                "total_price": float(op.total_price or 0),
+                "total_price_after_discount": float(op.total_price_after_discount or 0),
+                "vat_rate": float(op.vat_rate or 0),
+                "variety_values": op.variety_values,
+            }
+            for op in (order.order_products or [])
+        ],
+        "payment_requests": [
+            {
+                "id": str(pr.id),
+                "pay_date": pr.pay_date,
+                "pay_date_str": to_farsi_full(pr.pay_date) if pr.pay_date else "",
+                "approval": pr.approval,
+                "approval_str": to_farsi_full(pr.approval) if pr.approval else "",
+                "amount": float(pr.amount or 0),
+                "status": pr.status,
+                "status_name": PAYMENT_STATUS_NAMES.get(pr.status, pr.status or "-"),
+                "is_pay": pr.is_pay,
+                "ref_id": pr.ref_id,
+                "authority": pr.authority,
+            }
+            for pr in (order.payment_requests or [])
+        ],
+"receipts": [
+            {
+                "id": str(r.id),
+                "reference_code": r.reference_code,
+                "price": float(r.price or 0),
+                "status": r.status,
+                "status_name": RECEIPT_STATUS_NAMES.get(r.status, r.status or "-"),
+                "description": r.description,
+                "deposit_date": r.deposit_date,
+                "deposit_date_str": to_farsi(r.deposit_date) if r.deposit_date else "",
+                "destination_bank": r.destination_bank,
+                "image_url": r.image_url,
+            }
+            for r in (order.receipts or [])
+        ],
+"order_status_records": [
+            {
+                "id": str(sr.id),
+                "status": sr.status,
+                "status_name": ORDER_STATUS_NAMES.get(sr.status, sr.status or "-"),
+                "comment": sr.comment,
+                "tracking_number": sr.tracking_number,
+                "insert_date": sr.insert_date,
+                "insert_date_str": to_farsi_full(sr.insert_date) if sr.insert_date else "",
+                "created_by_user_id": str(sr.created_by_user_id) if sr.created_by_user_id else None,
+            }
+            for sr in (order.order_status_records or [])
+        ],
+    }
+
+
+def order_product_detail(op: OrderProduct) -> dict:
+    return {
+        "id": str(op.id),
+        "order_id": str(op.order_id),
+        "product_id": str(op.product_id) if op.product_id else None,
+        "variety_id": str(op.variety_id) if op.variety_id else None,
+        "part_number": op.product.part_number if op.product else "",
+        "product_name": op.product.name if op.product else "",
+        "count": op.count,
+        "unit_price": float(op.unit_price or 0),
+        "discount": float(op.discount or 0),
+        "price_after_discount": float(op.price_after_discount or 0),
+        "total_price": float(op.total_price or 0),
+        "total_price_after_discount": float(op.total_price_after_discount or 0),
+        "vat_rate": float(op.vat_rate or 0),
+        "variety_values": op.variety_values,
+        "product_unit": op.product_unit,
+    }
+
+
+def product_picker_data(products: list[Product]) -> list[dict]:
+    """JS-friendly structure for the order product picker (product -> varieties)."""
+    return [
+        {
+            "id": str(p.id),
+            "name": p.name or "",
+            "part_number": p.part_number or "",
+            "varieties": [
+                {"id": str(v.id), "part_number": v.part_number or "", "price": float(v.price or 0)}
+                for v in (p.varieties or [])
+            ],
+        }
+        for p in products
+    ]

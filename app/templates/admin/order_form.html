@@ -1,0 +1,102 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش سفارش" if order else "سفارش جدید" }}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-blue-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-blue-200"><i class="fas fa-shopping-cart"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش سفارش" if order else "ایجاد سفارش" }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{% if order %}کد سفارش: {{ order.reference_code or order.id[:8] }}{% else %}ثبت سفارش جدید مشتری{% endif %}</p>
+                </div>
+            </div>
+            <a href="{{ '/administration/orders/' ~ order.id if order else '/administration/orders' }}" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت</a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" action="{{ '/administration/orders/' ~ order.id ~ '/edit' if order else '/administration/orders/create' }}">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
+                <h2 class="font-semibold text-gray-800">مشخصات سفارش</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <!-- کاربر -->
+                    <div>
+                        <label class="form-label" for="user_id">کاربر <span class="text-red-500">*</span></label>
+                        <select id="user_id" name="user_id" class="form-input" required>
+                            <option value="">-- انتخاب کاربر --</option>
+                            {% for u in users %}
+                            <option value="{{ u.id }}" {{ 'selected' if order and order.user_id == u.id|string else '' }}>{{ u.full_name }} ({{ u.email }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- شماره پیگیری پستی -->
+                    <div>
+                        <label class="form-label" for="tracking_number">شماره پیگیری پستی</label>
+                        <input type="text" id="tracking_number" name="tracking_number" value="{{ order.tracking_number or '' }}" class="form-input ltr-input" placeholder="مثال: 887126510000000000000000">
+                    </div>
+                    <!-- نوع ارسال -->
+                    <div>
+                        <label class="form-label" for="post_type_id">نوع ارسال</label>
+                        <select id="post_type_id" name="post_type_id" class="form-input">
+                            <option value="">-- بدون ارسال --</option>
+                            {% for pt in post_types %}
+                            <option value="{{ pt.id }}" {{ 'selected' if order and order.post_type_id == pt.id|string else '' }}>{{ pt.name }} ({{ "{:,}".format(pt.price or 0) }} تومان)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- وزن -->
+                    <div>
+                        <label class="form-label" for="weight">وزن</label>
+                        <input type="text" id="weight" name="weight" value="{{ order.weight or '' }}" class="form-input" placeholder="مثال: 1250">
+                    </div>
+                    <!-- تاریخ پست -->
+                    <div>
+                        <label class="form-label" for="postage_date_str">تاریخ پست</label>
+                        <input type="text" id="postage_date_str" name="postage_date_str" value="{{ order.postage_date_str or '' }}" class="form-input" placeholder="۱۴۰۵/۰۵/۱۲">
+                    </div>
+                    <!-- یادداشت ها -->
+                    <div>
+                        <label class="form-label" for="notes">یادداشت‌ها</label>
+                        <input type="text" id="notes" name="notes" value="{{ order.notes or '' }}" class="form-input">
+                    </div>
+                    <!-- وضعیت سفارش -->
+                    <div>
+                        <label class="form-label" for="order_status">وضعیت سفارش</label>
+                        <select id="order_status" name="order_status" class="form-input">
+                            {% for value, name in order_status_names.items() %}
+                            <option value="{{ value }}" {{ 'selected' if (order and order.order_status == value) or (not order and default_status == value) else '' }}>{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- تاریخ -->
+                    <div>
+                        <label class="form-label" for="date_str">تاریخ</label>
+                        <input type="text" id="date_str" name="date_str" value="{{ order.date_str or '' }}" class="form-input" placeholder="۱۴۰۵/۰۵/۱۲">
+                    </div>
+                    {% if order %}
+                    <!-- روش پرداخت (فقط در ویرایش) -->
+                    <div class="md:col-span-2">
+                        <label class="form-label" for="pay_method_id">روش پرداخت</label>
+                        <select id="pay_method_id" name="pay_method_id" class="form-input">
+                            <option value="">-- انتخاب روش پرداخت --</option>
+                            {% for pm in pay_methods %}
+                            <option value="{{ pm.id }}" {{ 'selected' if order and order.pay_method_id == pm.id|string else '' }}>{{ pm.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3">
+                <button type="submit" class="btn-primary flex items-center gap-2"><i class="fas fa-save"></i> ذخیره</button>
+                <a href="{{ '/administration/orders/' ~ order.id if order else '/administration/orders' }}" class="btn-secondary">انصراف</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

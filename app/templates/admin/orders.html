@@ -1,32 +1,45 @@
-?{% extends "admin/base.html" %}
+{% extends "admin/base.html" %}
 {% block title %}مدیریت سفارشات{% endblock %}
 {% block header %}مدیریت سفارشات{% endblock %}
 {% block content %}
-<div class="bg-white rounded-lg shadow">
-    <div class="px-5 py-4 border-b flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <h3 class="font-semibold">لیست سفارشات</h3>
-            <span class="text-sm text-gray-500">({{ total or 0 }} سفارش)</span>
-        </div>
-        <select id="status-filter" class="border rounded-lg px-3 py-1.5 text-sm" onchange="window.location.href='?status='+this.value">
-            <option value="">همه وضعیت‌ها</option>
-            <option value="Ordering" {% if status_filter == 'Ordering' %}selected{% endif %}>در انتظار پرداخت</option>
-            <option value="Paid" {% if status_filter == 'Paid' %}selected{% endif %}>پرداخت شده</option>
-            <option value="Processing" {% if status_filter == 'Processing' %}selected{% endif %}>در حال پردازش</option>
-            <option value="Packing" {% if status_filter == 'Packing' %}selected{% endif %}>در حال بسته‌بندی</option>
-            <option value="Sending" {% if status_filter == 'Sending' %}selected{% endif %}>در حال ارسال</option>
-            <option value="Posted" {% if status_filter == 'Posted' %}selected{% endif %}>تحویل شده</option>
-            <option value="Canceled" {% if status_filter == 'Canceled' %}selected{% endif %}>لغو شده</option>
-        </select>
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">لیست سفارشات</h1>
+        <p class="text-sm text-gray-500 mt-0.5">مدیریت سفارشات مشتریان ({{ total or 0 }} سفارش)</p>
     </div>
-    <div class="p-5">
+    <a href="/administration/orders/create" class="btn-primary flex items-center gap-2"><i class="fas fa-plus"></i> ایجاد سفارش</a>
+</div>
+
+<form method="GET" action="/administration/orders" class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-3">
+        <div class="flex-1 min-w-[200px]">
+            <label class="form-label" for="status-filter">وضعیت سفارش</label>
+            <select id="status-filter" name="status_filter" class="form-input">
+                <option value="">همه وضعیت‌ها</option>
+                {% for value, name in order_status_names.items() %}
+                <option value="{{ value }}" {{ 'selected' if status_filter == value else '' }}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex-1 min-w-[200px]">
+            <label class="form-label" for="part-number">کد محصول (قسمت)</label>
+            <input type="text" id="part-number" name="part_number" value="{{ part_number or '' }}" class="form-input" placeholder="جستجو بر اساس کد کالا...">
+        </div>
+        <button type="submit" class="btn-primary whitespace-nowrap"><i class="fas fa-filter ml-1"></i> فیلتر</button>
+        <a href="/administration/orders" class="btn-secondary whitespace-nowrap"><i class="fas fa-times ml-1"></i> حذف فیلتر</a>
+    </div>
+</form>
+
+<div class="bg-white rounded-lg shadow">
+    <div class="p-5 overflow-x-auto">
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-gray-500 border-b">
                     <th class="text-right py-3 px-2">کد سفارش</th>
                     <th class="text-right py-3 px-2">مشتری</th>
-                    <th class="text-right py-3 px-2">تاریخ</th>
-                    <th class="text-left py-3 px-2">مبلغ</th>
+                    <th class="text-right py-3 px-2">تاریخ ثبت</th>
+                    <th class="text-left py-3 px-2">مبلغ قابل پرداخت</th>
+                    <th class="text-center py-3 px-2">تعداد اقلام</th>
                     <th class="text-center py-3 px-2">وضعیت</th>
                     <th class="text-center py-3 px-2">عملیات</th>
                 </tr>
@@ -34,29 +47,55 @@
             <tbody>
                 {% for o in orders %}
                 <tr class="border-b hover:bg-gray-50">
-                    <td class="py-3 px-2 font-medium">{{ o.reference_code or o.id[:8] }}</td>
-                    <td class="py-3 px-2">{{ o.first_name or o.last_name or o.user_id[:8] }}</td>
-                    <td class="py-3 px-2 text-gray-500">{{ o.insert_date[:10] if o.insert_date else '-' }}</td>
-                    <td class="py-3 px-2 text-left">{{ "{:,.0f}".format(o.payable or 0) }}</td>
+                    <td class="py-3 px-2 font-medium">
+                        <a href="/administration/orders/{{ o.id }}" class="text-indigo-600 hover:underline">{{ o.reference_code or o.id[:8] }}</a>
+                    </td>
+                    <td class="py-3 px-2">{{ o.full_name or o.first_name or o.last_name or (o.user_id[:8] if o.user_id else '-') }}</td>
+                    <td class="py-3 px-2 text-gray-500">{{ o.insert_date_str or '-' }}</td>
+                    <td class="py-3 px-2 text-left">{{ "{:,.0f}".format(o.payable or 0) }} تومان</td>
+                    <td class="py-3 px-2 text-center">{{ o.count or 0 }}</td>
                     <td class="py-3 px-2 text-center">
-                        <span class="px-2 py-0.5 rounded text-xs
-                            {% if o.order_status == 'Ordering' %}bg-yellow-100 text-yellow-800
-                            {% elif o.order_status == 'Paid' %}bg-blue-100 text-blue-800
-                            {% elif o.order_status == 'Posted' %}bg-green-100 text-green-800
-                            {% elif o.order_status == 'Canceled' %}bg-red-100 text-red-800
-                            {% else %}bg-gray-100 text-gray-800{% endif %}">
-                            {{ o.order_status }}
+                        <span class="badge
+                            {%- if o.order_status == 'Ordering' %} bg-yellow-100 text-yellow-800
+                            {%- elif o.order_status in ['Paid', 'ConfirmedPayment'] %} bg-blue-100 text-blue-800
+                            {%- elif o.order_status == 'Posted' %} bg-green-100 text-green-800
+                            {%- elif o.order_status == 'Canceled' %} bg-red-100 text-red-800
+                            {%- elif o.order_status in ['Processing', 'Collecting', 'Packing', 'Sending'] %} bg-indigo-100 text-indigo-800
+                            {%- else %} bg-gray-100 text-gray-800{% endif %}">
+                            {{ o.order_status_name }}
                         </span>
                     </td>
-                    <td class="py-3 px-2 text-center">
-                        <a href="/administration/orders/{{ o.id }}" class="text-indigo-600 hover:underline ml-2"><i class="fas fa-eye"></i></a>
-                        <button onclick="showStatusModal('{{ o.id }}')" class="text-green-600 hover:underline"><i class="fas fa-edit"></i></button>
+                    <td class="py-3 px-2 text-center whitespace-nowrap">
+                        <a href="/administration/orders/{{ o.id }}" class="text-indigo-600 hover:underline ml-2" title="جزئیات"><i class="fas fa-eye"></i></a>
+                        <a href="/administration/orders/{{ o.id }}/edit" class="text-blue-600 hover:underline ml-2" title="ویرایش"><i class="fas fa-edit"></i></a>
+                        <a href="/administration/orders/{{ o.id }}/factor" class="text-green-600 hover:underline ml-2" title="فاکتور کاغذی"><i class="fas fa-file-invoice"></i></a>
+                        <a href="/administration/orders/{{ o.id }}/labels" class="text-purple-600 hover:underline ml-2" title="برچسب‌ها"><i class="fas fa-tags"></i></a>
+                        <a href="/administration/orders/{{ o.id }}/post-info" class="text-teal-600 hover:underline ml-2" title="نوع ارسال"><i class="fas fa-truck"></i></a>
+                        <button onclick="showStatusModal('{{ o.id }}')" class="text-amber-600 hover:underline ml-2" title="تغییر وضعیت"><i class="fas fa-sync-alt"></i></button>
+                        <form method="POST" action="/administration/orders/{{ o.id }}/delete" onsubmit="return confirm('حذف این سفارش؟')" style="display:inline">
+                            <button type="submit" class="text-red-600 hover:underline" title="حذف"><i class="fas fa-trash"></i></button>
+                        </form>
                     </td>
                 </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center py-8 text-gray-400">سفارشی یافت نشد.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    {% if total_pages > 1 %}
+    <div class="px-5 py-4 border-t flex items-center justify-between">
+        <span class="text-sm text-gray-500">صفحه {{ page }} از {{ total_pages }}</span>
+        <div class="flex gap-2">
+            {% if page > 1 %}
+            <a href="?page={{ page - 1 }}&status={{ status_filter or '' }}&part_number={{ part_number or '' }}" class="btn-secondary">قبلی</a>
+            {% endif %}
+            {% if page < total_pages %}
+            <a href="?page={{ page + 1 }}&status={{ status_filter or '' }}&part_number={{ part_number or '' }}" class="btn-secondary">بعدی</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Status Update Modal -->
@@ -65,20 +104,15 @@
         <h3 class="font-bold mb-4">تغییر وضعیت سفارش</h3>
         <form id="status-form" method="POST" class="space-y-4">
             <div>
-                <label class="block text-sm mb-1">وضعیت جدید</label>
-                <select name="status" class="w-full border rounded-lg px-3 py-2">
-                    <option value="Ordering">در انتظار پرداخت</option>
-                    <option value="Paid">پرداخت شده</option>
-                    <option value="Processing">در حال پردازش</option>
-                    <option value="Collecting">در حال جمع‌آوری</option>
-                    <option value="Packing">در حال بسته‌بندی</option>
-                    <option value="Sending">در حال ارسال</option>
-                    <option value="Posted">تحویل شده</option>
-                    <option value="Canceled">لغو شده</option>
+                <label class="form-label">وضعیت جدید</label>
+                <select name="status" class="form-input">
+                    {% for value, name in order_status_names.items() %}
+                    <option value="{{ value }}">{{ name }}</option>
+                    {% endfor %}
                 </select>
             </div>
-            <div><label class="block text-sm mb-1">کد رهگیری</label><input name="tracking_number" class="w-full border rounded-lg px-3 py-2"></div>
-            <div><label class="block text-sm mb-1">توضیحات</label><textarea name="comment" rows="3" class="w-full border rounded-lg px-3 py-2"></textarea></div>
+            <div><label class="form-label">کد رهگیری</label><input name="tracking_number" class="form-input" dir="ltr"></div>
+            <div><label class="form-label">توضیحات</label><textarea name="comment" rows="3" class="form-input"></textarea></div>
             <div class="flex gap-2">
                 <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">ذخیره</button>
                 <button type="button" onclick="hideStatusModal()" class="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">انصراف</button>
@@ -89,7 +123,7 @@
 
 <script>
 function showStatusModal(orderId) {
-    document.getElementById('status-form').action = '/api/v1/orders/' + orderId + '/status';
+    document.getElementById('status-form').action = '/administration/orders/' + orderId + '/status';
     document.getElementById('status-modal').classList.remove('hidden');
     document.getElementById('status-modal').classList.add('flex');
 }

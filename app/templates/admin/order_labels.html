@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>برچسب‌های سفارش {{ reference_code or '' }}</title>
+    <style>
+        @page { size: 50mm 25mm; margin: 0; }
+        body { font-family: Vazirmatn, Tahoma, sans-serif; width: 50mm; font-size: 7pt; margin: 0; }
+        .toolbar { width: 50mm; text-align: left; padding: 4px; box-sizing: border-box; }
+        .toolbar button { font-family: inherit; font-size: 8pt; padding: 3px 8px; cursor: pointer; }
+        @media print { .toolbar { display: none; } .label { page-break-after: always; } }
+        .label { width: 50mm; height: 25mm; padding: 2mm; border: 1px dashed #000; box-sizing: border-box; overflow: hidden; }
+        .label:last-child { page-break-after: auto; }
+        .label b { font-weight: 700; }
+        .ltr { direction: ltr; unicode-bidi: embed; }
+    </style>
+</head>
+<body>
+    <div class="toolbar"><button onclick="window.print()">چاپ برچسب‌ها</button></div>
+    {% if labels %}
+    {% for item in labels %}
+    <div class="label">
+        <div>شماره سفارش: <b>{{ reference_code or '' }}</b> &nbsp;&nbsp; www.Hamdoos.ir</div>
+        <div>شناسه: <b class="ltr">{{ item.part_number }}</b></div>
+        <div>تعداد: {{ item.count }} {{ item.product_unit }}</div>
+        {% if item.model %}<div>مدل: <b>{{ item.model }}</b></div>{% endif %}
+        {% if item.name %}<div>نام: <b>{{ item.name }}</b></div>{% endif %}
+        {% if item.variety and item.variety != 'پیش فرض' %}<div>تنوع: {{ item.variety }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="label">
+        <div>شماره سفارش: <b>{{ reference_code or '' }}</b> &nbsp;&nbsp; www.Hamdoos.ir</div>
+        <div style="margin-top: 6mm; color: #888; font-size: 8pt;">محصولی برای چاپ برچسب وجود ندارد.</div>
+    </div>
+    {% endif %}
+</body>
+</html>

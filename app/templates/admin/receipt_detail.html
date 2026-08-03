@@ -1,0 +1,62 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات فیش پرداخت{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-violet-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-violet-200"><i class="fas fa-receipt"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">فیش‌های پرداخت</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">جزئیات</p>
+                </div>
+            </div>
+            <a href="/administration/receipts" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+        </div>
+    </div>
+
+    <!-- Receipt details -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-info-circle ml-2 text-violet-500"></i>فیش‌های پرداخت - جزئیات</h2>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                <div><dt class="text-xs text-gray-500 mb-1">کاربر</dt><dd class="text-sm font-medium">{% if receipt.user_id %}<a href="/administration/users/{{ receipt.user_id }}" class="text-indigo-600 hover:underline">{{ receipt.user_full_name or receipt.user_id[:8] }}</a>{% else %}—{% endif %}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">کد پیگیری</dt><dd class="text-sm font-medium ltr-input">{{ receipt.reference_code or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">قیمت</dt><dd class="text-sm font-bold">{{ "{:,}".format(receipt.price or 0) }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">وضعیت</dt><dd class="text-sm font-medium">
+                    {% if receipt.status == 'Confirmed' %}<span class="badge bg-emerald-100 text-emerald-800">تائید شده</span>
+                    {% elif receipt.status == 'Failed' %}<span class="badge bg-red-100 text-red-800">ناموفق</span>
+                    {% else %}<span class="badge bg-amber-100 text-amber-800">در انتظار تائید</span>{% endif %}
+                </dd></div>
+                <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">Tab</dt><dd class="text-sm font-medium ltr-input">{{ receipt.tab or '—' }}</dd></div>
+
+                <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">توضیح</dt><dd class="text-sm bg-gray-50 rounded-lg p-3">{{ receipt.description or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">تاریخ واریز</dt><dd class="text-sm font-medium">{{ receipt.deposit_date_str or receipt.deposit_date or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">نام بانک مقصد</dt><dd class="text-sm font-medium">{{ receipt.destination_bank or '—' }}</dd></div>
+                <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">پایا</dt><dd class="text-sm font-medium ltr-input">{{ receipt.paya if receipt.paya is not none else '—' }}</dd></div>
+
+                {% if receipt.image_url %}
+                <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">رسید تصویری</dt><dd class="text-sm"><a href="{{ receipt.image_url }}" target="_blank"><img src="{{ receipt.image_url }}" class="max-w-sm rounded-xl shadow-sm border border-gray-200"></a></dd></div>
+                {% endif %}
+            </dl>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-wrap items-center gap-3">
+            <a href="/administration/receipts" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+            {% if receipt.status == 'AwaitingConfirmation' %}
+            <form method="POST" action="/administration/receipts/{{ receipt.id }}/confirm" class="inline-flex">
+                <button type="submit" class="btn-success flex items-center gap-2"><i class="fas fa-check-circle"></i> تائید</button>
+            </form>
+            <form method="POST" action="/administration/receipts/{{ receipt.id }}/reject" class="inline-flex">
+                <button type="submit" class="btn-warning flex items-center gap-2"><i class="fas fa-times-circle"></i> رد</button>
+            </form>
+            <form method="POST" action="/administration/receipts/{{ receipt.id }}/delete" onsubmit="return confirm('حذف این فیش پرداخت؟')" class="inline-flex">
+                <button type="submit" class="btn-danger flex items-center gap-2"><i class="fas fa-trash"></i> حذف</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
