@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات روش پرداخت{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-teal-500">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-teal-200"><i class="fas fa-money-check"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ pay_method.name or 'روش پرداخت' }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">جزئیات روش پرداخت</p>
+                </div>
+            </div>
+            <a href="/administration/pay-methods" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-info-circle ml-2 text-teal-500"></i>اطلاعات روش پرداخت</h2>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                <div><dt class="text-xs text-gray-500 mb-1">نام</dt><dd class="text-sm font-bold text-gray-800">{{ pay_method.name or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">نوع</dt><dd class="text-sm font-medium">{% if pay_method.type == 'Zarinpal' %}<span class="badge bg-sky-100 text-sky-800">زرین‌پال</span>{% elif pay_method.type == 'BankReceipt' %}<span class="badge bg-indigo-100 text-indigo-800">فیش بانکی</span>{% else %}{{ pay_method_type_name or '—' }}{% endif %}</dd></div>
+                <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">وضعیت</dt><dd class="text-sm font-medium">{% if pay_method.enable %}<span class="badge bg-emerald-100 text-emerald-800">فعال</span>{% else %}<span class="badge bg-gray-100 text-gray-500">غیرفعال</span>{% endif %}</dd></div>
+                <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">توضیحات</dt><dd class="text-sm bg-gray-50 rounded-lg p-3">{{ pay_method.description or '—' }}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">تاریخ ثبت</dt><dd class="text-sm font-medium">{{ pay_method.insert_date.strftime('%Y/%m/%d %H:%M') if pay_method.insert_date else '—' }}</dd></div>
+            </dl>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3">
+            <a href="/administration/pay-methods/{{ pay_method.id }}/edit" class="btn-primary flex items-center gap-2"><i class="fas fa-edit"></i> ویرایش</a>
+            <a href="/administration/pay-methods" class="btn-secondary">بازگشت</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

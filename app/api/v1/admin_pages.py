@@ -4226,6 +4226,16 @@ async def admin_discount_create(
 
 # ── Pay Methods ──
 
+PAY_METHOD_TYPES = {
+    "Zarinpal": "زرین‌پال",
+    "BankReceipt": "فیش بانکی",
+}
+
+
+def _pay_method_type_name(value) -> str:
+    return PAY_METHOD_TYPES.get(value, value or "-")
+
+
 @router.get("/pay-methods", response_class=HTMLResponse)
 async def admin_pay_methods(
     request: Request,
@@ -4233,17 +4243,150 @@ async def admin_pay_methods(
     db: AsyncSession = Depends(get_db),
 ):
     items = (await db.execute(
-        select(PayMethod).where(PayMethod.is_removed == False).order_by(PayMethod.insert_date.desc()).limit(100)
+        select(PayMethod).where(PayMethod.is_removed == False).order_by(PayMethod.insert_date.desc()).limit(200)
     )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
-        "request": request, "current_user": current_user,
-        "title": "روش‌های پرداخت", "items": items,
-        "columns": [
-            {"key": "name", "label": "نام"},
-            {"key": "type", "label": "نوع"},
-            {"key": "enable", "label": "فعال"},
-        ],
+    return templates.TemplateResponse("admin/pay_methods.html", {
+        "request": request, "current_user": current_user, "items": items,
     })
+
+
+@router.get("/pay-methods/create", response_class=HTMLResponse)
+async def admin_pay_method_create_form(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+):
+    return templates.TemplateResponse("admin/pay_method_form.html", {
+        "request": request, "current_user": current_user,
+        "pay_method": None, "pay_method_types": PAY_METHOD_TYPES,
+    })
+
+
+@router.post("/pay-methods/create", response_class=HTMLResponse)
+async def admin_pay_method_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="نام الزامی است")
+    type_value = (form.get("type") or "").strip()
+    if type_value not in PAY_METHOD_TYPES:
+        type_value = type_value or None
+    enable = (form.get("enable") or "") in ("on", "true", "1", "True")
+
+    pm = PayMethod(
+        id=uuid.uuid4(),
+        name=name,
+        enable=enable,
+        type=type_value,
+        description=(form.get("description") or "").strip() or None,
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(pm)
+    db.add(Log(record_id=pm.id, table_name="pay_methods",
+               description=f"ایجاد روش پرداخت: {pm.name}",
+               created_by_user_id=current_user.id, type="Create"))
+    await db.commit()
+    return RedirectResponse(url="/administration/pay-methods", status_code=303)
+
+
+@router.get("/pay-methods/{pay_method_id}", response_class=HTMLResponse)
+async def admin_pay_method_detail(
+    request: Request,
+    pay_method_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(pay_method_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid pay method ID")
+    pm = await db.get(PayMethod, pid)
+    if not pm or pm.is_removed:
+        raise HTTPException(status_code=404, detail="Pay method not found")
+    return templates.TemplateResponse("admin/pay_method_detail.html", {
+        "request": request, "current_user": current_user,
+        "pay_method": pm, "pay_method_type_name": _pay_method_type_name(pm.type),
+    })
+
+
+@router.get("/pay-methods/{pay_method_id}/edit", response_class=HTMLResponse)
+async def admin_pay_method_edit_form(
+    request: Request,
+    pay_method_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(pay_method_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid pay method ID")
+    pm = await db.get(PayMethod, pid)
+    if not pm or pm.is_removed:
+        raise HTTPException(status_code=404, detail="Pay method not found")
+    return templates.TemplateResponse("admin/pay_method_form.html", {
+        "request": request, "current_user": current_user,
+        "pay_method": pm, "pay_method_types": PAY_METHOD_TYPES,
+    })
+
+
+@router.post("/pay-methods/{pay_method_id}/edit", response_class=HTMLResponse)
+async def admin_pay_method_edit_submit(
+    request: Request,
+    pay_method_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(pay_method_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid pay method ID")
+    pm = await db.get(PayMethod, pid)
+    if not pm or pm.is_removed:
+        raise HTTPException(status_code=404, detail="Pay method not found")
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if name:
+        pm.name = name
+    type_value = (form.get("type") or "").strip()
+    if type_value in PAY_METHOD_TYPES:
+        pm.type = type_value
+    pm.enable = (form.get("enable") or "") in ("on", "true", "1", "True")
+    pm.description = (form.get("description") or "").strip() or None
+    pm.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=pm.id, table_name="pay_methods",
+               description=f"ویرایش روش پرداخت: {pm.name}",
+               created_by_user_id=current_user.id, type="Update"))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/pay-methods/{pm.id}", status_code=303)
+
+
+@router.post("/pay-methods/{pay_method_id}/delete", response_class=HTMLResponse)
+async def admin_pay_method_delete(
+    request: Request,
+    pay_method_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Orders Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        pid = uuid.UUID(pay_method_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Invalid pay method ID")
+    pm = await db.get(PayMethod, pid)
+    if not pm or pm.is_removed:
+        raise HTTPException(status_code=404, detail="Pay method not found")
+    name = pm.name
+    pm.is_removed = True
+    pm.update_date = datetime.now(timezone.utc)
+    db.add(Log(record_id=pm.id, table_name="pay_methods",
+               description=f"حذف روش پرداخت: {name}",
+               created_by_user_id=current_user.id, type="Delete"))
+    await db.commit()
+    return RedirectResponse(url="/administration/pay-methods", status_code=303)
 
 
 # ── Post Types ──

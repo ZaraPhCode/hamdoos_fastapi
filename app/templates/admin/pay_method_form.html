@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش روش پرداخت" if pay_method else "ایجاد روش پرداخت" }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-teal-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-teal-200"><i class="fas fa-money-check"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش روش پرداخت" if pay_method else "ایجاد روش پرداخت" }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">{% if pay_method %}مدیریت {{ pay_method.name }}{% else %}ثبت روش پرداخت جدید{% endif %}</p>
+                </div>
+            </div>
+            <a href="/administration/pay-methods" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت</a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="POST" action="{{ '/administration/pay-methods/' ~ pay_method.id ~ '/edit' if pay_method else '/administration/pay-methods/create' }}">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-gray-200 px-6 py-4">
+                <h2 class="font-semibold text-gray-800">مشخصات روش پرداخت</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div>
+                        <label class="form-label" for="name">نام <span class="text-red-500">*</span></label>
+                        <input type="text" id="name" name="name" value="{{ pay_method.name or '' }}" class="form-input" required placeholder="مثال: زرین‌پال">
+                    </div>
+                    <div>
+                        <label class="form-label" for="type">نوع</label>
+                        <select id="type" name="type" class="form-input">
+                            <option value="">-- انتخاب نوع --</option>
+                            {% for value, name in pay_method_types.items() %}
+                            <option value="{{ value }}" {{ 'selected' if pay_method and pay_method.type == value else '' }}>{{ value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="form-label" for="description">توضیحات</label>
+                        <textarea id="description" name="description" rows="4" class="form-input" placeholder="توضیحات روش پرداخت...">{{ pay_method.description or '' }}</textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="enable" name="enable" class="form-checkbox h-5 w-5 text-teal-600 border-gray-300 rounded" {% if not pay_method or pay_method.enable %}checked{% endif %}>
+                            <span class="text-sm font-medium text-gray-700">فعال</span>
+                            <span class="text-xs text-gray-400">روش پرداخت فعال در فروشگاه نمایش داده می‌شود.</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center gap-3">
+                <button type="submit" class="btn-primary flex items-center gap-2"><i class="fas fa-save"></i> ذخیره</button>
+                <a href="/administration/pay-methods" class="btn-secondary">انصراف</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
