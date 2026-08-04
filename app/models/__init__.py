@@ -11,7 +11,7 @@ from app.models.common import (
 
 # Identity
 from app.models.identity import (
-    User, Role, UserRole, RoleClaim, Claim, IdentityInformation,
+    User, Role, UserRole, RoleClaim, UserClaim, Claim, IdentityInformation,
     UserLogin, UserToken,
 )
 
@@ -74,7 +74,7 @@ __all__ = [
     "BankInfo", "MobileNumber", "SmsCode", "Log", "AdminParameter",
 
     # Identity
-    "User", "Role", "UserRole", "RoleClaim", "Claim",
+    "User", "Role", "UserRole", "RoleClaim", "UserClaim", "Claim",
     "IdentityInformation", "UserLogin", "UserToken",
 
     # Products

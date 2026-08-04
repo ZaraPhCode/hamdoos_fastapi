@@ -127,6 +127,7 @@ async def soft_delete_user(db: AsyncSession, user: User, current_user_id: uuid.U
         table_name="users",
         description=f"حذف کاربر: {name}",
         created_by_user_id=current_user_id,
+        type="Delete",
     ))
 
 
@@ -253,6 +254,7 @@ async def soft_delete_role(db: AsyncSession, role: Role, current_user_id: uuid.U
         table_name="roles",
         description=f"حذف نقش: {name}",
         created_by_user_id=current_user_id,
+        type="Delete",
     ))
 
 
@@ -377,6 +379,7 @@ async def soft_delete_role_claim(db: AsyncSession, rc: RoleClaim, current_user_i
         table_name="role_claims",
         description=f"حذف دسترسی: {name}",
         created_by_user_id=current_user_id,
+        type="Delete",
     ))
 
 
@@ -480,6 +483,7 @@ async def soft_delete_user_role(db: AsyncSession, ur: UserRole, current_user_id:
         table_name="user_roles",
         description="حذف نقش کاربر",
         created_by_user_id=current_user_id,
+        type="Delete",
     ))
 
 
@@ -690,4 +694,5 @@ async def soft_delete_identity_info(db: AsyncSession, info: IdentityInformation,
         table_name="identity_informations",
         description=f"حذف اطلاعات هویتی: {name}",
         created_by_user_id=current_user_id,
+        type="Delete",
     ))

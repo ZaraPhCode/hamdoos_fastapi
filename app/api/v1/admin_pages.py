@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.core.dependencies import get_admin_user, require_any_role
 from app.models.identity import User, Role, IdentityInformation, RoleClaim, UserRole
-from app.models.product import Product, Category, Brand, ProductType, ProductUnit, Currency, Tag, CategoryOption, PriceHistory, ProductTag, RelatedProduct, SimilarProduct, ProductImage, MenuDatasheet, Variety
+from app.models.product import Product, Category, Brand, ProductType, ProductUnit, Currency, Tag, CategoryOption, PriceHistory, ProductTag, RelatedProduct, SimilarProduct, ProductImage, MenuDatasheet, Variety, ProductVariety
 from app.models.product_features import TechnicalFeature, TechnicalTable, CategoryTechnicalFeature, TechnicalTableProduct, TechnicalFeatureEnum, TechnicalFeatureValue
 from app.models.order import OrderModel as Order, PayMethod, PostType, Discount, OrderProduct, OrderStatusRecord
 from app.models.invoice import Invoice, InvoiceProduct, Supplier, SupplierProduct, PurchaseOrder
@@ -42,43 +42,24 @@ router = APIRouter(prefix="/administration", tags=["Admin Pages"])
 
 
 # ── Admin Login ──
+# The platform has a single login page at /login. Visiting /administration/login
+# redirects there; the same JWT cookie grants access to store + admin routes.
 
 @router.get("/login", response_class=HTMLResponse)
 async def admin_login_page(request: Request):
-    next_url = request.query_params.get("next", "/administration")
-    return templates.TemplateResponse("admin/login.html", {
-        "request": request, "next": next_url,
-    })
+    from fastapi.responses import RedirectResponse
+    from urllib.parse import quote
+    next_url = request.query_params.get("next", "")
+    target = f"/login?next={quote(next_url)}" if next_url else "/login"
+    return RedirectResponse(url=target, status_code=302)
 
 
 @router.post("/login", response_class=HTMLResponse)
-async def admin_login_submit(request: Request, db: AsyncSession = Depends(get_db)):
-    from app.schemas.auth import LoginRequest
-    from app.services.auth_service import authenticate_user, create_token_response
+async def admin_login_submit(request: Request):
     from fastapi.responses import RedirectResponse
-    form = await request.form()
-    username = form.get("username", "")
-    password = form.get("password", "")
-    next_url = form.get("next", "/administration")
-    try:
-        user = await authenticate_user(db, LoginRequest(username=username, password=password))
-        if not user:
-            return templates.TemplateResponse("admin/login.html", {
-                "request": request, "error": "نام کاربری یا رمز عبور اشتباه است", "next": next_url,
-            })
-        user_role_names = {ur.role.name for ur in user.roles}
-        if not user_role_names.intersection({"Admin", "Product Manager", "Orders Manager", "Financial Manager", "Warehouse Keeper"}):
-            return templates.TemplateResponse("admin/login.html", {
-                "request": request, "error": "شما دسترسی به پنل مدیریت ندارید", "next": next_url,
-            })
-        response = RedirectResponse(url=next_url, status_code=303)
-        token = await create_token_response(user)
-        response.set_cookie(key="access_token", value=token.access_token, httponly=True, max_age=7200)
-        return response
-    except Exception:
-        return templates.TemplateResponse("admin/login.html", {
-            "request": request, "error": "خطا در ورود به سیستم", "next": next_url,
-        })
+    next_url = (await request.form()).get("next", "")
+    target = f"/login?next={next_url}" if next_url else "/login"
+    return RedirectResponse(url=target, status_code=302)
 
 
 # ── Dashboard ──
@@ -87,7 +68,7 @@ async def admin_login_submit(request: Request, db: AsyncSession = Depends(get_db
 @router.get("/dashboard", response_class=HTMLResponse)
 async def admin_dashboard(
     request: Request,
-    current_user: User = Depends(get_admin_user),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager", "Orders Manager", "Financial Manager", "Warehouse Keeper")),
     db: AsyncSession = Depends(get_db),
 ):
     stats = await admin_service.get_dashboard_stats(db)
@@ -775,6 +756,7 @@ async def admin_product_delete_confirm(
         table_name="products",
         description=f"حذف محصول: {name}",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     await db.commit()
     return RedirectResponse(url="/administration/products", status_code=303)
@@ -943,6 +925,7 @@ async def admin_category_create_submit(
         table_name="categories",
         description=log_text,
         created_by_user_id=current_user.id,
+        type="Create",
     ))
     return RedirectResponse(url="/administration/categories", status_code=303)
 
@@ -1012,6 +995,7 @@ async def admin_category_edit_submit(
             table_name="categories",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/categories", status_code=303)
 
@@ -1089,6 +1073,7 @@ async def admin_category_delete_confirm(
         table_name="categories",
         description=f"حذف دسته بندی: {title}",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/categories", status_code=303)
 
@@ -1161,6 +1146,7 @@ async def admin_brand_create_submit(
             table_name="brands",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Create",
         ))
     return RedirectResponse(url="/administration/brands", status_code=303)
 
@@ -1202,6 +1188,7 @@ async def admin_brand_edit_submit(
             table_name="brands",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/brands", status_code=303)
 
@@ -1239,6 +1226,7 @@ async def admin_brand_delete(
         table_name="brands",
         description=f"حذف برند: {name}",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/brands", status_code=303)
 
@@ -2971,7 +2959,7 @@ async def admin_settings_restore(
     db.add(setting)
     db.add(Log(record_id=setting.id, table_name="site_settings",
                description=_site_create_desc(setting),
-               created_by_user_id=current_user.id, type="Create"))
+               created_by_user_id=current_user.id, type="Recovery"))
     await db.commit()
     return RedirectResponse(url="/administration/settings", status_code=303)
 
@@ -4227,6 +4215,7 @@ async def admin_product_type_create_submit(
             table_name="product_types",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Create",
         ))
     return RedirectResponse(url="/administration/product-types", status_code=303)
 
@@ -4269,6 +4258,7 @@ async def admin_product_type_edit_submit(
             table_name="product_types",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/product-types", status_code=303)
 
@@ -4306,6 +4296,7 @@ async def admin_product_type_delete(
         table_name="product_types",
         description=f"حذف نوع محصول: {name}",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/product-types", status_code=303)
 
@@ -4364,6 +4355,7 @@ async def admin_product_unit_create_submit(
             table_name="product_units",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Create",
         ))
     return RedirectResponse(url="/administration/product-units", status_code=303)
 
@@ -4407,6 +4399,7 @@ async def admin_product_unit_edit_submit(
             table_name="product_units",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/product-units", status_code=303)
 
@@ -4444,6 +4437,7 @@ async def admin_product_unit_delete(
         table_name="product_units",
         description=f"حذف واحد اندازه‌گیری: {name}",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/product-units", status_code=303)
 
@@ -4499,6 +4493,7 @@ async def admin_tag_create_submit(
             table_name="tags",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Create",
         ))
     return RedirectResponse(url="/administration/tags", status_code=303)
 
@@ -4540,6 +4535,7 @@ async def admin_tag_edit_submit(
             table_name="tags",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/tags", status_code=303)
 
@@ -4577,6 +4573,7 @@ async def admin_tag_delete(
         table_name="tags",
         description=f"حذف برچسب: {name}",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/tags", status_code=303)
 
@@ -5467,23 +5464,190 @@ async def admin_logger(
 
 # ── Notified Products ──
 
+async def _load_notified_products(db: AsyncSession, np_ids: list | None = None):
+    stmt = (
+        select(NotifiedProduct)
+        .options(
+            selectinload(NotifiedProduct.variety).selectinload(Variety.product),
+            selectinload(NotifiedProduct.variety).selectinload(Variety.product_varieties).selectinload(ProductVariety.category_option),
+            selectinload(NotifiedProduct.created_by_user),
+        )
+        .where(NotifiedProduct.is_removed == False)
+    )
+    if np_ids:
+        stmt = stmt.where(NotifiedProduct.id.in_(np_ids))
+    return (await db.execute(stmt)).scalars().all()
+
+
+def _notified_type_filter(np: NotifiedProduct, notify_type: str) -> bool:
+    """Mirror .NET GetFilteredNotifyProducts Type filter. Returns True when kept."""
+    variety = np.variety
+    supply_date = variety.stock_supply_date if variety else None
+    if not supply_date:
+        return False
+    if notify_type == "SmsNotification":
+        return np.insert_date <= supply_date and (np.sms_response_date is not None and np.sms_response_date < supply_date)
+    if notify_type == "EmailNotification":
+        return np.insert_date <= supply_date and (np.email_response_date is not None and np.email_response_date < supply_date)
+    return True
+
+
+def _notified_sort_key(np: NotifiedProduct, arrange: str):
+    key = {
+        "InsertDate": lambda x: x.insert_date,
+        "SmsResponseDate": lambda x: x.sms_response_date or x.insert_date,
+        "EmailResponseDate": lambda x: x.email_response_date or x.insert_date,
+        "UserName": lambda x: (x.created_by_user.full_name or "") if x.created_by_user else "",
+        "Product": lambda x: (x.variety.product.name or "") if x.variety and x.variety.product else "",
+        "SupplyDate": lambda x: (x.variety.product.stock_supply_date or x.insert_date) if x.variety and x.variety.product else x.insert_date,
+    }.get(arrange, lambda x: x.insert_date)
+    value = key(np)
+    return value.replace("", "\uffff") if isinstance(value, str) else (value or value)
+
+
+def _notified_variety_values(np: NotifiedProduct) -> str:
+    """Mirror _setVarietyValues: 'Name: Value , Name: Value'."""
+    if not np.variety:
+        return "—"
+    pvs = sorted(np.variety.product_varieties, key=lambda pv: pv.category_option.name if pv.category_option else "")
+    parts = []
+    for pv in pvs:
+        if pv.category_option:
+            parts.append(f"{pv.category_option.name}: {pv.value or ''}")
+    return " , ".join(parts) if parts else "—"
+
+
+def _notified_row(np: NotifiedProduct, detail_url: bool = True) -> dict:
+    variety = np.variety
+    product = variety.product if variety else None
+    return {
+        "id": str(np.id),
+        "insert_date": _to_fa_datetime(np.insert_date),
+        "sms_response_date": _to_fa_datetime(np.sms_response_date),
+        "email_response_date": _to_fa_datetime(np.email_response_date),
+        "product_name": product.name if product else "—",
+        "supply_date": _to_fa_datetime(product.stock_supply_date) if product else "—",
+        "created_by": (np.created_by_user.full_name or np.created_by_user.username) if np.created_by_user else "—",
+        "variety_values": _notified_variety_values(np),
+    }
+
+
 @router.get("/notified-products", response_class=HTMLResponse)
 async def admin_notified_products(
     request: Request,
-    current_user: User = Depends(get_admin_user),
+    notify_type: str = Query(""),
+    arrange: str = Query("InsertDate"),
+    desc: bool = Query(True),
+    page: int = Query(1),
+    page_size: int = Query(25),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    items = (await db.execute(
-        select(NotifiedProduct).where(NotifiedProduct.is_removed == False).order_by(NotifiedProduct.insert_date.desc()).limit(100)
-    )).scalars().all()
-    return templates.TemplateResponse("admin/generic_list.html", {
+    items = await _load_notified_products(db)
+
+    if notify_type:
+        items = [np for np in items if _notified_type_filter(np, notify_type)]
+
+    sorted_items = sorted(items, key=lambda np: _notified_sort_key(np, arrange), reverse=desc)
+
+    total = len(sorted_items)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * page_size
+    page_items = sorted_items[start:start + page_size]
+
+    rows = [_notified_row(np) for np in page_items]
+
+    return templates.TemplateResponse("admin/notified_products.html", {
         "request": request, "current_user": current_user,
-        "title": "محصولات اطلاع‌رسانی شده", "items": items,
-        "columns": [
-            {"key": "variety_id", "label": "شناسه تنوع"},
-            {"key": "sms_response_date", "label": "تاریخ پیامک"},
-            {"key": "email_response_date", "label": "تاریخ ایمیل"},
-        ],
+        "items": rows,
+        "total": total, "page": page, "total_pages": total_pages, "page_size": page_size,
+        "notify_type": notify_type, "arrange": arrange, "desc": desc,
+    })
+
+
+@router.post("/notified-products/send-sms", response_class=HTMLResponse)
+async def admin_notified_products_send_sms(
+    request: Request,
+    notify_ids: str = Form(""),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        ids = [u.strip() for u in notify_ids.split(",") if u.strip()]
+        items = await _load_notified_products(db, ids)
+        sent = 0
+        for np in items:
+            variety = np.variety
+            product = variety.product if variety else None
+            user = np.created_by_user
+            if not (variety and product and user and user.phone_number):
+                continue
+            from app.services.sms_service import SelectedSmsSender
+            sms = SelectedSmsSender()
+            await sms.send_notify_product(user.phone_number, user.full_name, product.name, product.part_number or "")
+            np.sms_response_date = datetime.now(timezone.utc)
+            sent += 1
+        await db.commit()
+        msg = "sms_sent" if sent else "none"
+        return RedirectResponse(url=f"/administration/notified-products?msg={msg}", status_code=303)
+    except Exception:
+        await db.rollback()
+        return RedirectResponse(url="/administration/notified-products?msg=error", status_code=303)
+
+
+@router.post("/notified-products/send-email", response_class=HTMLResponse)
+async def admin_notified_products_send_email(
+    request: Request,
+    notify_ids: str = Form(""),
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        ids = [u.strip() for u in notify_ids.split(",") if u.strip()]
+        items = await _load_notified_products(db, ids)
+        sent = 0
+        for np in items:
+            variety = np.variety
+            product = variety.product if variety else None
+            user = np.created_by_user
+            if not (variety and product and user and user.email):
+                continue
+            from app.services.email_service import EmailSender
+            email = EmailSender()
+            product_url = f"/products/{product.slug or product.id}"
+            await email.send_notify_product(user.email, user.full_name, product.name, product_url)
+            np.email_response_date = datetime.now(timezone.utc)
+            sent += 1
+        await db.commit()
+        msg = "email_sent" if sent else "none"
+        return RedirectResponse(url=f"/administration/notified-products?msg={msg}", status_code=303)
+    except Exception:
+        await db.rollback()
+        return RedirectResponse(url="/administration/notified-products?msg=error", status_code=303)
+
+
+@router.get("/notified-products/{np_id}/details", response_class=HTMLResponse)
+async def admin_notified_products_details(
+    np_id: str,
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        uid = uuid.UUID(np_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Notified product not found")
+    items = await _load_notified_products(db, [uid])
+    if not items:
+        raise HTTPException(status_code=404, detail="Notified product not found")
+    np = items[0]
+    detail = _notified_row(np)
+    detail.update({"variety_values": _notified_variety_values(np), "record_id": str(np.id)})
+    return templates.TemplateResponse("admin/notified_product_details.html", {
+        "request": request, "current_user": current_user,
+        "item": detail,
+        "record_id": str(np.id),
     })
 
 
@@ -5764,6 +5928,7 @@ async def admin_similar_product_create_submit(
             table_name="similar_products",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Create",
         ))
     return RedirectResponse(url="/administration/similar-products", status_code=303)
 
@@ -5814,6 +5979,7 @@ async def admin_similar_product_edit_submit(
             table_name="similar_products",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/similar-products", status_code=303)
 
@@ -5855,6 +6021,7 @@ async def admin_similar_product_delete(
         table_name="similar_products",
         description="حذف محصول مشابه",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/similar-products", status_code=303)
 
@@ -5923,6 +6090,7 @@ async def admin_related_product_create_submit(
             table_name="related_products",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Create",
         ))
     return RedirectResponse(url="/administration/related-products", status_code=303)
 
@@ -5973,6 +6141,7 @@ async def admin_related_product_edit_submit(
             table_name="related_products",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/related-products", status_code=303)
 
@@ -6014,6 +6183,7 @@ async def admin_related_product_delete(
         table_name="related_products",
         description="حذف محصول مرتبط",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/related-products", status_code=303)
 
@@ -6093,6 +6263,7 @@ async def admin_product_tag_create_submit(
             table_name="product_tags",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Create",
         ))
     return RedirectResponse(url="/administration/product-tags", status_code=303)
 
@@ -6146,6 +6317,7 @@ async def admin_product_tag_edit_submit(
             table_name="product_tags",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/product-tags", status_code=303)
 
@@ -6187,6 +6359,7 @@ async def admin_product_tag_delete(
         table_name="product_tags",
         description="حذف برچسب محصول",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/product-tags", status_code=303)
 
@@ -6245,6 +6418,7 @@ async def admin_technical_feature_enum_create_submit(
             table_name="technical_feature_enums",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Create",
         ))
     return RedirectResponse(url="/administration/technical-feature-enums", status_code=303)
 
@@ -6287,6 +6461,7 @@ async def admin_technical_feature_enum_edit_submit(
             table_name="technical_feature_enums",
             description=log_text,
             created_by_user_id=current_user.id,
+            type="Update",
         ))
     return RedirectResponse(url="/administration/technical-feature-enums", status_code=303)
 
@@ -6324,6 +6499,7 @@ async def admin_technical_feature_enum_delete(
         table_name="technical_feature_enums",
         description=f"حذف انوم ویژگی فنی: {name}",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/technical-feature-enums", status_code=303)
 
@@ -6404,6 +6580,7 @@ async def admin_category_technical_feature_create_submit(
         table_name="category_technical_features",
         description="ایجاد دسته‌بندی ویژگی فنی",
         created_by_user_id=current_user.id,
+        type="Create",
     ))
     return RedirectResponse(url="/administration/category-technical-features", status_code=303)
 
@@ -6458,6 +6635,7 @@ async def admin_category_technical_feature_edit_submit(
         table_name="category_technical_features",
         description="ویرایش دسته‌بندی ویژگی فنی",
         created_by_user_id=current_user.id,
+        type="Update",
     ))
     return RedirectResponse(url="/administration/category-technical-features", status_code=303)
 
@@ -6482,6 +6660,7 @@ async def admin_category_technical_feature_delete(
         table_name="category_technical_features",
         description="حذف دسته‌بندی ویژگی فنی",
         created_by_user_id=current_user.id,
+        type="Delete",
     ))
     return RedirectResponse(url="/administration/category-technical-features", status_code=303)
 
@@ -6533,7 +6712,7 @@ async def admin_technical_table_create_submit(
     await db.flush()
     db.add(Log(
         record_id=tt.id, table_name="technical_tables",
-        description=f"ایجاد جدول فنی: {title}", created_by_user_id=current_user.id,
+        description=f"ایجاد جدول فنی: {title}", created_by_user_id=current_user.id, type="Create",
     ))
     return RedirectResponse(url="/administration/technical-tables", status_code=303)
 
@@ -6573,7 +6752,7 @@ async def admin_technical_table_edit_submit(
 
     db.add(Log(
         record_id=tt.id, table_name="technical_tables",
-        description=f"ویرایش جدول فنی: {tt.title}", created_by_user_id=current_user.id,
+        description=f"ویرایش جدول فنی: {tt.title}", created_by_user_id=current_user.id, type="Update",
     ))
     return RedirectResponse(url="/administration/technical-tables", status_code=303)
 
@@ -6608,7 +6787,7 @@ async def admin_technical_table_delete(
     await db.flush()
     db.add(Log(
         record_id=tt.id, table_name="technical_tables",
-        description=f"حذف جدول فنی: {name}", created_by_user_id=current_user.id,
+        description=f"حذف جدول فنی: {name}", created_by_user_id=current_user.id, type="Delete",
     ))
     return RedirectResponse(url="/administration/technical-tables", status_code=303)
 
@@ -6681,7 +6860,7 @@ async def admin_technical_table_product_create_submit(
     await db.flush()
     db.add(Log(
         record_id=ttp.id, table_name="technical_table_products",
-        description="ایجاد جدول فنی محصول", created_by_user_id=current_user.id,
+        description="ایجاد جدول فنی محصول", created_by_user_id=current_user.id, type="Create",
     ))
     return RedirectResponse(url="/administration/technical-table-products", status_code=303)
 
@@ -6738,7 +6917,7 @@ async def admin_technical_table_product_edit_submit(
 
     db.add(Log(
         record_id=ttp.id, table_name="technical_table_products",
-        description="ویرایش جدول فنی محصول", created_by_user_id=current_user.id,
+        description="ویرایش جدول فنی محصول", created_by_user_id=current_user.id, type="Update",
     ))
     return RedirectResponse(url="/administration/technical-table-products", status_code=303)
 
@@ -6779,7 +6958,7 @@ async def admin_technical_table_product_delete(
     await db.flush()
     db.add(Log(
         record_id=ttp.id, table_name="technical_table_products",
-        description="حذف جدول فنی محصول", created_by_user_id=current_user.id,
+        description="حذف جدول فنی محصول", created_by_user_id=current_user.id, type="Delete",
     ))
     return RedirectResponse(url="/administration/technical-table-products", status_code=303)
 
@@ -6850,7 +7029,7 @@ async def admin_technical_feature_create_submit(
     await _assign_feature_enums(db, feature, form.getlist("feature_enum_ids"), form.getlist("feature_enum1_ids"))
     db.add(Log(
         record_id=feature.id, table_name="technical_features",
-        description=f"ایجاد ویژگی فنی: {fa_name or name}", created_by_user_id=current_user.id,
+        description=f"ایجاد ویژگی فنی: {fa_name or name}", created_by_user_id=current_user.id, type="Create",
     ))
     return RedirectResponse(url="/administration/technical-features", status_code=303)
 
@@ -6935,7 +7114,7 @@ async def admin_technical_feature_edit_submit(
 
     db.add(Log(
         record_id=feature.id, table_name="technical_features",
-        description=f"ویرایش ویژگی فنی: {feature.fa_name or feature.name}", created_by_user_id=current_user.id,
+        description=f"ویرایش ویژگی فنی: {feature.fa_name or feature.name}", created_by_user_id=current_user.id, type="Update",
     ))
     return RedirectResponse(url="/administration/technical-features", status_code=303)
 
@@ -6970,7 +7149,7 @@ async def admin_technical_feature_delete(
     await db.flush()
     db.add(Log(
         record_id=feature.id, table_name="technical_features",
-        description=f"حذف ویژگی فنی: {name}", created_by_user_id=current_user.id,
+        description=f"حذف ویژگی فنی: {name}", created_by_user_id=current_user.id, type="Delete",
     ))
     return RedirectResponse(url="/administration/technical-features", status_code=303)
 
@@ -7018,7 +7197,7 @@ async def admin_category_option_create_submit(
         raise HTTPException(status_code=400, detail="این گزینه قبلاً تعریف شده")
     db.add(Log(
         record_id=co.id, table_name="category_options",
-        description=f"ایجاد گزینه دسته‌بندی: {name}", created_by_user_id=current_user.id,
+        description=f"ایجاد گزینه دسته‌بندی: {name}", created_by_user_id=current_user.id, type="Create",
     ))
     return RedirectResponse(url="/administration/category-options", status_code=303)
 
@@ -7058,7 +7237,7 @@ async def admin_category_option_edit_submit(
 
     db.add(Log(
         record_id=co.id, table_name="category_options",
-        description=f"ویرایش گزینه دسته‌بندی: {co.name}", created_by_user_id=current_user.id,
+        description=f"ویرایش گزینه دسته‌بندی: {co.name}", created_by_user_id=current_user.id, type="Update",
     ))
     return RedirectResponse(url="/administration/category-options", status_code=303)
 
@@ -7093,7 +7272,7 @@ async def admin_category_option_delete(
     await db.flush()
     db.add(Log(
         record_id=co.id, table_name="category_options",
-        description=f"حذف گزینه دسته‌بندی: {name}", created_by_user_id=current_user.id,
+        description=f"حذف گزینه دسته‌بندی: {name}", created_by_user_id=current_user.id, type="Delete",
     ))
     return RedirectResponse(url="/administration/category-options", status_code=303)
 

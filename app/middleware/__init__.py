@@ -7,7 +7,7 @@ import uuid
 from typing import Callable
 
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -32,20 +32,31 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     """Global error handler — catches unhandled exceptions and redirects admin auth errors."""
 
+    def _forbidden_response(self) -> Response:
+        try:
+            with open("app/templates/errors/403.html", "r", encoding="utf-8") as f:
+                return HTMLResponse(f.read(), status_code=403)
+        except Exception:
+            return JSONResponse(status_code=403, content={"detail": "Forbidden"})
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         from starlette.responses import RedirectResponse
         try:
             response = await call_next(request)
-            if response.status_code in (401, 403) and request.url.path.startswith("/administration"):
-                if request.url.path == "/administration/login":
-                    return response
-                login_url = f"/administration/login?next={request.url.path}"
-                return RedirectResponse(url=login_url, status_code=302)
+            if request.url.path.startswith("/administration"):
+                if response.status_code == 401 and request.url.path != "/administration/login":
+                    login_url = f"/login?next={request.url.path}"
+                    return RedirectResponse(url=login_url, status_code=302)
+                if response.status_code == 403 and request.url.path != "/administration/login":
+                    return self._forbidden_response()
             return response
         except HTTPException as e:
-            if e.status_code in (401, 403) and request.url.path.startswith("/administration") and request.url.path != "/administration/login":
-                login_url = f"/administration/login?next={request.url.path}"
-                return RedirectResponse(url=login_url, status_code=302)
+            if request.url.path.startswith("/administration") and request.url.path != "/administration/login":
+                if e.status_code == 401:
+                    login_url = f"/login?next={request.url.path}"
+                    return RedirectResponse(url=login_url, status_code=302)
+                if e.status_code == 403:
+                    return self._forbidden_response()
             return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
         except Exception as e:
             logger.exception(f"Unhandled error: {e}")

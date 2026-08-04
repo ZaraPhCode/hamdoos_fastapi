@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}پنل مدیریت{% endblock %} | آساشاپ</title>
+    <title>{% block title %}پنل مدیریت{% endblock %} | همدوس</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -66,7 +66,7 @@
             <div class="p-4 border-b border-gray-700">
                 <h1 class="text-xl font-bold flex items-center gap-2">
                     <i class="fas fa-store text-blue-400"></i>
-                    آسا‌شاپ
+                    همدوس
                 </h1>
                 <p class="text-xs text-gray-400 mt-1">پنل مدیریت</p>
             </div>
@@ -250,8 +250,11 @@
                     </div>
                 </div>
             </nav>
-            <div class="p-4 border-t border-gray-700">
-                <a href="/administration/logout" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+            <div class="p-4 border-t border-gray-700 space-y-1">
+                <a href="/home" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+                    <i class="fas fa-store w-5 text-center"></i> بازگشت به فروشگاه
+                </a>
+                <a href="/auth/logout" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
                     <i class="fas fa-sign-out-alt w-5 text-center"></i> خروج
                 </a>
             </div>
@@ -262,8 +265,8 @@
                     <i class="fas fa-bars"></i>
                 </button>
                 <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-600">خوش آمدید، مدیر</span>
-                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">مد</div>
+                    <span class="text-sm text-gray-600">خوش آمدید، {{ current_user.full_name or current_user.user_name or current_user.phone_number or 'کاربر' }}</span>
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold">{{ (current_user.full_name or current_user.user_name or 'کاربر')[0] }}</div>
                 </div>
             </header>
             <main class="flex-1 overflow-y-auto p-6">

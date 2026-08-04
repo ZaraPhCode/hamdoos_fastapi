@@ -423,12 +423,15 @@ def _build_shop_detail(product):
 
 # ── Auth Pages ──
 
-@router.get("/auth/login", response_class=HTMLResponse)
+ADMIN_ROLES = {"Admin", "Product Manager", "Orders Manager", "Financial Manager", "Warehouse Keeper"}
+
+
+@router.get("/login", response_class=HTMLResponse)
 async def shop_login(request: Request):
     return templates.TemplateResponse("shop/login.html", {"request": request})
 
 
-@router.post("/auth/login", response_class=HTMLResponse)
+@router.post("/login", response_class=HTMLResponse)
 async def shop_login_submit(request: Request, db: AsyncSession = Depends(get_db)):
     from fastapi.responses import RedirectResponse
     from app.schemas.auth import LoginRequest
@@ -436,16 +439,27 @@ async def shop_login_submit(request: Request, db: AsyncSession = Depends(get_db)
     form = await request.form()
     username = form.get("username", "")
     password = form.get("password", "")
+    next_url = (form.get("next") or "").strip()
     try:
         user = await authenticate_user(db, LoginRequest(username=username, password=password))
         if user:
-            response = RedirectResponse(url="/home", status_code=303)
+            # route admin intent to admin panel, only if the user has an admin role
+            target = "/home"
+            if next_url and next_url.startswith("/"):
+                user_role_names = {ur.role.name for ur in user.roles}
+                if next_url.startswith("/administration") and not user_role_names.intersection(ADMIN_ROLES):
+                    target = "/home"
+                elif next_url.startswith("/administration"):
+                    target = next_url
+                else:
+                    target = next_url
+            response = RedirectResponse(url=target, status_code=303)
             token = await create_token_response(user)
             response.set_cookie(key="access_token", value=token.access_token, httponly=True, max_age=7200)
             return response
     except Exception:
         pass
-    return templates.TemplateResponse("shop/login.html", {"request": request, "error": "نام کاربری یا رمز عبور اشتباه است"})
+    return templates.TemplateResponse("shop/login.html", {"request": request, "error": "نام کاربری یا رمز عبور اشتباه است", "next": next_url})
 
 
 @router.get("/auth/register", response_class=HTMLResponse)

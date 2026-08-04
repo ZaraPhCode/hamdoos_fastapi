@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% block title %}جزئیات محصولات اطلاع داده شده{% endblock %}
+{% block header %}جزئیات{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">محصولات اطلاع داده شده</h1>
+        <p class="text-sm text-gray-500 mt-0.5">جزئیات</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow">
+    <div class="p-6">
+        <dl class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <dt class="text-gray-500 mb-1">محصول</dt>
+                <dd class="font-medium">{{ item.product_name }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500 mb-1">تنوع</dt>
+                <dd class="font-medium">{{ item.variety_values }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500 mb-1">ایجاد شده توسط کاربر</dt>
+                <dd class="font-medium">{{ item.created_by }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500 mb-1">تاریخ ایجاد</dt>
+                <dd class="font-medium" dir="ltr">{{ item.insert_date }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500 mb-1">تاریخ پاسخ پیامک</dt>
+                <dd class="font-medium" dir="ltr">{{ item.sms_response_date }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500 mb-1">تاریخ پاسخ ایمیل</dt>
+                <dd class="font-medium" dir="ltr">{{ item.email_response_date }}</dd>
+            </div>
+        </dl>
+    </div>
+    <div class="px-6 py-4 border-t flex gap-2">
+        <a href="/administration/logs/{{ record_id }}" class="btn-secondary"><i class="fas fa-history ml-1"></i> سوابق</a>
+        <a href="/administration/notified-products" class="btn-secondary"><i class="fas fa-arrow-right ml-1"></i> بازگشت به لیست</a>
+    </div>
+</div>
+{% endblock %}

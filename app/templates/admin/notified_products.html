@@ -1,0 +1,119 @@
+{% extends "admin/base.html" %}
+{% block title %}محصولات اطلاع داده شده{% endblock %}
+{% block header %}محصولات اطلاع داده شده{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">محصولات اطلاع داده شده</h1>
+        <p class="text-sm text-gray-500 mt-0.5">لیست درخواست‌های اطلاع‌رسانی موجودی مشتریان ({{ total or 0 }} مورد)</p>
+    </div>
+</div>
+
+{% if request.query_params.get('msg') == 'sms_sent' %}
+<div class="mb-4 px-4 py-3 rounded-lg bg-green-100 text-green-800">پیامک‌ها با موفقیت ارسال شد.</div>
+{% elif request.query_params.get('msg') == 'email_sent' %}
+<div class="mb-4 px-4 py-3 rounded-lg bg-green-100 text-green-800">ایمیل‌ها با موفقیت ارسال شد.</div>
+{% elif request.query_params.get('msg') == 'error' %}
+<div class="mb-4 px-4 py-3 rounded-lg bg-red-100 text-red-800">خطا در ارسال پیام. دوباره تلاش کنید.</div>
+{% endif %}
+
+<form method="GET" action="/administration/notified-products" class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="flex flex-wrap items-end gap-3">
+        <div class="flex-1 min-w-[200px]">
+            <label class="form-label" for="notify-type">نوع</label>
+            <select id="notify-type" name="notify_type" class="form-input">
+                <option value="">انتخاب</option>
+                <option value="SmsNotification" {{ 'selected' if notify_type == 'SmsNotification' else '' }}>اطلاع‌رسانی پیامکی</option>
+                <option value="EmailNotification" {{ 'selected' if notify_type == 'EmailNotification' else '' }}>اطلاع‌رسانی ایمیلی</option>
+            </select>
+        </div>
+        <div class="flex-1 min-w-[200px]">
+            <label class="form-label" for="arrange">مرتب‌سازی بر اساس</label>
+            <select id="arrange" name="arrange" class="form-input">
+                {% set arrange_map = {'InsertDate': 'تاریخ ایجاد', 'SmsResponseDate': 'تاریخ پاسخ پیامک', 'EmailResponseDate': 'تاریخ پاسخ ایمیل', 'Product': 'محصول', 'SupplyDate': 'تاریخ تامین موجودی', 'UserName': 'ایجاد شده توسط کاربر'} %}
+                {% for key, name in arrange_map.items() %}
+                <option value="{{ key }}" {{ 'selected' if arrange == key else '' }}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="submit" class="btn-primary whitespace-nowrap"><i class="fas fa-search ml-1"></i> جستجو</button>
+            <a href="/administration/notified-products" class="btn-secondary whitespace-nowrap"><i class="fas fa-times ml-1"></i> حذف فیلتر</a>
+        </div>
+    </div>
+</form>
+
+<form method="POST" id="notify-form" action="/administration/notified-products/send-sms">
+    <div class="flex gap-2 mb-4">
+        <input type="hidden" name="notify_ids" id="selected-ids">
+        <button type="button" onclick="sendAction('sms')" class="btn-primary whitespace-nowrap"><i class="fas fa-sms ml-1"></i> ارسال پیامک</button>
+        <button type="button" onclick="sendAction('email')" class="btn-primary whitespace-nowrap"><i class="fas fa-envelope ml-1"></i> ارسال ایمیل</button>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-5 overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-500 border-b">
+                        <th class="text-right py-3 px-2 w-8"><input type="checkbox" id="select-all" title="انتخاب همه"></th>
+                        <th class="text-right py-3 px-2">تاریخ ایجاد</th>
+                        <th class="text-right py-3 px-2">تاریخ پاسخ پیامک</th>
+                        <th class="text-right py-3 px-2">تاریخ پاسخ ایمیل</th>
+                        <th class="text-right py-3 px-2">محصول</th>
+                        <th class="text-right py-3 px-2">تاریخ تامین موجودی</th>
+                        <th class="text-right py-3 px-2">ایجاد شده توسط کاربر</th>
+                        <th class="text-center py-3 px-2">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for it in items %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-2 text-center">
+                            <input type="checkbox" class="row-check" value="{{ it.id }}" title="انتخاب">
+                        </td>
+                        <td class="py-3 px-2 text-gray-600" dir="ltr">{{ it.insert_date }}</td>
+                        <td class="py-3 px-2 text-gray-600" dir="ltr">{{ it.sms_response_date }}</td>
+                        <td class="py-3 px-2 text-gray-600" dir="ltr">{{ it.email_response_date }}</td>
+                        <td class="py-3 px-2 font-medium">{{ it.product_name }}</td>
+                        <td class="py-3 px-2 text-gray-600" dir="ltr">{{ it.supply_date }}</td>
+                        <td class="py-3 px-2">{{ it.created_by }}</td>
+                        <td class="py-3 px-2 text-center whitespace-nowrap">
+                            <a href="/administration/notified-products/{{ it.id }}/details" class="text-indigo-600 hover:underline" title="جزئیات"><i class="fas fa-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center py-8 text-gray-400">موردی یافت نشد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_pages > 1 %}
+        <div class="px-5 py-4 border-t flex items-center justify-between">
+            <span class="text-sm text-gray-500">صفحه {{ page }} از {{ total_pages }}</span>
+            <div class="flex gap-2">
+                {% if page > 1 %}
+                <a href="?notify_type={{ notify_type or '' }}&arrange={{ arrange }}&desc={{ 'false' if desc else 'true' }}&page={{ page - 1 }}&page_size={{ page_size }}" class="btn-secondary">قبلی</a>
+                {% endif %}
+                {% if page < total_pages %}
+                <a href="?notify_type={{ notify_type or '' }}&arrange={{ arrange }}&desc={{ 'false' if desc else 'true' }}&page={{ page + 1 }}&page_size={{ page_size }}" class="btn-secondary">بعدی</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+<script>
+document.getElementById('select-all').addEventListener('change', function () {
+    document.querySelectorAll('.row-check').forEach(function (cb) { cb.checked = this.checked; }.bind(this));
+});
+function sendAction(kind) {
+    var ids = Array.from(document.querySelectorAll('.row-check:checked')).map(function (cb) { return cb.value; });
+    if (ids.length === 0) { alert('حداقل یک مورد را انتخاب کنید.'); return; }
+    var form = document.getElementById('notify-form');
+    document.getElementById('selected-ids').value = ids.join(',');
+    form.action = kind === 'sms' ? '/administration/notified-products/send-sms' : '/administration/notified-products/send-email';
+    form.submit();
+}
+</script>
+{% endblock %}
