@@ -457,7 +457,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for ds in product.menu_datasheets %}
+                        {% for ds in product.menu_datasheets if not ds.is_removed %}
                         <tr class="border-b hover:bg-gray-50 transition-colors">
                             <td class="py-3 px-2 text-center text-gray-500">{{ loop.index }}</td>
                             <td class="py-3 px-2">
@@ -607,7 +607,13 @@
             <button type="button" onclick="closeModal('datasheet-modal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
         </div>
         <form method="POST" action="/administration/products/{{ product.id }}/datasheets/new" class="space-y-4">
-            <div><label class="form-label">نوع</label><input type="text" name="type" class="form-input" placeholder="مثلا: Datasheet / Manual"></div>
+            <div><label class="form-label">نوع</label>
+                <select name="type" class="form-input">
+                    <option value="Datasheet">دیتاشیت</option>
+                    <option value="UserManual">راهنمای کاربر</option>
+                    <option value="QuickStart">راهنمای شروع سریع</option>
+                </select>
+            </div>
             <div><label class="form-label">آدرس فایل</label><input type="text" name="file_url" class="form-input" dir="ltr" placeholder="/Media/..."></div>
             <div class="flex items-center gap-3 justify-end pt-2">
                 <button type="button" onclick="closeModal('datasheet-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
@@ -653,20 +659,8 @@
         <form method="POST" action="/administration/products/{{ product.id }}/technical-values/set" class="space-y-4">
             <input type="hidden" name="technical_feature_id" id="tfv-feature-id">
             <input type="hidden" name="table_product_id" id="tfv-table-id">
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div><label class="form-label">D Value</label><input type="text" name="d_value" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Unit</label><input type="text" name="unit" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">S Value</label><input type="text" name="s_value" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Min Value</label><input type="text" name="min_value" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Min Unit</label><input type="text" name="min_unit" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Max Value</label><input type="text" name="max_value" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Max Unit</label><input type="text" name="max_unit" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">X Value</label><input type="text" name="x_value" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">X Unit</label><input type="text" name="x_unit" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Y Value</label><input type="text" name="y_value" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Y Unit</label><input type="text" name="y_unit" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Z Value</label><input type="text" name="z_value" class="form-input" dir="ltr"></div>
-                <div><label class="form-label">Z Unit</label><input type="text" name="z_unit" class="form-input" dir="ltr"></div>
+            <p id="tfv-fa-name" class="text-sm text-teal-600 font-bold mb-2"></p>
+            <div id="tfv-fields" class="grid grid-cols-2 md:grid-cols-3 gap-4">
             </div>
             <div class="flex items-center gap-3 justify-end pt-2">
                 <button type="button" onclick="closeModal('tfv-modal')" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
@@ -701,7 +695,46 @@ function setValue(general) {
     }
     $('#tfv-feature-id').val(featureId);
     $('#tfv-table-id').val(tableId);
-    openModal('tfv-modal');
+    // Fetch feature config and build dynamic form
+    $.getJSON('/administration/technical-features/' + featureId + '/config', function (data) {
+        $('#tfv-fa-name').text(data.fa_name);
+        var $container = $('#tfv-fields');
+        $container.empty();
+        $.each(data.fields, function (i, f) {
+            var $wrap = $('<div>');
+            var $label = $('<label>').addClass('form-label').text(f.label);
+            $wrap.append($label);
+            // Map frontend field names to backend form field names
+            var nameMap = {
+                'd_value': 'd_value', 'unit': 'unit', 's_value': 's_value',
+                'min_value': 'min_value', 'min_unit': 'min_unit',
+                'max_value': 'max_value', 'max_unit': 'max_unit',
+                'x_value': 'x_value', 'x_unit': 'x_unit',
+                'y_value': 'y_value', 'y_unit': 'y_unit',
+                'z_value': 'z_value', 'z_unit': 'z_unit',
+                'EValue': 'technical_feature_enum_id',
+                'EValue1': 'technical_feature_enum1_id',
+                'BValue': 'b_value'
+            };
+            var fieldName = nameMap[f.name] || f.name;
+            if (f.type === 'select') {
+                var $sel = $('<select>').attr('name', fieldName).addClass('form-input');
+                $sel.append($('<option>').val('').text('انتخاب کنید'));
+                $.each(f.options, function (j, opt) {
+                    $sel.append($('<option>').val(opt.id).text(opt.text));
+                });
+                $wrap.append($sel);
+            } else {
+                var $input = $('<input>').attr('type', f.type).attr('name', fieldName).addClass('form-input');
+                if (f.type === 'number') $input.attr('dir', 'ltr');
+                $wrap.append($input);
+            }
+            $container.append($wrap);
+        });
+        openModal('tfv-modal');
+    }).fail(function () {
+        alert('خطا در دریافت اطلاعات ویژگی');
+    });
 }
 
 function editTfv(valueId) {

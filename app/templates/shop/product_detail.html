@@ -1,169 +1,542 @@
 {% extends "shop/base.html" %}
 {% block title %}{{ product.name }} - آشا شاپ{% endblock %}
+{% block meta %}
+<meta name="availability" content="{% if product.stock_quantity > 0 %}instock{% else %}outofstock{% endif %}">
+<meta name="product_id" content="{{ product.part_number }}">
+<meta name="product_name" content="{{ product.name }}">
+<meta property="og:image" content="{{ product.large_image_url or product.medium_image_url }}">
+<meta name="product_price" content="{{ '{:,.0f}'.format(product.price_after_discount or product.price or 0) }}">
+<meta name="product_old_price" content="{{ '{:,.0f}'.format(product.price or 0) }}">
+{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page-product tax-display-enabled st-wrapper{% endblock %}
 {% block extra_head %}
-<meta name="description" content="{{ product.meta_description or product.short_description or '' }}">
-<meta property="og:title" content="{{ product.name }}">
-<meta property="og:description" content="{{ product.short_description or '' }}">
-<meta property="og:image" content="{{ product.large_image_url or product.medium_image_url or '' }}">
+<style>
+    .smallImage { height: 90px; }
+    .fCol { width: 13rem; }
+    .tableTfv {
+        direction: ltr !important; height: 48px; text-align: left;
+        padding: 0.25rem; background-color: #c4c0c0;
+    }
+    .inline { display: inline; }
+    .col.btn.filter {
+        background-color: cornsilk; border-width: thin; border-color: darkblue;
+        padding: 7px; margin-right: 7px;
+    }
+    .col.btn.selected { background-color: limegreen; }
+    .col.btn.disable { background-color: #5d7488; }
+    .out-of-stock { text-align: center; }
+    .stock-notification-div {
+        color: #333; padding-left: 10px; padding-right: 10px; position: relative;
+        width: 190px; border-radius: 10px; height: 50px; margin: 0 !important;
+    }
+    .stock-notification-text {
+        font-size: 0.9rem; display: block; text-align: left;
+        font-weight: bolder; padding: 0;
+    }
+    .stock-notification-icon {
+        background-color: #e0a800; padding: 0.8em 0.6em 1em 1.3em;
+        font-size: 1.5em; border-radius: 0 10px 10px 0;
+        position: absolute; top: 0; right: 0; height: 100%; width: 2.5em;
+    }
+    .stock-notification-div { background-color: #ffc107; }
+    .wishlist-button-add { font-size: 20px; box-shadow: none; height: 20px; }
+    .wishlist-button-add i { color: #e70036 !important; }
+</style>
 {% endblock %}
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <!-- Images -->
-    <div>
-        <div class="bg-white rounded-lg shadow-sm border p-4 mb-4">
-            <img id="main-image" src="{{ product.large_image_url or product.medium_image_url or '/static/img/placeholder.png' }}" alt="{{ product.name }}" class="w-full h-96 object-contain">
-        </div>
-        {% if product.images %}
-        <div class="flex gap-2 overflow-x-auto">
-            {% for img in product.images %}
-            <img src="{{ img.medium_image_url }}" class="w-16 h-16 object-contain border rounded cursor-pointer hover:border-indigo-500" onclick="document.getElementById('main-image').src='{{ img.large_image_url or img.medium_image_url }}'">
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Product Info -->
-    <div>
-        <nav class="text-sm text-gray-500 mb-4">
-            <a href="/" class="hover:text-indigo-600">خانه</a>
-            {% if product.category %}
-            <span class="mx-2">/</span>
-            <a href="/categories/{{ product.category.slug or product.category.id }}" class="hover:text-indigo-600">{{ product.category.title }}</a>
-            {% endif %}
-        </nav>
-
-        <h1 class="text-2xl font-bold mb-2">{{ product.name }}</h1>
-        {% if product.en_name %}<p class="text-gray-500 mb-4">{{ product.en_name }}</p>{% endif %}
-        {% if product.brand_name %}<p class="text-sm mb-4">برند: <a href="/brands/{{ product.brand_id }}" class="text-indigo-600">{{ product.brand_name }}</a></p>{% endif %}
-
-        {% if product.part_number %}<p class="text-sm text-gray-500 mb-2">کد محصول: {{ product.part_number }}</p>{% endif %}
-
-        <!-- Price -->
-        <div class="bg-gray-50 rounded-lg p-4 mb-6">
-            {% if product.price_after_discount and product.price_after_discount < product.price %}
-            <p class="text-gray-400 line-through text-lg">{{ "{:,.0f}".format(product.price) }} تومان</p>
-            <p class="text-2xl font-bold text-red-600">{{ "{:,.0f}".format(product.price_after_discount) }} <span class="text-sm">تومان</span></p>
-            {% if product.discount_percentage %}<span class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded">{{ product.discount_percentage }}% تخفیف</span>{% endif %}
-            {% else %}
-            <p class="text-2xl font-bold text-indigo-600">{{ "{:,.0f}".format(product.price or 0) }} <span class="text-sm">تومان</span></p>
-            {% endif %}
-        </div>
-
-        <!-- Stock -->
-        <div class="mb-4">
-            {% if product.stock_quantity > 0 %}
-            <span class="bg-green-100 text-green-700 px-3 py-1 rounded text-sm"><i class="fas fa-check ml-1"></i>موجود در انبار</span>
-            {% else %}
-            <span class="bg-red-100 text-red-700 px-3 py-1 rounded text-sm"><i class="fas fa-times ml-1"></i>ناموجود</span>
-            {% endif %}
-        </div>
-
-        <!-- Varieties -->
-        {% if product.varieties %}
-        <div class="mb-4">
-            <label class="block text-sm font-medium mb-2">تنوع محصول</label>
-            <select id="variety-select" class="w-full border rounded-lg px-3 py-2" onchange="updateVarietyPrice()">
-                {% for v in product.varieties %}
-                <option value="{{ v.id }}" data-price="{{ v.price or 0 }}" data-discount="{{ v.price_after_discount or v.price or 0 }}" data-stock="{{ v.stock_quantity }}">
-                    {{ v.part_number or 'تنوع ' + loop.index|string }}
-                    {% if v.product_varieties %}({% for pv in v.product_varieties %}{{ pv.category_option_name or '' }}: {{ pv.value or '' }}{% if not loop.last %}, {% endif %}{% endfor %}){% endif %}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        {% endif %}
-
-        <!-- Quantity & Add to Cart -->
-        <div class="flex items-center gap-4 mb-6">
-            <div class="flex items-center border rounded-lg">
-                <button onclick="changeQty(-1)" class="px-3 py-2 hover:bg-gray-100">−</button>
-                <input id="qty-input" type="number" value="1" min="1" max="{{ product.stock_quantity or 99 }}" class="w-12 text-center border-x py-2">
-                <button onclick="changeQty(1)" class="px-3 py-2 hover:bg-gray-100">+</button>
-            </div>
-            <button onclick="addToCart('{{ product.id }}')" class="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition font-medium">
-                <i class="fas fa-cart-plus ml-2"></i>افزودن به سبد خرید
-            </button>
-        </div>
-
-        <!-- Short Description -->
-        {% if product.short_description %}
-        <div class="border-t pt-4">
-            <h3 class="font-bold mb-2">توضیحات کوتاه</h3>
-            <p class="text-gray-600 text-sm leading-relaxed">{{ product.short_description }}</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Full Description -->
-{% if product.introduction %}
-<div class="mt-8 bg-white rounded-lg shadow-sm border p-6">
-    <h2 class="text-lg font-bold mb-4">توضیحات کامل</h2>
-    <div class="text-gray-600 leading-relaxed">{{ product.introduction }}</div>
-</div>
-{% endif %}
-
-<!-- Technical Features -->
-{% if product.technical_features %}
-<div class="mt-8 bg-white rounded-lg shadow-sm border p-6">
-    <h2 class="text-lg font-bold mb-4">مشخصات فنی</h2>
-    <table class="w-full text-sm">
-        {% for feature in product.technical_features %}
-        <tr class="border-b">
-            <td class="py-2 font-medium text-gray-700 w-1/3">{{ feature.fa_name or feature.name }}</td>
-            <td class="py-2 text-gray-600">
-                {% for val in feature.values %}
-                {{ val.s_value or val.e_value or val.d_value or '' }}{% if val.unit %} {{ val.unit }}{% endif %}{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-</div>
-{% endif %}
-
-<!-- Related Products -->
-{% if product.related_products %}
-<div class="mt-8">
-    <h2 class="text-lg font-bold mb-4">محصولات مرتبط</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {% for rp in product.related_products %}
-        <div class="bg-white rounded-lg shadow-sm border p-3">
-            <a href="/products/{{ rp.slug or rp.id }}">
-                <img src="{{ rp.medium_image_url or '/static/img/placeholder.png' }}" class="w-full h-32 object-contain mb-2">
-                <p class="text-sm line-clamp-2">{{ rp.name }}</p>
-                <p class="text-indigo-600 font-bold mt-1">{{ "{:,.0f}".format(rp.price or 0) }} <span class="text-xs">تومان</span></p>
-            </a>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
 <script>
-function changeQty(delta) {
-    const input = document.getElementById('qty-input');
-    let val = parseInt(input.value) + delta;
-    if (val < 1) val = 1;
-    if (val > {{ product.stock_quantity or 99 }}) val = {{ product.stock_quantity or 99 }};
-    input.value = val;
-}
-function updateVarietyPrice() {
-    const sel = document.getElementById('variety-select');
-    const opt = sel.options[sel.selectedIndex];
-    // Price display would update here
-}
-function addToCart(productId) {
-    const qty = document.getElementById('qty-input').value;
-    const varietyId = document.getElementById('variety-select')?.value || null;
-    fetch('/api/v1/cart/add', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({product_id: productId, quantity: parseInt(qty), variety_id: varietyId})
-    }).then(r => {
-        if (r.ok) { alert('به سبد خرید اضافه شد'); window.location.href='/cart'; }
-        else { alert('خطا در افزودن به سبد خرید'); }
-    });
-}
+    var body = $("body");
+    body.attr("id", "product");
+    body.addClass("lang-fa lang-rtl country-ir currency-irr layout-full-width page-product tax-display-enabled product-id-{{ product.id }} product-available-for-order st-wrapper");
+</script>
+
+{% if category_hierarchy %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="{{ 1 + (category_hierarchy|length) }}" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <img src="/static/ThemeLayout/iconsvg/icons8-home.svg" />
+                    <span itemprop="name">صفحه اصلی</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            {% for crumb in category_hierarchy %}
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/Shop/Category/Index/{{ crumb.en_title or crumb.slug }}">
+                    <span itemprop="name">{{ crumb.title }}</span>
+                </a>
+                <meta itemprop="position" content="{{ loop.index + 1 }}">
+            </li>
+            {% endfor %}
+            {% if product.category_title %}
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/Shop/Category/Index/{{ product.category_en_title or product.category_id }}">
+                    <span itemprop="name">{{ product.category_title }}</span>
+                </a>
+                <meta itemprop="position" content="{{ 1 + (category_hierarchy|length) }}">
+            </li>
+            {% endif %}
+        </ol>
+    </div>
+</nav>
+{% endif %}
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div id="center-column" class="center-column col-12">
+                <div class="center-wrapper">
+                    <section>
+                        <div class="main-product-details shadow-box md-bottom" id="mainProduct">
+                            <div class="row">
+                                {# ── Left Column: Images ── #}
+                                <div class="product-left col-12 col-md-5">
+                                    <section class="product-left-content">
+                                        <div class="images-container">
+                                            <div class="images-container-wrapper js-enable-zoom-image">
+                                                {% set first_img = product.images|first if product.images else None %}
+                                                <div class="product-cover sm-bottom">
+                                                    {% if not first_img %}
+                                                    <img src="https://placehold.co/455x455" class="img-fluid js-qv-product-cover js-main-zoom" alt="{{ product.short_description or product.name }}" data-zoom-image="https://placehold.co/455x455" width="455" height="455">
+                                                    {% else %}
+                                                    <img src="{{ first_img.medium_image_url }}" class="img-fluid js-qv-product-cover js-main-zoom" alt="{{ product.short_description or product.name }}" data-zoom-image="{{ first_img.large_image_url or first_img.medium_image_url }}" width="455" height="455">
+                                                    {% endif %}
+                                                    <div class="layer d-flex align-items-center justify-content-center">
+                                                        <span class="zoom-in js-mfp-button" style="border-radius: 5px"><i class="material-icons">zoom_out_map</i></span>
+                                                    </div>
+                                                </div>
+                                                {% if product.images|length > 1 %}
+                                                <div class="thumbs-list">
+                                                    <div class="flex-scrollbox-wrapper js-product-thumbs-scrollbox">
+                                                        <ul class="product-images" id="js-zoom-gallery">
+                                                            {% for img in product.images %}
+                                                            <li class="thumb-container">
+                                                                <a href="#" class="thumb js-thumb{% if loop.first %} selected{% endif %}" data-image="{{ img.medium_image_url }}" data-zoom-image="{{ img.large_image_url or img.medium_image_url }}" data-id-image="{{ img.id }}">
+                                                                    <img src="{{ img.small_image_url or img.medium_image_url }}" alt="{{ product.short_description or product.name }}" class="img-fluid smallImage" width="90" height="90">
+                                                                </a>
+                                                            </li>
+                                                            {% endfor %}
+                                                        </ul>
+                                                    </div>
+                                                    <div class="scroll-box-arrows scroll">
+                                                        <i class="material-icons left">chevron_left</i>
+                                                        <i class="material-icons right">chevron_right</i>
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <div class="thumbs-list d-none">
+                                                    <div class="flex-scrollbox-wrapper js-product-thumbs-scrollbox">
+                                                        <ul class="product-images" id="js-zoom-gallery">
+                                                            <li class="thumb-container">
+                                                                <a href="#" class="thumb js-thumb selected" data-image="{{ first_img.medium_image_url if first_img else '' }}" data-zoom-image="{{ first_img.large_image_url if first_img else '' }}" data-id-image="{{ first_img.id if first_img else '' }}">
+                                                                    <img src="{{ first_img.small_image_url or first_img.medium_image_url or 'https://placehold.co/90x90' }}" class="img-fluid" width="90" height="90">
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="scroll-box-arrows">
+                                                        <i class="material-icons left">chevron_left</i>
+                                                        <i class="material-icons right">chevron_right</i>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="product-flags"></div>
+                                    </section>
+                                </div>
+                                {# ── Right Column: Product Info ── #}
+                                <div class="product-right col-12 col-md-7">
+                                    <section class="product-right-content">
+                                        <h1 class="page-heading">{{ product.name }}</h1>
+                                        <div class="main-product-attributes">
+                                            <div class="product-attributes-item row">
+                                                <div class="col-xl-8 product-attributes">
+                                                    <div class="col-xl-6 product-attributes js-product-attributes-destination"></div>
+                                                    <div class="row">
+                                                        <div class="attribute-item product-reference col-lg-12 col-md-10 col-sm-12 col-xs-10">
+                                                            <label>شماره قطعه</label>&nbsp;
+                                                            <span>{{ product.part_number }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-xl-4 mt-2 mt-sm-0 additional-info">
+                                                    <div class="product-additional-info">
+                                                        <div class="d-flex justify-content-start comment-rate" itemtype="https://schema.org/AggregateRating" itemscope="">
+                                                            {# Comment & rating area placeholder #}
+                                                        </div>
+                                                        <div onclick="showShareButtons()" class="social-sharing-button" style="cursor: pointer; padding-top: 30px">
+                                                            <i class="fa fa-share-alt" aria-hidden="true"></i>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="favorite-button">
+                                                    <div class="wishlist-button" data-url="#" data-product-id="{{ product.id }}" data-product-attribute-id="0" data-is-logged="1" data-list-id="1" data-checked="true" data-is-product="true"></div>
+                                                </div>
+                                                <div class="product-availability-top js-product-availability-destination"></div>
+                                                <div class="product-out-of-stock"></div>
+                                            </div>
+                                            {% if product.short_description %}
+                                            <div class="product-page-description-short">
+                                                <div id="product-description-short" class="product-description-short typo">
+                                                    {{ product.short_description|safe }}
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                            <section class="product-discounts"></section>
+                                            <div class="product-information light-box-bg">
+                                                {% if product.variety_values %}
+                                                {% set counter = 0 %}
+                                                {% for vv in product.variety_values %}
+                                                <div class="row">
+                                                    <div class="col inline">
+                                                        <label>{{ vv.category_name }}</label>
+                                                    </div>&nbsp;&nbsp;
+                                                    {% for val in vv.values %}
+                                                    <div data-index="{{ loop.index0 }}" class="col btn filter">{{ val }}</div>
+                                                    {% endfor %}
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;
+                                                </div>
+                                                <br />
+                                                {% endfor %}
+                                                {% endif %}
+                                                <br />
+                                                <div class="product-actions">
+                                                    <form id="add-to-cart-or-refresh" method="post">
+                                                        <input type="hidden" name="product_id" value="{{ product.id }}" />
+                                                        <div class="product-information-items row">
+                                                            <div class="col-lg-6">
+                                                                <div class="product-quantity-touchspin">
+                                                                    <label class="form-control-label col-3" style="font-size: 15px">تعداد</label>
+                                                                    <div class="col-9">
+                                                                        <div class="qty">
+                                                                            <input style="font-size: 1.3rem" type="number" name="count" id="quantity_wanted" value="1" class="form-control" min="1" aria-label="تعداد" />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="product-variants"></div>
+                                                                <div class="product-minimal-quantity"></div>
+                                                            </div>
+                                                            <div class="js-product-countdown" data-specific-prices-to=""></div>
+                                                            <div class="col-lg-6 price-basket-column">
+                                                                <div class="product-prices haveInventory">
+                                                                    <div id="offers" itemscope="" itemtype="https://schema.org/Offer" class="product-prices-wrapper d-flex flex-wrap align-items-center justify-content-center">
+                                                                        {% set has_discount = product.discount_amount and product.discount_amount > 0 and product.price_after_discount and product.price_after_discount < product.price %}
+                                                                        {% if has_discount %}
+                                                                        <span class="prc regular-price">{{ '{:,.0f}'.format(product.price) }} ریال</span>
+                                                                        <span class="prc discount-percentage">&lrm;−{{ product.discount_percentage }}%</span>
+                                                                        <span class="prc price product-price"><span class="current-price">{{ '{:,.0f}'.format(product.price_after_discount) }} ریال</span></span>
+                                                                        {% else %}
+                                                                        <span class="prc price product-price"><span class="current-price">{{ '{:,.0f}'.format(product.price) }} ریال</span></span>
+                                                                        {% endif %}
+                                                                    </div>
+                                                                    <div class="tax-shipping-delivery-label"></div>
+                                                                </div>
+                                                                <div class="product-add-to-cart haveInventory">
+                                                                    <div class="product-quantity">
+                                                                        <div class="product-add-to-cart-button mb-2">
+                                                                            <button class="btn add-to-cart add-btn" data-button-action="add-to-cart" type="submit">
+                                                                                <span class="shopping-icon"><i class="material-icons shopping-cart">shopping_cart</i></span>
+                                                                                <span class="shopping-text">افزودن به سبد خرید</span>
+                                                                                <span class="js-waitting-add-to-cart page-loading-overlay add-to-cart-loading">
+                                                                                    <span class="page-loading-backdrop d-flex align-items-center justify-content-center">
+                                                                                        <span class="uil-spin-css"><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span></span>
+                                                                                    </span>
+                                                                                </span>
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <span class="out-of-stock d-none NoInventory">اتمام موجودی</span>
+                                                                <div id="stock-notification-div" class="NoInventory d-none">
+                                                                    <button type="button" onclick="notifyMe();" class="stock-notification-div btn">
+                                                                        <span class="stock-notification-text">موجود شد به من خبر بده</span>
+                                                                        <span class="stock-notification-icon"><i class="fa fa-bell"></i></span>
+                                                                    </button>
+                                                                </div>
+                                                                <p id="stock-notification-message" class="text-success NoInventory d-none"></p>
+                                                                <div class="modal fade NoInventory d-none" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                                                                    <div class="modal-dialog" role="document">
+                                                                        <div class="modal-content">
+                                                                            <div class="modal-header">
+                                                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                                                <h4 class="modal-title" id="myModalLabel">اطلاع از موجودی</h4>
+                                                                            </div>
+                                                                            <div class="modal-body">
+                                                                                <p style="font-size: 15px;">باید برای اطلاع از موجودی <a style="color: red;" href="#">وارد حساب کاربری</a> خود شوید</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <script>
+                                                                    stockNotificationNotifyMeUrl = '/Shop/Product/NotifyProduct';
+                                                                    stockNotificationIdProduct = '';
+                                                                    static_token = '0';
+                                                                </script>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row"></div>
+                                        <div class="reassurance-hook"></div>
+                                    </section>
+                                </div>
+                            </div>
+                            <div class="js-product-refresh-pending-query page-loading-overlay main-product-details-loading">
+                                <div class="page-loading-backdrop d-flex align-items-center justify-content-center">
+                                    <span class="uil-spin-css"><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# ── Description & Technical Specs ── #}
+                        <div class="main-product-bottom md-bottom">
+                            <div class="product-tabs light-box-bg md-bottom">
+                                <ul class="nav nav-tabs flex-lg-nowrap desc-block">
+                                    <li class="nav-item product-description-nav-item">
+                                        <a class="nav-link active" data-toggle="tab" href="#collapseDescription">
+                                            <span>توضیحات</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                                <div class="tab-content">
+                                    <div id="collapseDescription" class="product-description-block tab-pane fade show active">
+                                        <div class="panel-content">
+                                            <div class="product-description typo">
+                                                {% if product.introduction %}
+                                                <p><span style="color:#00a693;"><strong>معرفی</strong></span></p>
+                                                <div style="text-align:justify;">{{ product.introduction|safe }}</div>
+                                                <p></p>
+                                                {% endif %}
+
+                                                {% if product.specifications %}
+                                                <p><span style="color:#00a693;"><strong>مشخصات</strong></span></p>
+                                                <ul>
+                                                    {% for spec in product.specifications %}
+                                                    <li style="text-align:justify;">{{ spec.fa_name or spec.name }} : <span dir="ltr">{{ spec.value }}</span></li>
+                                                    {% endfor %}
+                                                </ul>
+                                                {% endif %}
+
+                                                {% if product.menu_datasheets %}
+                                                <p style="text-align:center;"><img style="margin-left:auto;margin-right:auto;" title="" src="/static/ThemeLayout/img/dividerLine.jpg" alt="" width="80%"></p>
+                                                <table>
+                                                    <tbody>
+                                                        <tr>
+                                                            {% for ds in product.menu_datasheets %}
+                                                            <td>
+                                                                <a href="/products/{{ product.id }}/datasheet/{{ ds.id }}" target="_blank" rel="noreferrer noopener">
+                                                                    {% if ds.type == 'Datasheet' %}
+                                                                    <img src="/static/ThemeLayout/img/datasheet.png" alt="دیتاشیت" width="180" height="76">
+                                                                    {% elif ds.type == 'QuickStart' %}
+                                                                    <img src="/static/ThemeLayout/img/quickStart.png" alt="راهنمای شروع سریع" width="180" height="76">
+                                                                    {% elif ds.type == 'UserManual' %}
+                                                                    <img src="/static/ThemeLayout/img/software.png" alt="راهنمای کاربر" width="180" height="76">
+                                                                    {% else %}
+                                                                    <img src="{{ ds.file_url }}" alt="" width="180" height="76">
+                                                                    {% endif %}
+                                                                </a>
+                                                            </td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                                <p style="text-align:center;"><img title="" src="/static/ThemeLayout/img/dividerLine.jpg" alt="" width="80%" style="margin-left:auto;margin-right:auto;"></p>
+                                                {% endif %}
+
+                                                {% for tt in product.technical_tables %}
+                                                {% if tt.column_values or tt.linear_values %}
+                                                <table dir="ltr" style="margin-left:auto;margin-right:auto;" border="1" cellspacing="0" cellpadding="0">
+                                                    <tbody>
+                                                        <tr style="height:65.0333px;">
+                                                            <th class="tableTfv" colspan="4">
+                                                                <h3 class="h3_basic01" style="text-align:center;"><span style="color:#00a693;">{{ tt.en_title }}&nbsp;{{ product.en_name }}</span></h3>
+                                                            </th>
+                                                        </tr>
+                                                        <tr style="height:48px;">
+                                                            <th class="tableTfv" style="background-color:#d4d4d4;text-align:left;height:48px;">Parameter</th>
+                                                            {% for head in tt.headers %}
+                                                            <th class="tableTfv fCol" style="background-color:#d4d4d4;text-align:left;height:48px;">{{ head }}</th>
+                                                            {% endfor %}
+                                                        </tr>
+                                                        {% for cv in tt.column_values %}
+                                                        <tr style="height:48px;">
+                                                            <th class="tableTfv" style="background-color:#d4d4d4;text-align:left;height:48px;">{{ cv.name }}</th>
+                                                            {% for cell in cv.cells %}
+                                                            <td class="tableTfv" dir="ltr">{{ cell }}</td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                        {% endfor %}
+                                                        {% if tt.linear_values %}
+                                                        <tr style="height:48px;">
+                                                            <th class="tableTfv fCol" style="background-color:#d4d4d4;text-align:left;height:48px;">Feature</th>
+                                                            <th class="tableTfv fCol center" colspan="{{ tt.columns }}" style="background-color:#d4d4d4;text-align:center;height:48px;">Description</th>
+                                                        </tr>
+                                                        {% for lv in tt.linear_values %}
+                                                        <tr style="height:48px;">
+                                                            <th class="tableTfv" style="background-color:#d4d4d4;text-align:left;height:48px;">{{ lv.name }}</th>
+                                                            <td colspan="{{ lv.colspan }}" class="tableTfv" dir="ltr">{{ lv.value }}</td>
+                                                            {% for _ in range(lv.extra_cells) %}
+                                                            <td colspan="{{ lv.colspan }}" class="tableTfv" dir="ltr"></td>
+                                                            {% endfor %}
+                                                        </tr>
+                                                        {% endfor %}
+                                                        {% endif %}
+                                                    </tbody>
+                                                </table>
+                                                {% endif %}
+                                                <br />
+                                                {% endfor %}
+                                                <p></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# ── Related Products ── #}
+                            {% if related_products %}
+                            <section class="category-products md-bottom box-bg">
+                                <div class="block clearfix">
+                                    <div class="title-block">
+                                        <span>{{ related_products|length }} محصولات مرتبط</span>
+                                    </div>
+                                    <div class="product-list">
+                                        <div class="product-list-wrapper clearfix grid simple columns-6 columns-slick js-category-products-slider">
+                                            {% for rp in related_products %}
+                                            <article class="product-miniature slick-slide" data-id-product="0" data-product-id-category="0" tabindex="-1" role="option">
+                                                <a href="/products/{{ rp.slug or rp.part_number or rp.id }}" tabindex="0">
+                                                    <div class="product-container product-style pg-onp">
+                                                        <div class="first-block">
+                                                            <div class="product-thumbnail">
+                                                                <span class="product-cover-link">
+                                                                    <img src="{{ rp.medium_image_url or 'https://placehold.co/278x278' }}" alt="{{ rp.name }}" class="img-fluid" title="{{ rp.name }}" width="278" height="278">
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <p class="product-name" title="{{ rp.name }}"><span>{{ rp.name[:60] }}{% if rp.name|length > 60 %}...{% endif %}</span></p>
+                                                        <div class="product-price-and-shipping d-flex flex-wrap justify-content-center align-items-center">
+                                                            <span class="price product-price">{{ '{:,.0f}'.format(rp.price_after_discount or rp.price or 0) }} &lrm;ریال</span>
+                                                            {% if rp.discount_amount and rp.discount_amount > 0 and rp.price_after_discount and rp.price_after_discount < rp.price %}
+                                                            <span class="regular-price">{{ '{:,.0f}'.format(rp.price) }} &lrm;ریال</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </article>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                            {% endif %}
+
+                            {# ── Similar Products ── #}
+                            {% if similar_products %}
+                            <section class="category-products md-bottom box-bg">
+                                <div class="block clearfix">
+                                    <div class="title-block">
+                                        <span>{{ similar_products|length }} محصولات مشابه</span>
+                                    </div>
+                                    <div class="product-list">
+                                        <div class="product-list-wrapper clearfix grid simple columns-6 columns-slick js-category-products-slider">
+                                            {% for sp in similar_products %}
+                                            <article class="product-miniature slick-slide" data-id-product="0" data-product-id-category="0" tabindex="-1" role="option">
+                                                <a href="/products/{{ sp.slug or sp.part_number or sp.id }}" tabindex="-1">
+                                                    <div class="product-container product-style pg-onp">
+                                                        <div class="first-block">
+                                                            <div class="product-thumbnail">
+                                                                <span class="product-cover-link">
+                                                                    <img src="{{ sp.medium_image_url or 'https://placehold.co/278x278' }}" alt="{{ sp.name }}" class="img-fluid" title="{{ sp.name }}" width="278" height="278">
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <p class="product-name" title="{{ sp.name }}"><span>{{ sp.name[:60] }}{% if sp.name|length > 60 %}...{% endif %}</span></p>
+                                                        <div class="product-price-and-shipping d-flex flex-wrap justify-content-center align-items-center">
+                                                            <span class="price product-price">{{ '{:,.0f}'.format(sp.price_after_discount or sp.price or 0) }} &lrm;ریال</span>
+                                                            {% if sp.discount_amount and sp.discount_amount > 0 and sp.price_after_discount and sp.price_after_discount < sp.price %}
+                                                            <span class="regular-price">{{ '{:,.0f}'.format(sp.price) }} &lrm;ریال</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </article>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                            {% endif %}
+
+                            {# ── Share Modal ── #}
+                            <div id="social-sharing" class="modal fade" role="dialog">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content" style="width: 400px;">
+                                        <div class="modal-header">
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                            <label style="margin: 0">اشتراک‌گذاری</label>
+                                        </div>
+                                        <div class="row modal-body" style="display: flex">
+                                            <div style="display: flex" class="xs-bottom">
+                                                <i style="margin: 5px" class="fa fa-caret-left" aria-hidden="true"></i>
+                                                <p>این محصول را با دوستان خود به اشتراک بگذارید</p>
+                                            </div>
+                                            {% set share_url = request.url %}
+                                            <input id="clipboard" value="{{ share_url }}" type="hidden">
+                                            <div class="socials-icons">
+                                                <a href="https://twitter.com/intent/tweet?url={{ share_url }}" title="twitter" target="_blank">
+                                                    <div class="twitter"></div>
+                                                </a>
+                                                <a href="https://wa.me/?text={{ share_url }}" title="واتساپ" target="_blank">
+                                                    <div class="whatsapp"></div>
+                                                </a>
+                                                <a href="https://telegram.me/share/url?url={{ share_url }}" title="تلگرام" target="_blank">
+                                                    <div class="telegram"></div>
+                                                </a>
+                                                <button type="button" id="copy-link-button" class="btn copy-link-button" onclick="copyLink()">
+                                                    <i class="fa fa-link" aria-hidden="true"></i>
+                                                    <span>کپی لینک</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ul id="js_mfp_gallery" class="d-none" data-text-close="بستن" data-text-prev="قبلی" data-text-next="بعدی">
+                                {% for img in product.images %}
+                                <li class="js_mfp_gallery_item" data-id-image="{{ img.id }}" data-mfp-src="{{ img.large_image_url or img.medium_image_url }}"></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script type="text/javascript" src="/static/ThemeLayout/js/jquery.livequery.min.js"></script>
+<script type="text/javascript" src="/static/ThemeLayout/js/jquery.timeago.min.js"></script>
+<script type="text/javascript" src="/static/ThemeLayout/js/product_footer.min.js"></script>
+<script type="text/javascript" src="/static/ThemeLayout/js/mailalerts.js"></script>
+<script type="text/javascript" src="/static/ThemeLayout/js/product.bundle.js"></script>
+<script>
+    function showShareButtons() {
+        $('#social-sharing').modal('show');
+    }
+    function copyLink() {
+        var copiedLink = $("#clipboard").val();
+        navigator.clipboard.writeText(copiedLink);
+        $("#copy-link-button span").html("کپی شد");
+    }
 </script>
 {% endblock %}

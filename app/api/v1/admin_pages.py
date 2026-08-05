@@ -6,7 +6,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -339,6 +339,17 @@ async def admin_product_edit_submit(
     return RedirectResponse(url="/administration/products", status_code=303)
 
 
+def _normalize_media_url(url):
+    if not url:
+        return url
+    if url.startswith(("http://", "https://", "//", "/static/", "/media/")):
+        return url
+    normalized = url.replace("\\", "/").lstrip("/")
+    if normalized.lower().startswith("media/"):
+        normalized = normalized[len("media/"):]
+    return "/media/" + normalized
+
+
 @router.get("/products/{product_id}/details", response_class=HTMLResponse)
 async def admin_product_details(
     request: Request,
@@ -431,6 +442,14 @@ async def admin_product_details(
             "rows": rows,
         })
 
+    def _normalize_img(img):
+        from copy import copy
+        c = copy(img)
+        c.medium_image_url = _normalize_media_url(img.medium_image_url)
+        c.small_image_url = _normalize_media_url(img.small_image_url)
+        c.large_image_url = _normalize_media_url(img.large_image_url)
+        return c
+
     return templates.TemplateResponse("admin/product_details.html", {
         "request": request, "current_user": current_user,
         "product": product,
@@ -442,7 +461,7 @@ async def admin_product_details(
         "insert_date_fa": _to_fa_datetime(product.insert_date),
         "update_date_fa": _to_fa_datetime(product.update_date),
         "purchase_date_fa": _to_fa_date(product.purchase_date),
-        "product_images": sorted(product.product_images, key=lambda i: i.picture_order or 0),
+        "product_images": [_normalize_img(i) for i in sorted(product.product_images, key=lambda x: x.picture_order or 0)],
     })
 
 
@@ -475,6 +494,12 @@ async def admin_product_image_create(
         update_date=datetime.now(timezone.utc),
     )
     db.add(image)
+    # Also update the product-level thumbnails so product cards everywhere show the image
+    url = image.medium_image_url
+    if url and (product.medium_image_url is None or "placehold" in str(product.medium_image_url).lower()):
+        product.medium_image_url = url
+        product.large_image_url = image.large_image_url or url
+        product.feature_image_url = url
     db.add(Log(
         record_id=image.id, table_name="product_images",
         description=f"افزودن عکس به محصول: {product.name}",
@@ -654,9 +679,12 @@ async def admin_product_technical_value_set(
         if val is None or val == "":
             return None
         try:
-            return str(float(val))
+            return float(val)
         except Exception:
             return None
+
+    enum_id = form.get("technical_feature_enum_id")
+    enum1_id = form.get("technical_feature_enum1_id")
 
     payload = dict(
         technical_feature_id=uuid.UUID(feature_id),
@@ -668,13 +696,15 @@ async def admin_product_technical_value_set(
         d_value=_num("d_value"),
         unit=form.get("unit") or None,
         s_value=form.get("s_value") or None,
-        b_value=form.get("b_value") in ("1", "true", "on"),
+        b_value=True if form.get("b_value") == "True" else False if form.get("b_value") == "False" else None,
         x_value=_num("x_value"),
         x_unit=form.get("x_unit") or None,
         y_value=_num("y_value"),
         y_unit=form.get("y_unit") or None,
         z_value=_num("z_value"),
         z_unit=form.get("z_unit") or None,
+        technical_feature_enum_id=uuid.UUID(enum_id) if enum_id else None,
+        technical_feature_enum1_id=uuid.UUID(enum1_id) if enum1_id else None,
         general_feature=form.get("general_feature") in ("1", "true", "on"),
         created_by_user_id=current_user.id,
     )
@@ -7528,3 +7558,81 @@ async def admin_user_role_delete(
         raise HTTPException(status_code=404, detail="User role not found")
     await identity_service.soft_delete_user_role(db, ur, current_user.id)
     return RedirectResponse(url="/administration/user-roles", status_code=303)
+
+
+# ── Technical Feature Config (for dynamic modal form) ──
+
+FIELD_CONFIG = [
+    ("d_value", "D Value", "number"),
+    ("unit", "Unit", "text"),
+    ("s_value", "S Value", "text"),
+    ("min_value", "Min Value", "number"),
+    ("min_unit", "Min Unit", "text"),
+    ("max_value", "Max Value", "number"),
+    ("max_unit", "Max Unit", "text"),
+    ("x_value", "X Value", "number"),
+    ("x_unit", "X Unit", "text"),
+    ("y_value", "Y Value", "number"),
+    ("y_unit", "Y Unit", "text"),
+    ("z_value", "Z Value", "number"),
+    ("z_unit", "Z Unit", "text"),
+]
+
+@router.get("/technical-features/{feature_id}/config")
+async def admin_technical_feature_config(
+    feature_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        fid = uuid.UUID(feature_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid feature ID")
+
+    stmt = (
+        select(TechnicalFeature)
+        .options(
+            selectinload(TechnicalFeature.technical_feature_enums),
+            selectinload(TechnicalFeature.technical_feature_enums1),
+        )
+        .where(TechnicalFeature.id == fid)
+    )
+    result = await db.execute(stmt)
+    tf = result.unique().scalar_one_or_none()
+    if not tf:
+        raise HTTPException(status_code=404, detail="Technical feature not found")
+
+    fields = []
+    for prop_name, label, input_type in FIELD_CONFIG:
+        val = getattr(tf, prop_name, None)
+        if val:
+            field = {"name": prop_name, "label": label, "type": input_type}
+            fields.append(field)
+    # Handle EValue and EValue1 (the bool props are `e_value`, `e_value1`)
+    if tf.e_value:
+        fields.append({
+            "name": "EValue",
+            "label": "E Value",
+            "type": "select",
+            "options": [{"id": str(e.id), "text": e.persian_name} for e in tf.technical_feature_enums if not e.is_removed],
+        })
+    if tf.e_value1:
+        fields.append({
+            "name": "EValue1",
+            "label": "E Value1",
+            "type": "select",
+            "options": [{"id": str(e.id), "text": e.persian_name} for e in tf.technical_feature_enums1 if not e.is_removed],
+        })
+    # BValue
+    if tf.b_value:
+        fields.append({
+            "name": "BValue",
+            "label": "B Value",
+            "type": "select",
+            "options": [{"id": "", "text": "انتخاب"}, {"id": "True", "text": "True"}, {"id": "False", "text": "False"}],
+        })
+
+    return JSONResponse({
+        "fa_name": tf.fa_name,
+        "fields": fields,
+    })

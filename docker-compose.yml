@@ -35,6 +35,7 @@ services:
     volumes:
       - ./app:/app/app/
       - ./alembic:/app/alembic
+      - ../asha-shop/ASHA.Shop.Presentation/wwwroot/Media:/app/media
 
 volumes:
   postgres_data:

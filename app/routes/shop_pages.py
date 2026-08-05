@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import math
+import os
 import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.core.dependencies import get_current_active_user, get_optional_user_from_cookie
 from app.models.identity import User, UserRole
-from app.models.product import Product, Category, Brand
+from app.models.product import Product, Category, Brand, MenuDatasheet
 from app.models.order import OrderModel as Order
 from app.models.common import Address, BankInfo
 from app.models.customer_content import Comment
@@ -28,6 +29,22 @@ templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(tags=["Shop Pages"])
 
 NET_ORDER_OPTIONS = ("Sale", "Id", "AlphabetAsc", "AlphabetDesc", "Cheapest", "Expensive")
+
+
+async def _get_category_hierarchy(db: AsyncSession, cat: Category) -> list[dict]:
+    """Build breadcrumb hierarchy from root to current category (exclusive)."""
+    hierarchy = []
+    current = cat
+    seen = set()
+    while current and current.parent_category_id and current.parent_category_id not in seen:
+        seen.add(current.parent_category_id)
+        parent = await product_service.get_category_by_id(db, current.parent_category_id)
+        if parent:
+            hierarchy.insert(0, {"title": parent.title, "en_title": parent.en_title, "slug": parent.slug})
+            current = parent
+        else:
+            break
+    return hierarchy
 
 
 def _parse_uuids(value: Optional[str]) -> list[uuid.UUID]:
@@ -148,25 +165,26 @@ async def home_page(
         except Exception:
             pass
 
+    _map = lambda pl: [product_service._build_product_list_response(p) for p in pl]
     return templates.TemplateResponse("shop/index.html", {
         "request": request,
-        "special_products": special_products,
-        "new_products": new_products,
-        "restocked_products": restocked_products,
-        "suggested_products": suggested_products,
+        "special_products": _map(special_products),
+        "new_products": _map(new_products),
+        "restocked_products": _map(restocked_products),
+        "suggested_products": _map(suggested_products),
         "top_category": top_category,
         "top_category_title": top_category.title if top_category else None,
-        "top_category_products": top_category_products,
+        "top_category_products": _map(top_category_products),
         "top_category_poster": top_category_poster,
         "middle_category": middle_category,
         "middle_category_title": middle_category.title if middle_category else None,
-        "middle_category_products": middle_category_products,
+        "middle_category_products": _map(middle_category_products),
         "middle_category_poster": middle_category_poster,
         "mid_left_poster": mid_left_poster,
         "mid_right_poster": mid_right_poster,
         "bottom_category": bottom_category,
         "bottom_category_title": bottom_category.title if bottom_category else None,
-        "bottom_category_products": bottom_category_products,
+        "bottom_category_products": _map(bottom_category_products),
         "bottom_category_poster": bottom_category_poster,
         "categories": categories,
         "header_categories": categories,
@@ -236,6 +254,8 @@ async def _render_product_list(
         select(SiteSetting).where(SiteSetting.is_removed == False).limit(1)
     )).scalars().first()
 
+    category_hierarchy = await _get_category_hierarchy(db, cat) if cat else []
+
     total_pages = max(1, math.ceil(total / page_size))
 
     parts = []
@@ -261,7 +281,7 @@ async def _render_product_list(
         "categories": cats,
         "header_categories": cats,
         "children": list(cat.children) if cat and cat.children else [],
-        "products": products,
+        "products": [product_service._build_product_list_response(p) for p in products],
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -276,6 +296,8 @@ async def _render_product_list(
         "price_max": price_max,
         "filter_qs": filter_qs,
         "site_settings": site_settings,
+        "category_hierarchy": category_hierarchy,
+        "current_user": None,
     })
 
 
@@ -292,12 +314,30 @@ async def product_detail_page(slug: str, request: Request, db: AsyncSession = De
 
     await product_service.increment_product_view(db, product)
     detail = _build_shop_detail(product)
-    related = await product_service.get_related_products(db, product, 6)
+    related = await product_service.get_related_products(db, product, 12)
+    similar = await product_service.get_similar_products(db, product, 12)
+    category_hierarchy = await _get_category_hierarchy(db, product.category) if product.category else []
     cats = await product_service.get_category_tree(db)
+
+    def _norm_list(plist):
+        result = []
+        for p in plist:
+            r = product_service._build_product_list_response(p)
+            d = r.model_dump()
+            if d.get("medium_image_url"):
+                d["medium_image_url"] = _normalize_media_url(d["medium_image_url"])
+            if d.get("large_image_url"):
+                d["large_image_url"] = _normalize_media_url(d["large_image_url"])
+            result.append(d)
+        return result
+
     return templates.TemplateResponse("shop/product_detail.html", {
         "request": request, "product": detail,
-        "related_products": [product_service._build_product_list_response(p) for p in related],
+        "related_products": _norm_list(related),
+        "similar_products": _norm_list(similar),
         "categories": cats, "header_categories": cats,
+        "category_hierarchy": category_hierarchy,
+        "current_user": None,
     })
 
 
@@ -482,6 +522,12 @@ async def profile_favorites(request: Request, current_user: User = Depends(get_c
     ).options(selectinload(FavoriteProductList.favorite_list_items).selectinload(FavoriteListItem.product))
     result = await db.execute(stmt)
     lists = result.unique().scalars().all()
+    # Normalize product image URLs in favorites
+    for fl in lists:
+        for item in (fl.favorite_list_items or []):
+            if item.product:
+                item.product.medium_image_url = _normalize_media_url(item.product.medium_image_url)
+                item.product.large_image_url = _normalize_media_url(item.product.large_image_url)
     return templates.TemplateResponse("shop/favorites.html", {"request": request, "current_user": current_user, "favorite_lists": lists})
 
 
@@ -572,13 +618,176 @@ async def brand_detail_page(brand_id: str, request: Request, db: AsyncSession = 
     return templates.TemplateResponse("shop/brand_detail.html", {"request": request, "brand": brand})
 
 
+# ── Datasheet Download ──
+
+@router.get("/products/{product_id}/datasheet/{datasheet_id}")
+async def product_datasheet_download(
+    product_id: str,
+    datasheet_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        ds = (await db.execute(
+            select(MenuDatasheet).where(
+                MenuDatasheet.id == uuid.UUID(datasheet_id),
+                MenuDatasheet.is_removed == False,
+            )
+        )).scalar_one_or_none()
+    except ValueError:
+        return HTMLResponse("Invalid ID", status_code=400)
+
+    if not ds or not ds.file_url:
+        return HTMLResponse("Datasheet not found", status_code=404)
+
+    # Resolve path from the mounted .NET wwwroot/Media directory
+    rel = ds.file_url.replace("\\", "/").lstrip("/")
+    # Strip the "Media/" prefix if present (it's the root of the mount)
+    if rel.lower().startswith("media/"):
+        rel = rel[len("media/"):]
+    candidate = os.path.join("/app/media", rel)
+    if os.path.exists(candidate):
+        file_path = candidate
+    else:
+        return HTMLResponse("File not found", status_code=404)
+
+    filename = os.path.basename(file_path)
+    return FileResponse(file_path, media_type="application/pdf", filename=filename)
+
+
 # ── Helpers ──
+
+def _normalize_media_url(url):
+    """Convert a stored path like \\Media\\laser\\file.jpg to /media/laser/file.jpg.
+    Only transforms paths that look like Media/... or \\Media\\...;
+    leaves absolute URLs, full URLs, and None unchanged."""
+    if not url:
+        return url
+    if url.startswith(("http://", "https://", "//", "/static/", "/media/")):
+        return url
+    normalized = url.replace("\\", "/").lstrip("/")
+    if normalized.lower().startswith("media/"):
+        normalized = normalized[len("media/"):]
+    return "/media/" + normalized
+
+
+def _fmt_tech_num(n):
+    """Replicate .NET double→string with no decimal for integers."""
+    if n is None:
+        return "-"
+    return str(int(n)) if n == int(n) else f"{n:.15g}"
+
+
+def _format_tech_value(value, format_str):
+    """Replicate .NET TechnicalFeatureValue.Value(displayFormat)."""
+    if not format_str:
+        return ""
+    te = value.technical_feature_enum
+    te1 = value.technical_feature_enum1
+    args = [
+        _fmt_tech_num(value.d_value),  # {0} DValue
+        value.unit,                     # {1} Unit
+        value.s_value,                  # {2} SValue
+        te.persian_name if te else None,  # {3} EValue
+        value.b_value,                  # {4} BValue
+        _fmt_tech_num(value.min_value),  # {5} MinValue
+        value.min_unit,                 # {6} MinUnit
+        _fmt_tech_num(value.max_value),  # {7} MaxValue
+        value.max_unit,                 # {8} MaxUnit
+        _fmt_tech_num(value.x_value),   # {9} XValue
+        value.x_unit,                   # {10} XUnit
+        _fmt_tech_num(value.y_value),   # {11} YValue
+        value.y_unit,                   # {12} YUnit
+        _fmt_tech_num(value.z_value),   # {13} ZValue
+        value.z_unit,                   # {14} ZUnit
+        te1.persian_name if te1 else None,  # {15} EValue1
+    ]
+    try:
+        return format_str.format(*args)
+    except (IndexError, ValueError):
+        return format_str
+
+
+def _build_technical_tables(product):
+    """Build structured technical table data matching .NET Details.cshtml."""
+    tables = []
+    for ttp in (product.technical_table_products or []):
+        if ttp.is_removed:
+            continue
+        if not ttp.technical_feature_values:
+            continue
+        table = ttp.technical_table
+        headers = [h for h in (table.header or "").split(";") if h.strip()]
+        column_values = []
+        linear_values = []
+        specs = []
+        for value in sorted(
+            [v for v in ttp.technical_feature_values if v.technical_feature and v.technical_feature.columns == table.columns],
+            key=lambda v: (v.technical_feature.priority, v.technical_feature.name),
+        ):
+            vh = [h for h in (value.technical_feature.display_format or "").split(";") if h.strip()]
+            hc = len(vh)
+            if hc < table.columns:
+                vh += [" "] * (table.columns - hc)
+            elif hc > table.columns:
+                vh = vh[:max(0, hc - table.columns)]
+            column_values.append({
+                "name": value.technical_feature.name,
+                "cells": [_format_tech_value(value, f) for f in vh],
+            })
+        for value in sorted(
+            [v for v in ttp.technical_feature_values if v.technical_feature and v.technical_feature.columns != table.columns],
+            key=lambda v: (v.technical_feature.priority, v.technical_feature.name),
+        ):
+            linear_values.append({
+                "name": value.technical_feature.name,
+                "value": _format_tech_value(value, value.technical_feature.display_format),
+                "colspan": table.columns - value.technical_feature.columns + 1,
+                "extra_cells": value.technical_feature.columns - 1,
+            })
+        # specifications list (linear display features)
+        for value in sorted(
+            [v for v in ttp.technical_feature_values if v.technical_feature and v.technical_feature.linear_display],
+            key=lambda v: (v.technical_feature.priority, v.technical_feature.name),
+        ):
+            specs.append({
+                "fa_name": value.technical_feature.fa_name,
+                "name": value.technical_feature.name,
+                "value": _format_tech_value(value, value.technical_feature.linear_display),
+            })
+        tables.append({
+            "en_title": table.en_title,
+            "columns": table.columns,
+            "headers": headers,
+            "column_values": column_values,
+            "linear_values": linear_values,
+            "specifications": specs,
+        })
+    return tables
+
 
 def _build_shop_detail(product):
     base = product_service._build_product_list_response(product)
-    import uuid
+    from collections import OrderedDict
+    variety_values = OrderedDict()
+    for v in (product.varieties or []):
+        for pv in (v.product_varieties or []):
+            if pv.category_option:
+                key = pv.category_option.name
+                if key not in variety_values:
+                    variety_values[key] = []
+                if pv.value not in variety_values[key]:
+                    variety_values[key].append(pv.value)
+    variety_values_list = [{"category_name": k, "values": v} for k, v in variety_values.items()]
+    technical_tables = _build_technical_tables(product)
+    specifications = []
+    for tt in technical_tables:
+        specifications.extend(tt["specifications"])
     return {
         **base.model_dump(),
+        "medium_image_url": _normalize_media_url(product.medium_image_url),
+        "large_image_url": _normalize_media_url(product.large_image_url),
+        "feature_image_url": _normalize_media_url(product.feature_image_url),
         "introduction": product.introduction,
         "keywords": product.keywords,
         "meta_description": product.meta_description,
@@ -587,7 +796,10 @@ def _build_shop_detail(product):
         "max_number_of_purchases": product.max_number_of_purchases,
         "delivery_day": product.delivery_day,
         "vat_rate": float(product.vat_rate) if product.vat_rate else None,
-        "images": [{"id": str(img.id), "medium_image_url": img.medium_image_url, "large_image_url": img.large_image_url}
+        "images": [{"id": str(img.id),
+             "small_image_url": _normalize_media_url(img.small_image_url),
+             "medium_image_url": _normalize_media_url(img.medium_image_url),
+             "large_image_url": _normalize_media_url(img.large_image_url)}
                    for img in (product.product_images or [])] if hasattr(product, 'product_images') else [],
         "varieties": [{"id": str(v.id), "part_number": v.part_number, "price": float(v.price or 0),
                        "price_after_discount": float(v.price_after_discount or v.price or 0),
@@ -595,8 +807,15 @@ def _build_shop_detail(product):
                        "product_varieties": [{"category_option_name": pv.category_option.name if pv.category_option else None, "value": pv.value}
                                              for pv in (v.product_varieties or [])] if hasattr(v, 'product_varieties') else []}
                       for v in (product.varieties or [])] if hasattr(product, 'varieties') else [],
-        "technical_features": [],
-        "related_products": [],
+        "menu_datasheets": [{"id": str(ds.id), "type": ds.type, "file_url": ds.file_url, "complete_file_url": ds.complete_file_url}
+                            for ds in (product.menu_datasheets or []) if not ds.is_removed],
+        "technical_tables": technical_tables,
+        "specifications": specifications,
+        "variety_values": variety_values_list,
+        "category_en_title": product.category.en_title if product.category else None,
+        "brand_name": product.brand.name if product.brand else None,
+        "brand_id": str(product.brand_id) if product.brand_id else None,
+        "category_id": str(product.category_id) if product.category_id else None,
     }
 
 

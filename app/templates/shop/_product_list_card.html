@@ -34,7 +34,7 @@
                     <h5 class="product-name" itemprop="name"><span title="{{ product.name }}">{{ product.name[:60] }}{% if product.name|length > 60 %}...{% endif %}</span></h5>
                     {% if product.short_description %}
                     <div class="product-description-short" itemprop="description">
-                        {{ product.short_description[:120] }}{% if product.short_description|length > 120 %}...{% endif %}
+                        {{ product.short_description|safe }}
                     </div>
                     {% endif %}
                     <div class="product-reference">شماره فنی : <span>{{ product.part_number }}</span></div>

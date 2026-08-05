@@ -1,7 +1,53 @@
 {% extends "shop/base.html" %}
 {% block title %}{{ category.title if category else 'محصولات' }} - آشا شاپ{% endblock %}
 {% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-category tax-display-enabled st-wrapper{% endblock %}
+{% block extra_head %}
+<style>
+    .ordering { color: #999999; }
+    .ordering.selected { color: #00a693; }
+    .ordering:hover { color: #00a693; }
+    .typo.descFull { text-align: justify; }
+</style>
+{% endblock %}
 {% block content %}
+
+{% if category_hierarchy or category %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="{{ 1 + (category_hierarchy|length) }}" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">صفحه اصلی</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            {% for crumb in category_hierarchy or [] %}
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/Shop/Category/Index/{{ crumb.en_title or crumb.slug }}">
+                    <span itemprop="name">{{ crumb.title }}</span>
+                </a>
+                <meta itemprop="position" content="{{ loop.index + 1 }}">
+            </li>
+            {% endfor %}
+            {% if category %}
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/Shop/Category/Index/{{ category.en_title or category.slug }}">
+                    <span itemprop="name">{{ category.title }}</span>
+                </a>
+                <meta itemprop="position" content="{{ 1 + (category_hierarchy|length) }}">
+            </li>
+            {% endif %}
+        </ol>
+    </div>
+</nav>
+{% endif %}
+
+<aside id="notifications">
+    <div class="container"></div>
+</aside>
 
 {% if category %}
 <div id="js-product-list-header" class="shadow-box md-bottom">
@@ -14,7 +60,7 @@
                 <img style="width: 60%" class="img-fluid" src="https://placehold.co/394x197">
                 {% endif %}
             </div>
-            <h1 class="page-heading js-category-page" data-current-category-id="{{ category.en_title }}">
+            <h1 class="page-heading js-category-page" data-current-category-id="{{ category.en_title or category.slug }}">
                 <span>{{ category.title }}</span>
             </h1>
             <div class="total-products d-lg-block">
@@ -64,12 +110,12 @@
         <div class="row">
             <div id="left-column" class="sidebar-column col-12 col-md-4 col-lg-3">
                 <div class="column-wrapper md-bottom fixed" style="top: -320px;">
-                    {% include "shop/_category_sidebar.html" %}
+                    {% include "shop/_left_categories.html" %}
 
                     <div class="column-block md-bottom d-none d-md-block">
                         <div id="_desktop_search_filters">
                             <div id="search_filters">
-                                <p class="column-title d-none d-md-block">فیلترها</p>
+                                <p class="column-title d-none d-md-block">فیلتر بر اساس</p>
                                 <form method="GET" action="" id="facet-form">
                                     {% if category %}
                                     <input type="hidden" name="category" value="{{ category.en_title or category.slug }}">
@@ -87,7 +133,7 @@
                                                             <input type="checkbox" class="filterCheckbox branch-check" value="{{ child.id }}" {% if child.id|string in branch_ids %}checked{% endif %}>
                                                             <span class="check-shape"><i class="material-icons check-icon">check</i></span>
                                                         </span>
-                                                        <a class="_gray-darker" href="/Shop/Category/Index/{{ child.en_title or child.slug }}" rel="nofollow">{{ child.title }}</a>
+                                                        <a class="_gray-darker" href="/Shop/Category/Index/{{ child.en_title or child.slug }}" rel="nofollow">{{ child.title }}<span class="magnitude">({{ child.product_count }})</span></a>
                                                     </label>
                                                 </div>
                                             </li>
@@ -117,12 +163,12 @@
                                     {% endif %}
                                     <section class="facet clearfix">
                                         <h5 class="facet-title d-none d-md-block"><i class="fa fa-angle-double-right" aria-hidden="true"></i>قیمت</h5>
-                                        <ul class="faceted-slider collapse show">
+                                        <ul id="" class="faceted-slider collapse show" data-slider-min="0" data-slider-max="{{ price_max or 100000000 }}" data-slider-id="51100" data-slider-values='["{{ min_value or 0 }}","{{ max_value or price_max or 100000000 }}"]' data-slider-unit="ریال" data-slider-label="قیمت">
                                             <li>
-                                                <div class="price-facet-inputs">
-                                                    <input type="number" name="min_value" class="form-control form-control-sm" placeholder="از {{ "{:,.0f}".format(0) }} ریال" value="{{ min_value or '' }}">
-                                                    <input type="number" name="max_value" class="form-control form-control-sm mt-2" placeholder="تا {{ "{:,.0f}".format(price_max or 0) }} ریال" value="{{ max_value or '' }}">
-                                                </div>
+                                                <div id="slider-range_51100" class="slider-range"></div>
+                                                <p id="facet_label_51100" class="text-center font-weight-bold mt-2"></p>
+                                                <input type="hidden" name="min_value" id="slider_min_value" value="{{ min_value or '' }}">
+                                                <input type="hidden" name="max_value" id="slider_max_value" value="{{ max_value or '' }}">
                                             </li>
                                         </ul>
                                     </section>
@@ -173,9 +219,9 @@
                                                     <span>|</span>
                                                     <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=Id" class="ordering {% if order == 'Id' %}selected{% endif %}">ردیف</a>
                                                     <span>|</span>
-                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=AlphabetAsc" class="ordering {% if order == 'AlphabetAsc' %}selected{% endif %}">الفبا (A تا Z)</a>
+                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=AlphabetAsc" class="ordering {% if order == 'AlphabetAsc' %}selected{% endif %}">الف تا ی</a>
                                                     <span>|</span>
-                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=AlphabetDesc" class="ordering {% if order == 'AlphabetDesc' %}selected{% endif %}">الفبا (Z تا A)</a>
+                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=AlphabetDesc" class="ordering {% if order == 'AlphabetDesc' %}selected{% endif %}">ی تا الف</a>
                                                     <span>|</span>
                                                     <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=Cheapest" class="ordering {% if order == 'Cheapest' %}selected{% endif %}">ارزان‌ترین</a>
                                                     <span>|</span>
@@ -218,68 +264,69 @@
                                         <nav class="pagination">
                                             <ul class="page-list">
                                                 {% set last = total_pages %}
+                                                {% set query_str = filter_qs + ('&' if filter_qs else '') + 'order=' + order %}
                                                 {% if total_pages < 6 %}
                                                     {% if page != last %}
                                                     <li>
-                                                        <a rel="next" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
+                                                        <a rel="next" href="?{{ query_str }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
                                                     </li>
                                                     {% endif %}
                                                     {% for p in range(1, last + 1) %}
                                                     <li {% if p == page %}class="current"{% endif %}>
-                                                        <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ p }}" data-pageNo="{{ p }}">{{ p }}</a>
+                                                        <a rel="nofollow" href="?{{ query_str }}&page={{ p }}" data-pageNo="{{ p }}">{{ p }}</a>
                                                     </li>
                                                     {% endfor %}
                                                     {% if page != 1 %}
                                                     <li>
-                                                        <a rel="prev" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
+                                                        <a rel="prev" href="?{{ query_str }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
                                                     </li>
                                                     {% endif %}
                                                 {% elif page > 3 %}
                                                     {% if page != last %}
                                                     <li>
-                                                        <a rel="next" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
+                                                        <a rel="next" href="?{{ query_str }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
                                                     </li>
                                                     {% endif %}
-                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page=1" data-pageNo="1">1</a></li>
+                                                    <li><a rel="nofollow" href="?{{ query_str }}&page=1" data-pageNo="1">1</a></li>
                                                     <li><span class="spacer">…</span></li>
                                                     {% if page == last %}
-                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 2 }}" data-pageNo="{{ page - 1 }}">{{ page - 2 }}</a></li>
+                                                    <li><a rel="nofollow" href="?{{ query_str }}&page={{ page - 2 }}" data-pageNo="{{ page - 1 }}">{{ page - 2 }}</a></li>
                                                     {% endif %}
-                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 1 }}" data-pageNo="{{ page - 1 }}">{{ page - 1 }}</a></li>
-                                                    <li class="current"><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page }}" data-pageNo="{{ page }}">{{ page }}</a></li>
+                                                    <li><a rel="nofollow" href="?{{ query_str }}&page={{ page - 1 }}" data-pageNo="{{ page - 1 }}">{{ page - 1 }}</a></li>
+                                                    <li class="current"><a rel="nofollow" href="?{{ query_str }}&page={{ page }}" data-pageNo="{{ page }}">{{ page }}</a></li>
                                                     {% if page < last %}
-                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page + 1 }}" data-pageNo="{{ page + 1 }}">{{ page + 1 }}</a></li>
+                                                    <li><a rel="nofollow" href="?{{ query_str }}&page={{ page + 1 }}" data-pageNo="{{ page + 1 }}">{{ page + 1 }}</a></li>
                                                         {% if page < last - 2 %}
                                                         <li><span class="spacer">…</span></li>
-                                                        <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ last }}" data-pageNo="{{ last }}" class="disabled">{{ last }}</a></li>
+                                                        <li><a rel="nofollow" href="?{{ query_str }}&page={{ last }}" data-pageNo="{{ last }}" class="disabled">{{ last }}</a></li>
                                                         {% elif page == last - 2 %}
-                                                        <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ last }}" data-pageNo="{{ last }}" class="disabled">{{ last }}</a></li>
+                                                        <li><a rel="nofollow" href="?{{ query_str }}&page={{ last }}" data-pageNo="{{ last }}" class="disabled">{{ last }}</a></li>
                                                         {% endif %}
                                                     {% endif %}
                                                     {% if page != 1 %}
                                                     <li>
-                                                        <a rel="prev" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
+                                                        <a rel="prev" href="?{{ query_str }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
                                                     </li>
                                                     {% endif %}
                                                 {% else %}
                                                     {% if page != last %}
                                                     <li>
-                                                        <a rel="next" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
+                                                        <a rel="next" href="?{{ query_str }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
                                                     </li>
                                                     {% endif %}
                                                     {% for p in range(1, 4) %}
                                                     <li {% if p == page %}class="current"{% endif %}>
-                                                        <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ p }}" data-pageNo="{{ p }}">{{ p }}</a>
+                                                        <a rel="nofollow" href="?{{ query_str }}&page={{ p }}" data-pageNo="{{ p }}">{{ p }}</a>
                                                     </li>
                                                     {% endfor %}
                                                     {% if page == 3 %}
-                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page=4" data-pageNo="4">4</a></li>
+                                                    <li><a rel="nofollow" href="?{{ query_str }}&page=4" data-pageNo="4">4</a></li>
                                                     {% endif %}
                                                     <li><span class="spacer">…</span></li>
-                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ last }}" data-pageNo="{{ last }}">{{ last }}</a></li>
+                                                    <li><a rel="nofollow" href="?{{ query_str }}&page={{ last }}" data-pageNo="{{ last }}">{{ last }}</a></li>
                                                     {% if page != 1 %}
                                                     <li>
-                                                        <a rel="prev" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
+                                                        <a rel="prev" href="?{{ query_str }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
                                                     </li>
                                                     {% endif %}
                                                 {% endif %}
@@ -303,7 +350,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
 (function () {
     var form = document.getElementById('facet-form');
@@ -322,6 +371,41 @@
             hBrands.value = brands;
         }
     });
+
+    // Price slider
+    var $slider = $('#slider-range_51100');
+    if ($slider.length) {
+        var $ul = $slider.closest('.faceted-slider');
+        var min = parseFloat($ul.data('slider-min')) || 0;
+        var max = parseFloat($ul.data('slider-max')) || 100000000;
+        var rawValues = $ul.data('slider-values');
+        var vals = (rawValues && Array.isArray(rawValues)) ? rawValues : [null, null];
+        var currentMin = vals[0] !== null && vals[0] !== undefined ? parseFloat(vals[0]) : min;
+        var currentMax = vals[1] !== null && vals[1] !== undefined ? parseFloat(vals[1]) : max;
+        var unit = $ul.data('slider-unit') || 'ریال';
+        var $label = $('#facet_label_51100');
+        var $minInput = $('#slider_min_value');
+        var $maxInput = $('#slider_max_value');
+
+        function formatPrice(value) {
+            return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        $slider.slider({
+            range: true,
+            min: min,
+            max: max,
+            values: [currentMin, currentMax],
+            slide: function (event, ui) {
+                $label.text(formatPrice(ui.values[0]) + ' ' + unit + ' - ' + formatPrice(ui.values[1]) + ' ' + unit);
+                $minInput.val(ui.values[0]);
+                $maxInput.val(ui.values[1]);
+            }
+        });
+        $label.text(formatPrice(currentMin) + ' ' + unit + ' - ' + formatPrice(currentMax) + ' ' + unit);
+        $minInput.val(currentMin);
+        $maxInput.val(currentMax);
+    }
 })();
 </script>
 {% endblock %}

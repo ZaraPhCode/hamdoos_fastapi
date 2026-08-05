@@ -176,6 +176,21 @@ async def create_brand(db: AsyncSession, request: BrandCreate, user_id: uuid.UUI
 
 # ── Products ──
 
+def _normalize_media_url(url):
+    """Convert a stored path like \\Media\\laser\\file.jpg to /media/laser/file.jpg.
+    Only transforms paths that look like Media/... or \\Media\\...;
+    leaves absolute URLs, full URLs, and None unchanged."""
+    if not url:
+        return url
+    # Skip absolute URLs and full http/https URLs
+    if url.startswith(("http://", "https://", "//", "/static/", "/media/")):
+        return url
+    normalized = url.replace("\\", "/").lstrip("/")
+    if normalized.lower().startswith("media/"):
+        normalized = normalized[len("media/"):]
+    return "/media/" + normalized
+
+
 def _build_product_list_response(product: Product) -> ProductListResponse:
     return ProductListResponse(
         id=product.id,
@@ -199,8 +214,9 @@ def _build_product_list_response(product: Product) -> ProductListResponse:
         status=product.status,
         category_id=product.category_id,
         brand_id=product.brand_id,
-        medium_image_url=product.medium_image_url,
-        large_image_url=product.large_image_url,
+        medium_image_url=_normalize_media_url(product.medium_image_url),
+        large_image_url=_normalize_media_url(product.large_image_url),
+        feature_image_url=_normalize_media_url(product.feature_image_url),
         insert_date=product.insert_date,
         update_date=product.update_date,
         category_title=product.category.title if product.category else None,
@@ -447,6 +463,7 @@ async def get_product_by_id(db: AsyncSession, product_id: uuid.UUID) -> Optional
             selectinload(Product.product_unit),
             selectinload(Product.currency),
             selectinload(Product.product_images),
+            selectinload(Product.menu_datasheets),
             selectinload(Product.varieties).selectinload(Variety.product_varieties).selectinload(ProductVariety.category_option),
             selectinload(Product.related_products).selectinload(RelatedProduct.relate_product),
             selectinload(Product.similar_products).selectinload(SimilarProduct.similar),
@@ -455,6 +472,12 @@ async def get_product_by_id(db: AsyncSession, product_id: uuid.UUID) -> Optional
             .selectinload(TechnicalFeatureValue.technical_feature),
             selectinload(Product.technical_table_products)
             .selectinload(TechnicalTableProduct.technical_table),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_feature_values)
+            .selectinload(TechnicalFeatureValue.technical_feature_enum),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_feature_values)
+            .selectinload(TechnicalFeatureValue.technical_feature_enum1),
         )
         .where(Product.id == product_id, Product.is_removed == False)
     )
@@ -469,9 +492,21 @@ async def get_product_by_slug(db: AsyncSession, slug: str) -> Optional[Product]:
             selectinload(Product.category),
             selectinload(Product.brand),
             selectinload(Product.product_images),
+            selectinload(Product.menu_datasheets),
             selectinload(Product.varieties),
             selectinload(Product.related_products).selectinload(RelatedProduct.relate_product),
             selectinload(Product.similar_products).selectinload(SimilarProduct.similar),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_feature_values)
+            .selectinload(TechnicalFeatureValue.technical_feature),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_table),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_feature_values)
+            .selectinload(TechnicalFeatureValue.technical_feature_enum),
+            selectinload(Product.technical_table_products)
+            .selectinload(TechnicalTableProduct.technical_feature_values)
+            .selectinload(TechnicalFeatureValue.technical_feature_enum1),
         )
         .where(Product.slug == slug, Product.is_removed == False, Product.no_display == False)
     )
@@ -569,6 +604,20 @@ async def get_related_products(db: AsyncSession, product: Product, limit: int = 
         select(Product)
         .options(selectinload(Product.category), selectinload(Product.brand))
         .where(Product.id.in_(related_ids), Product.is_removed == False, Product.no_display == False)
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.unique().scalars().all())
+
+
+async def get_similar_products(db: AsyncSession, product: Product, limit: int = 6) -> list[Product]:
+    similar_ids = [sp.similar_product_id for sp in product.similar_products if not sp.is_removed]
+    if not similar_ids:
+        return []
+    stmt = (
+        select(Product)
+        .options(selectinload(Product.category), selectinload(Product.brand))
+        .where(Product.id.in_(similar_ids), Product.is_removed == False, Product.no_display == False)
         .limit(limit)
     )
     result = await db.execute(stmt)

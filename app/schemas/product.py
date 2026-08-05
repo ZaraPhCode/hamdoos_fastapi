@@ -184,6 +184,7 @@ class ProductListResponse(BaseModel):
     brand_id: Optional[UUID] = None
     medium_image_url: Optional[str] = None
     large_image_url: Optional[str] = None
+    feature_image_url: Optional[str] = None
     insert_date: Optional[datetime] = None
     update_date: Optional[datetime] = None
     category_title: Optional[str] = None
