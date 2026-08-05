@@ -1,105 +1,327 @@
 {% extends "shop/base.html" %}
-{% block title %}محصولات - آشا شاپ{% endblock %}
+{% block title %}{{ category.title if category else 'محصولات' }} - آشا شاپ{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-category tax-display-enabled st-wrapper{% endblock %}
 {% block content %}
-<div class="flex gap-6">
-    <!-- Filters Sidebar -->
-    <aside class="w-64 shrink-0 hidden lg:block">
-        <div class="bg-white rounded-lg shadow-sm border p-4 sticky top-24">
-            <h3 class="font-bold mb-4">فیلترها</h3>
-            <form method="GET" action="/products" id="filter-form">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-1">دسته‌بندی</label>
-                    <select name="category_id" class="w-full border rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
-                        <option value="">همه دسته‌ها</option>
-                        {% for cat in all_categories or [] %}
-                        <option value="{{ cat.id }}" {% if request.query_params.category_id == cat.id|string %}selected{% endif %}>{{ cat.title }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-1">برند</label>
-                    <select name="brand_id" class="w-full border rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
-                        <option value="">همه برندها</option>
-                        {% for brand in all_brands or [] %}
-                        <option value="{{ brand.id }}" {% if request.query_params.brand_id == brand.id|string %}selected{% endif %}>{{ brand.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-1">محدوده قیمت</label>
-                    <input type="number" name="min_price" placeholder="حداقل" class="w-full border rounded-lg px-3 py-2 text-sm mb-2" value="{{ request.query_params.min_price or '' }}">
-                    <input type="number" name="max_price" placeholder="حداکثر" class="w-full border rounded-lg px-3 py-2 text-sm" value="{{ request.query_params.max_price or '' }}">
-                </div>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="on_sale" value="true" {% if request.query_params.on_sale %}checked{% endif %} onchange="this.form.submit()">فقط تخفیف‌دار</label>
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_new" value="true" {% if request.query_params.is_new %}checked{% endif %} onchange="this.form.submit()">فقط جدید</label>
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_special" value="true" {% if request.query_params.is_special %}checked{% endif %} onchange="this.form.submit()">فقط ویژه</label>
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white rounded-lg py-2 mt-4 text-sm hover:bg-indigo-700">اعمال فیلتر</button>
-            </form>
-        </div>
-    </aside>
 
-    <!-- Product Grid -->
-    <div class="flex-1">
-        <div class="flex justify-between items-center mb-4">
-            <h1 class="text-xl font-bold">محصولات</h1>
-            <div class="flex items-center gap-3">
-                <span class="text-sm text-gray-500">{{ total or 0 }} محصول</span>
-                <select name="sort_by" class="border rounded-lg px-3 py-1.5 text-sm" onchange="window.location.href=this.value">
-                    <option value="?sort_by=insert_date&sort_desc=true" {% if sort_by == 'insert_date' %}selected{% endif %}>جدیدترین</option>
-                    <option value="?sort_by=price&sort_desc=false" {% if sort_by == 'price' and not sort_desc %}selected{% endif %}>ارزان‌ترین</option>
-                    <option value="?sort_by=price&sort_desc=true" {% if sort_by == 'price' and sort_desc %}selected{% endif %}>گران‌ترین</option>
-                    <option value="?sort_by=rate&sort_desc=true" {% if sort_by == 'rate' %}selected{% endif %}>محبوب‌ترین</option>
-                </select>
+{% if category %}
+<div id="js-product-list-header" class="shadow-box md-bottom">
+    <div class="row" style="padding-top: 25px">
+        <div class="col-lg-6 col-md-12 col-sm-12">
+            <div class="category-cover mb-4">
+                {% if category.poster_image_url %}
+                <img style="width: 60%" class="img-fluid" src="{{ category.poster_image_url }}" alt="{{ category.title }}">
+                {% else %}
+                <img style="width: 60%" class="img-fluid" src="https://placehold.co/394x197">
+                {% endif %}
+            </div>
+            <h1 class="page-heading js-category-page" data-current-category-id="{{ category.en_title }}">
+                <span>{{ category.title }}</span>
+            </h1>
+            <div class="total-products d-lg-block">
+                <p>{{ total }} کالا</p>
             </div>
         </div>
-
-        {% if products %}
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {% for product in products %}
-            <div class="bg-white rounded-lg shadow-sm border hover:shadow-md transition p-3">
-                <a href="/products/{{ product.slug or product.id }}">
-                    <img src="{{ product.medium_image_url or '/static/img/placeholder.png' }}" alt="{{ product.name }}" class="w-full h-40 object-contain mb-3">
-                    {% if product.is_new %}<span class="bg-green-500 text-white text-xs px-2 py-0.5 rounded">جدید</span>{% endif %}
-                    {% if product.on_sale %}<span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded">تخفیف</span>{% endif %}
-                    <h3 class="text-sm font-medium text-gray-800 mt-2 line-clamp-2">{{ product.name[:50] }}{% if product.name|length > 50 %}...{% endif %}</h3>
-                    <p class="text-xs text-gray-500 mt-1">{{ product.brand_name or '' }}</p>
-                    <div class="mt-2">
-                        {% if product.price_after_discount and product.price_after_discount < product.price %}
-                        <span class="text-gray-400 text-xs line-through">{{ "{:,.0f}".format(product.price) }}</span>
-                        <span class="text-indigo-600 font-bold">{{ "{:,.0f}".format(product.price_after_discount) }}</span>
-                        {% else %}
-                        <span class="text-indigo-600 font-bold">{{ "{:,.0f}".format(product.price or 0) }}</span>
-                        {% endif %}
-                        <span class="text-xs text-gray-500">تومان</span>
-                    </div>
-                </a>
+        {% if category.description %}
+        <div class="category-description col-lg-6 col-md-12 col-sm-12">
+            <div class="js-expand-description">
+                <div class="typo descFull">
+                    {{ category.description|safe }}
+                </div>
             </div>
-            {% endfor %}
-        </div>
-
-        <!-- Pagination -->
-        {% if total_pages > 1 %}
-        <div class="flex justify-center mt-8 gap-2">
-            {% if page > 1 %}
-            <a href="?page={{ page - 1 }}&page_size={{ page_size }}" class="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">قبلی</a>
-            {% endif %}
-            {% for p in range(1, total_pages + 1) %}
-            <a href="?page={{ p }}&page_size={{ page_size }}" class="px-4 py-2 border rounded-lg text-sm {% if p == page %}bg-indigo-600 text-white{% else %}hover:bg-gray-100{% endif %}">{{ p }}</a>
-            {% endfor %}
-            {% if page < total_pages %}
-            <a href="?page={{ page + 1 }}&page_size={{ page_size }}" class="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100">بعدی</a>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        {% else %}
-        <div class="text-center py-16 text-gray-400">
-            <i class="fas fa-box-open text-5xl mb-4"></i>
-            <p>محصولی یافت نشد</p>
         </div>
         {% endif %}
     </div>
+    {% if children %}
+    <aside class="subcategories mb-2">
+        <div class="relative md-bottom">
+            <h3 class="sub-categories-title page-subheading">زیرمجموعه‌ها</h3>
+            <hr class="sub-category-hr">
+        </div>
+        <div class="subcategories-wrapper row">
+            {% for child in children %}
+            <section class="subcategory-miniature">
+                <a href="/Shop/Category/Index/{{ child.en_title or child.slug }}" title="{{ child.title }}">
+                    <div class="subcategory-image">
+                        {% if child.poster_image_url %}
+                        <img src="{{ child.poster_image_url }}" class="img-fluid img-thumbnail" title="{{ child.title }}" width="200" height="90">
+                        {% else %}
+                        <img src="https://placehold.co/200x90" class="img-fluid img-thumbnail" title="{{ child.title }}" width="200" height="90">
+                        {% endif %}
+                    </div>
+                    <h5 class="subcategory-name">{{ child.title }}</h5>
+                    {% if child.description %}<div class="subcategory-description">{{ child.description[:100] }}{% if child.description|length > 100 %}...{% endif %}</div>{% endif %}
+                </a>
+            </section>
+            {% endfor %}
+        </div>
+    </aside>
+    {% endif %}
 </div>
+{% endif %}
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div id="left-column" class="sidebar-column col-12 col-md-4 col-lg-3">
+                <div class="column-wrapper md-bottom fixed" style="top: -320px;">
+                    {% include "shop/_category_sidebar.html" %}
+
+                    <div class="column-block md-bottom d-none d-md-block">
+                        <div id="_desktop_search_filters">
+                            <div id="search_filters">
+                                <p class="column-title d-none d-md-block">فیلترها</p>
+                                <form method="GET" action="" id="facet-form">
+                                    {% if category %}
+                                    <input type="hidden" name="category" value="{{ category.en_title or category.slug }}">
+                                    {% endif %}
+                                    <input type="hidden" name="order" value="{{ order }}">
+                                    {% if children %}
+                                    <section class="facet clearfix">
+                                        <h5 class="facet-title d-none d-md-block"><i class="fa fa-angle-double-right" aria-hidden="true"></i>شاخه‌ها</h5>
+                                        <ul class="faceted-checkbox collapse show">
+                                            {% for child in children %}
+                                            <li>
+                                                <div class="facet-label">
+                                                    <label class="custom-checkbox">
+                                                        <span class="check-wrap">
+                                                            <input type="checkbox" class="filterCheckbox branch-check" value="{{ child.id }}" {% if child.id|string in branch_ids %}checked{% endif %}>
+                                                            <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                        </span>
+                                                        <a class="_gray-darker" href="/Shop/Category/Index/{{ child.en_title or child.slug }}" rel="nofollow">{{ child.title }}</a>
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </section>
+                                    {% endif %}
+                                    {% if brand_facets %}
+                                    <section class="facet clearfix">
+                                        <h5 class="facet-title d-none d-md-block"><i class="fa fa-angle-double-right" aria-hidden="true"></i>برند</h5>
+                                        <ul class="faceted-checkbox collapse show">
+                                            {% for brand in brand_facets %}
+                                            <li>
+                                                <div class="facet-label">
+                                                    <label class="custom-checkbox">
+                                                        <span class="check-wrap">
+                                                            <input type="checkbox" class="filterCheckbox brand-check" value="{{ brand.id }}" {% if brand.id in brand_ids %}checked{% endif %}>
+                                                            <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                        </span>
+                                                        <span class="_gray-darker" rel="nofollow">{{ brand.name }}<span class="magnitude">({{ brand.count }})</span></span>
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </section>
+                                    {% endif %}
+                                    <section class="facet clearfix">
+                                        <h5 class="facet-title d-none d-md-block"><i class="fa fa-angle-double-right" aria-hidden="true"></i>قیمت</h5>
+                                        <ul class="faceted-slider collapse show">
+                                            <li>
+                                                <div class="price-facet-inputs">
+                                                    <input type="number" name="min_value" class="form-control form-control-sm" placeholder="از {{ "{:,.0f}".format(0) }} ریال" value="{{ min_value or '' }}">
+                                                    <input type="number" name="max_value" class="form-control form-control-sm mt-2" placeholder="تا {{ "{:,.0f}".format(price_max or 0) }} ریال" value="{{ max_value or '' }}">
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </section>
+                                    <button type="submit" class="btn btn-primary btn-block mt-3">اعمال فیلتر</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="aone-column">
+                        <div class="column-block md-bottom clearfix no-box">
+                            <div class="static-html typo">
+                                <a href="#" target="_blank"><img src="/static/ThemeLayout/img/customer-support.jpg" width="750"></a>
+                            </div>
+                        </div>
+                        <div class="column-block md-bottom clearfix shown-index">
+                            <div class="static-html typo">
+                                <div class="block_content">
+                                    <div dir="rtl" align="justify">
+                                        <div style="margin-bottom:10px;"><img src="/static/ThemeLayout/img/support.png" style="margin-left:8px;" width="38px"><span style="color:#333;font-size:1.1rem;">شماره‌های تماس</span></div>
+                                        <div>دفتر مرکزی و امور مشتریان: {% if site_settings %}{{ site_settings.telephone }}{% else %}۰۲۱-۸۸۲۱۴۶۴۱{% endif %}</div>
+                                        <div style="font-size:12px;color:#868686;">زمان پاسخگویی: شنبه تا چهارشنبه از ساعت ۹ الی ۱۷، پنجشنبه‌ها از ساعت ۹ الی ۱۴</div>
+                                        <div style="font-size:12px;color:#868686;">پیگیری تمامی موارد مربوط به فروش وبسایت از دفتر مرکزی تهران مقدور می‌باشد.</div>
+                                        <div style="margin-top:5px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="bottomVisible"></div>
+                </div>
+            </div>
+
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main">
+                        {% if total != 0 %}
+                        <section id="products">
+                            <div class="light-box-bg md-bottom">
+                                <div id="js-product-list-top" class="products-selection clearfix">
+                                    <div class="row align-items-center">
+                                        <div class="col-sm-12 col-12 col-md-12 col-lg-12 products-sort-order order-2">
+                                            <div class="d-flex flex-wrap">
+                                                <label class="form-control-label d-lg-block sort-display-label sort-label">ترتیب :</label>
+                                                <div class="sort-items">
+                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=Sale" class="ordering {% if order == 'Sale' %}selected{% endif %}">پرفروش‌ترین</a>
+                                                    <span>|</span>
+                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=Id" class="ordering {% if order == 'Id' %}selected{% endif %}">ردیف</a>
+                                                    <span>|</span>
+                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=AlphabetAsc" class="ordering {% if order == 'AlphabetAsc' %}selected{% endif %}">الفبا (A تا Z)</a>
+                                                    <span>|</span>
+                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=AlphabetDesc" class="ordering {% if order == 'AlphabetDesc' %}selected{% endif %}">الفبا (Z تا A)</a>
+                                                    <span>|</span>
+                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=Cheapest" class="ordering {% if order == 'Cheapest' %}selected{% endif %}">ارزان‌ترین</a>
+                                                    <span>|</span>
+                                                    <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order=Expensive" class="ordering {% if order == 'Expensive' %}selected{% endif %}">گران‌ترین</a>
+                                                </div>
+                                                <div class="product-display d-md-block">
+                                                    <div class="d-flex">
+                                                        <label class="form-control-label display-label d-lg-block product-display-label">نمایش :</label>
+                                                        <ul class="display-select" id="product_display_control">
+                                                            <li class="d-flex">
+                                                                <a data-view="grid" href="#grid" title="Grid" data-toggle="tooltip" data-placement="top"><i class="material-icons">view_comfy</i></a>
+                                                                <a data-view="list" href="#list" title="List" data-toggle="tooltip" data-placement="top" class="selected"><i class="material-icons">view_list</i></a>
+                                                                <a data-view="table-view" href="#table" title="Table" data-toggle="tooltip" data-placement="top"><i class="material-icons">view_headline</i></a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 col-sm-3 d-block d-md-none filter-button order-3">
+                                            <button id="search_filter_toggler" class="btn btn-primary"><i class="fa fa-filter" aria-hidden="true"></i> فیلتر</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="md-bottom">
+                                <div id="_mobile_search_filters" class="mobile-search-fillter light-box-bg d-md-none md-bottom"></div>
+                                <div id="js-active-search-filters"></div>
+                                <div id="js-filter-scroll-here"></div>
+                                <div id="js-product-list" data-grid-columns="columns-4">
+                                    <div class="product-list light-box-bg md-bottom">
+                                        <div id="categoryProducts" class="products product-list-wrapper clearfix columns-4 js-product-list-view list">
+                                            {% for product in products %}
+                                            {% include "shop/_product_list_card.html" %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% if total_pages > 1 %}
+                                    <div class="pagination-wrapper light-box-bg clearfix">
+                                        <nav class="pagination">
+                                            <ul class="page-list">
+                                                {% set last = total_pages %}
+                                                {% if total_pages < 6 %}
+                                                    {% if page != last %}
+                                                    <li>
+                                                        <a rel="next" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% for p in range(1, last + 1) %}
+                                                    <li {% if p == page %}class="current"{% endif %}>
+                                                        <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ p }}" data-pageNo="{{ p }}">{{ p }}</a>
+                                                    </li>
+                                                    {% endfor %}
+                                                    {% if page != 1 %}
+                                                    <li>
+                                                        <a rel="prev" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
+                                                    </li>
+                                                    {% endif %}
+                                                {% elif page > 3 %}
+                                                    {% if page != last %}
+                                                    <li>
+                                                        <a rel="next" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
+                                                    </li>
+                                                    {% endif %}
+                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page=1" data-pageNo="1">1</a></li>
+                                                    <li><span class="spacer">…</span></li>
+                                                    {% if page == last %}
+                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 2 }}" data-pageNo="{{ page - 1 }}">{{ page - 2 }}</a></li>
+                                                    {% endif %}
+                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 1 }}" data-pageNo="{{ page - 1 }}">{{ page - 1 }}</a></li>
+                                                    <li class="current"><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page }}" data-pageNo="{{ page }}">{{ page }}</a></li>
+                                                    {% if page < last %}
+                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page + 1 }}" data-pageNo="{{ page + 1 }}">{{ page + 1 }}</a></li>
+                                                        {% if page < last - 2 %}
+                                                        <li><span class="spacer">…</span></li>
+                                                        <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ last }}" data-pageNo="{{ last }}" class="disabled">{{ last }}</a></li>
+                                                        {% elif page == last - 2 %}
+                                                        <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ last }}" data-pageNo="{{ last }}" class="disabled">{{ last }}</a></li>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                    {% if page != 1 %}
+                                                    <li>
+                                                        <a rel="prev" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
+                                                    </li>
+                                                    {% endif %}
+                                                {% else %}
+                                                    {% if page != last %}
+                                                    <li>
+                                                        <a rel="next" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page + 1 }}" class="next"><span class="prev-next-pagination">بعدی</span><i class="material-icons d-none">navigate_next</i></a>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% for p in range(1, 4) %}
+                                                    <li {% if p == page %}class="current"{% endif %}>
+                                                        <a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ p }}" data-pageNo="{{ p }}">{{ p }}</a>
+                                                    </li>
+                                                    {% endfor %}
+                                                    {% if page == 3 %}
+                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page=4" data-pageNo="4">4</a></li>
+                                                    {% endif %}
+                                                    <li><span class="spacer">…</span></li>
+                                                    <li><a rel="nofollow" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ last }}" data-pageNo="{{ last }}">{{ last }}</a></li>
+                                                    {% if page != 1 %}
+                                                    <li>
+                                                        <a rel="prev" href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}order={{ order }}&page={{ page - 1 }}" class="previous"><i class="material-icons d-none">navigate_before</i><span class="prev-next-pagination">قبلی</span></a>
+                                                    </li>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div id="js-product-list-bottom"></div>
+                            </div>
+                        </section>
+                        {% else %}
+                        <div class="text-center py-16">
+                            <i class="fas fa-box-open text-5xl mb-4"></i>
+                            <p>محصولی یافت نشد</p>
+                        </div>
+                        {% endif %}
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var form = document.getElementById('facet-form');
+    if (!form) return;
+    form.addEventListener('submit', function () {
+        var branches = Array.prototype.map.call(form.querySelectorAll('.branch-check:checked'), function (cb) { return cb.value; }).join(',');
+        var brands = Array.prototype.map.call(form.querySelectorAll('.brand-check:checked'), function (cb) { return cb.value; }).join(',');
+        var hBranches = form.querySelector('input[name="branches"]');
+        var hBrands = form.querySelector('input[name="brands"]');
+        if (branches) {
+            if (!hBranches) { hBranches = document.createElement('input'); hBranches.type = 'hidden'; hBranches.name = 'branches'; form.appendChild(hBranches); }
+            hBranches.value = branches;
+        }
+        if (brands) {
+            if (!hBrands) { hBrands = document.createElement('input'); hBrands.type = 'hidden'; hBrands.name = 'brands'; form.appendChild(hBrands); }
+            hBrands.value = brands;
+        }
+    });
+})();
+</script>
 {% endblock %}

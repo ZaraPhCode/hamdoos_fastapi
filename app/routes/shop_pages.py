@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import uuid
 from typing import Optional
 
@@ -26,6 +27,57 @@ from app.schemas.product import ProductSearchParams
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(tags=["Shop Pages"])
 
+NET_ORDER_OPTIONS = ("Sale", "Id", "AlphabetAsc", "AlphabetDesc", "Cheapest", "Expensive")
+
+
+def _parse_uuids(value: Optional[str]) -> list[uuid.UUID]:
+    """Parse a comma-separated list of UUIDs (.NET `branches` / `brands` params)."""
+    if not value:
+        return []
+    result = []
+    for part in value.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            result.append(uuid.UUID(part))
+        except ValueError:
+            pass
+    return result
+
+
+async def _resolve_category(db: AsyncSession, category_id: Optional[str], category: Optional[str]) -> Optional[Category]:
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    def _query() -> select:
+        return (
+            select(Category)
+            .options(
+                selectinload(Category.children),
+                selectinload(Category.medias),
+            )
+            .where(Category.is_removed == False)
+        )
+
+    if category_id:
+        try:
+            result = await db.execute(_query().where(Category.id == uuid.UUID(category_id)))
+            return result.unique().scalar_one_or_none()
+        except ValueError:
+            return None
+    if category:
+        cat = (await db.execute(_query().where(Category.en_title == category))).unique().scalar_one_or_none()
+        if not cat:
+            cat = (await db.execute(_query().where(Category.slug == category))).unique().scalar_one_or_none()
+        if not cat:
+            try:
+                cat = (await db.execute(_query().where(Category.id == uuid.UUID(category)))).unique().scalar_one_or_none()
+            except ValueError:
+                pass
+        return cat
+    return None
+
 
 @router.get("/home", response_class=HTMLResponse)
 async def home_page(
@@ -34,21 +86,88 @@ async def home_page(
     current_user: Optional[User] = Depends(get_optional_user_from_cookie),
 ):
     from app.models.common import SiteSetting
-    from sqlalchemy import select
+
+    # Defaults (empty lists/None) mirror .NET nullable view-model props
+    special_products = new_products = restocked_products = suggested_products = []
+    categories = []
+    site_settings = None
+    top_category = middle_category = bottom_category = None
+    top_category_products = middle_category_products = bottom_category_products = []
+    top_category_poster = mid_left_poster = mid_right_poster = middle_category_poster = bottom_category_poster = None
+
     try:
-        featured = await product_service.get_featured_products(db, 10)
-        new_products = await product_service.get_new_products(db, 10)
+        special_products = await product_service.get_special_products(db, 12)
+        new_products = await product_service.get_new_products(db, 12)
+        restocked_products = await product_service.get_restocked_products(db, 12)
+        suggested_products = await product_service.get_suggested_products(db, 12)
         categories = await product_service.get_category_tree(db)
         stmt = select(SiteSetting).where(SiteSetting.is_removed == False)
         result = await db.execute(stmt)
         site_settings = result.scalars().first()
     except Exception:
-        featured, new_products, categories, site_settings = [], [], [], None
+        pass
+
+    if site_settings:
+        ref_ids = {
+            site_settings.top_category_id,
+            site_settings.middle_category_id,
+            site_settings.bottom_category_id,
+            site_settings.top_poster_category_id,
+            site_settings.mid_left_poster_category_id,
+            site_settings.mid_right_poster_category_id,
+            site_settings.middle_poster_category_id,
+            site_settings.bottom_poster_category_id,
+        }
+        ref_ids.discard(None)
+        cats_map = {}
+        if ref_ids:
+            cat_stmt = (
+                select(Category)
+                .options(selectinload(Category.children))
+                .where(Category.id.in_(ref_ids), Category.is_removed == False)
+            )
+            cat_res = await db.execute(cat_stmt)
+            cats_map = {c.id: c for c in cat_res.unique().scalars().all()}
+
+        top_category = cats_map.get(site_settings.top_category_id)
+        middle_category = cats_map.get(site_settings.middle_category_id)
+        bottom_category = cats_map.get(site_settings.bottom_category_id)
+        top_category_poster = cats_map.get(site_settings.top_poster_category_id)
+        mid_left_poster = cats_map.get(site_settings.mid_left_poster_category_id)
+        mid_right_poster = cats_map.get(site_settings.mid_right_poster_category_id)
+        middle_category_poster = cats_map.get(site_settings.middle_poster_category_id)
+        bottom_category_poster = cats_map.get(site_settings.bottom_poster_category_id)
+
+        try:
+            if top_category:
+                top_category_products = await product_service.get_home_products_by_category(db, top_category.id)
+            if middle_category:
+                middle_category_products = await product_service.get_home_products_by_category(db, middle_category.id)
+            if bottom_category:
+                bottom_category_products = await product_service.get_home_products_by_category(db, bottom_category.id)
+        except Exception:
+            pass
 
     return templates.TemplateResponse("shop/index.html", {
         "request": request,
-        "featured_products": featured,
+        "special_products": special_products,
         "new_products": new_products,
+        "restocked_products": restocked_products,
+        "suggested_products": suggested_products,
+        "top_category": top_category,
+        "top_category_title": top_category.title if top_category else None,
+        "top_category_products": top_category_products,
+        "top_category_poster": top_category_poster,
+        "middle_category": middle_category,
+        "middle_category_title": middle_category.title if middle_category else None,
+        "middle_category_products": middle_category_products,
+        "middle_category_poster": middle_category_poster,
+        "mid_left_poster": mid_left_poster,
+        "mid_right_poster": mid_right_poster,
+        "bottom_category": bottom_category,
+        "bottom_category_title": bottom_category.title if bottom_category else None,
+        "bottom_category_products": bottom_category_products,
+        "bottom_category_poster": bottom_category_poster,
         "categories": categories,
         "header_categories": categories,
         "site_settings": site_settings,
@@ -60,43 +179,103 @@ async def home_page(
 async def product_list_page(
     request: Request,
     category_id: Optional[str] = Query(None),
-    brand_id: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    branches: Optional[str] = Query(None),
+    brands: Optional[str] = Query(None),
+    min_value: Optional[float] = Query(None),
+    max_value: Optional[float] = Query(None),
     min_price: Optional[float] = Query(None),
     max_price: Optional[float] = Query(None),
-    on_sale: Optional[bool] = Query(None),
-    is_new: Optional[bool] = Query(None),
-    is_special: Optional[bool] = Query(None),
-    sort_by: Optional[str] = Query("insert_date"),
-    sort_desc: bool = Query(True),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    order: str = Query("AlphabetAsc"),
     query: Optional[str] = Query(None),
+    q: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    current_page: Optional[int] = Query(None),
+    page_size: int = Query(28, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
-    cats = await product_service.get_category_tree(db)
-    params = ProductSearchParams(
-        query=query,
-        category_id=uuid.UUID(category_id) if category_id else None,
-        brand_id=uuid.UUID(brand_id) if brand_id else None,
-        min_price=min_price, max_price=max_price,
-        on_sale=on_sale, is_new=is_new, is_special=is_special,
-        sort_by=sort_by, sort_desc=sort_desc, page=page, page_size=page_size,
+    if current_page and current_page > 0:
+        page = current_page
+    return await _render_product_list(
+        request, db,
+        category_id=category_id, category=category,
+        branches=branches, brands=brands,
+        min_value=min_value or min_price, max_value=max_value or max_price,
+        order=order, query=query or q, page=page, page_size=page_size,
     )
-    try:
-        products, total = await product_service.search_products(db, params)
-        all_categories = await product_service.get_all_categories_flat(db)
-        all_brands = await product_service.get_all_brands(db)
-    except Exception:
-        products, total, all_categories, all_brands = [], 0, [], []
 
-    items = [product_service._build_product_list_response(p) for p in products]
+
+async def _render_product_list(
+    request: Request, db: AsyncSession, *,
+    category_id: Optional[str] = None, category: Optional[str] = None,
+    branches: Optional[str] = None, brands: Optional[str] = None,
+    min_value: Optional[float] = None, max_value: Optional[float] = None,
+    order: str = "AlphabetAsc", query: Optional[str] = None,
+    page: int = 1, page_size: int = 28,
+) -> HTMLResponse:
+    cat = await _resolve_category(db, category_id, category)
+    if order not in NET_ORDER_OPTIONS:
+        order = "AlphabetAsc"
+
+    branch_ids = _parse_uuids(branches)
+    brand_ids = _parse_uuids(brands)
+    cat_uuid = cat.id if cat else None
+
+    products, total = await product_service.search_products_net(
+        db, category_id=cat_uuid, branch_ids=branch_ids or None,
+        brand_ids=brand_ids or None, min_price=min_value, max_price=max_value,
+        order=order, query=query, page=page, page_size=page_size,
+    )
+    brand_facets = await product_service.get_brand_facets(db, category_id=cat_uuid, branch_ids=branch_ids or None)
+    _, price_max = await product_service.get_category_price_range(db, category_id=cat_uuid, branch_ids=branch_ids or None)
+    cats = await product_service.get_category_tree(db)
+
+    from app.models.common import SiteSetting
+    from sqlalchemy import select
+    site_settings = (await db.execute(
+        select(SiteSetting).where(SiteSetting.is_removed == False).limit(1)
+    )).scalars().first()
+
+    total_pages = max(1, math.ceil(total / page_size))
+
+    parts = []
+    if cat:
+        parts.append(f"category={cat.en_title or cat.slug}")
+    elif category_id:
+        parts.append(f"category_id={category_id}")
+    if branches:
+        parts.append(f"branches={branches}")
+    if brands:
+        parts.append(f"brands={brands}")
+    if min_value is not None:
+        parts.append(f"min_value={min_value}")
+    if max_value is not None:
+        parts.append(f"max_value={max_value}")
+    if query:
+        parts.append(f"query={query}")
+    filter_qs = "&".join(parts)
+
     return templates.TemplateResponse("shop/product_list.html", {
-        "request": request, "products": items, "total": total,
-        "page": page, "page_size": page_size,
-        "total_pages": max(1, (total + page_size - 1) // page_size),
-        "sort_by": sort_by, "sort_desc": sort_desc,
-        "all_categories": all_categories, "all_brands": all_brands,
-        "categories": cats, "header_categories": cats,
+        "request": request,
+        "category": cat,
+        "categories": cats,
+        "header_categories": cats,
+        "children": list(cat.children) if cat and cat.children else [],
+        "products": products,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "order": order,
+        "query": query,
+        "min_value": min_value,
+        "max_value": max_value,
+        "branch_ids": {str(b) for b in branch_ids},
+        "brand_ids": {str(b) for b in brand_ids},
+        "brand_facets": brand_facets,
+        "price_max": price_max,
+        "filter_qs": filter_qs,
+        "site_settings": site_settings,
     })
 
 
@@ -440,22 +619,33 @@ async def shop_category_dotnet(slug: str, request: Request, db: AsyncSession = D
 
 
 async def _render_category_page(slug: str, request: Request, db: AsyncSession) -> HTMLResponse:
-    cat = await product_service.get_category_by_en_title(db, slug)
-    if not cat:
-        cat = await product_service.get_category_by_slug(db, slug)
-    if not cat:
-        try:
-            cat = await db.get(Category, uuid.UUID(slug))
-        except ValueError:
-            pass
+    cat = await _resolve_category(db, None, slug)
     if not cat:
         return HTMLResponse("دسته‌بندی یافت نشد", status_code=404)
-    cats = await product_service.get_category_tree(db)
-    params = ProductSearchParams(category_id=cat.id, page=1, page_size=20)
-    products_result, total = await product_service.search_products(db, params)
-    items = [product_service._build_product_list_response(p) for p in products_result]
-    return templates.TemplateResponse("shop/product_list.html", {
-        "request": request, "products": items,
-        "total": total, "page": 1, "page_size": 20, "total_pages": max(1, (total + 19) // 20),
-        "category": cat, "categories": cats, "header_categories": cats,
-    })
+    branches = request.query_params.get("branches")
+    brands = request.query_params.get("brands")
+    try:
+        min_value = float(request.query_params.get("min_value") or request.query_params.get("minValue")) if request.query_params.get("min_value") or request.query_params.get("minValue") else None
+    except (ValueError, TypeError):
+        min_value = None
+    try:
+        max_value = float(request.query_params.get("max_value") or request.query_params.get("maxValue")) if request.query_params.get("max_value") or request.query_params.get("maxValue") else None
+    except (ValueError, TypeError):
+        max_value = None
+    order = request.query_params.get("order", "AlphabetAsc")
+    query = request.query_params.get("query") or request.query_params.get("q")
+    try:
+        page = int(request.query_params.get("currentPage") or request.query_params.get("page") or 1)
+    except (ValueError, TypeError):
+        page = 1
+    try:
+        page_size = int(request.query_params.get("pageSize") or request.query_params.get("page_size") or 28)
+    except (ValueError, TypeError):
+        page_size = 28
+    return await _render_product_list(
+        request, db,
+        category_id=str(cat.id), category=slug,
+        branches=branches, brands=brands,
+        min_value=min_value, max_value=max_value,
+        order=order, query=query, page=page, page_size=page_size,
+    )

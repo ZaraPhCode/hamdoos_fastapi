@@ -1,17 +1,27 @@
-<article class="product-miniature js-product-miniature" data-id-product="{{ product.id }}">
-    <a href="/products/{{ product.slug or product.id }}">
+<article class="product-miniature js-product-miniature" data-id-product="{{ product.id }}" data-id-product-attribute="0" data-product-id-category="0" data-product-id-manufacturer="0" tabindex="-1" role="option">
+    <a href="/products/{{ product.slug or product.part_number or product.id }}" tabindex="-1">
         <div class="product-container product-style">
             <div class="first-block">
                 <div class="product-thumbnail">
                     <span class="product-cover-link">
-                        <img loading="lazy" src="{{ product.medium_image_url or 'https://placehold.co/278x278' }}" alt="{{ product.name }}" class="img-fluid" title="{{ product.name }}" width="278" height="278">
+                        {% set card_img = product.feature_image_url or product.medium_image_url %}
+                        {% if card_img %}
+                        <img loading="lazy" src="{{ card_img }}" alt="{{ product.short_description or product.name }}" class="img-fluid" title="{{ product.name }}" width="278" height="278">
+                        {% else %}
+                        <img loading="lazy" src="https://placehold.co/278x278" alt="{{ product.short_description or product.name }}" class="img-fluid" title="{{ product.name }}" width="278" height="278">
+                        {% endif %}
                     </span>
                 </div>
                 {% set has_discount = product.price_after_discount is defined and product.price_after_discount and product.price_after_discount < product.price %}
-                {% if has_discount or product.is_new %}
+                {% if has_discount and product.is_new %}
+                <div class="product-flags" style="right:57px">
+                    <span class="product-flag discount"><span>&lrm;− {{ ("%.2f"|format(product.discount_percentage)).rstrip('0').rstrip('.') }}%</span></span>
+                    <span class="product-flag new"><span>جدید</span></span>
+                </div>
+                {% else %}
                 <div class="product-flags">
                     {% if has_discount %}
-                    <span class="product-flag discount"><span>-{{ "%.0f"|format(((product.price - product.price_after_discount) / product.price * 100) if product.price else 0) }}%</span></span>
+                    <span class="product-flag discount"><span>&lrm;− {{ ("%.2f"|format(product.discount_percentage)).rstrip('0').rstrip('.') }}%</span></span>
                     {% endif %}
                     {% if product.is_new %}
                     <span class="product-flag new"><span>جدید</span></span>
@@ -27,19 +37,29 @@
                     <div class="third-block-left">
                         <div class="product-price-and-shipping d-flex">
                             <div class="first-prices d-flex flex-wrap align-items-center">
-                                <span class="price product-price">{{ "{:,.0f}".format(product.price_after_discount or product.price or 0) }} ریال</span>
+                                {% if product.max_price %}
+                                <span class="price product-price">از {{ "{:,.0f}".format(product.price_after_discount or product.price or 0) }} &lrm;ریال</span>
+                                {% else %}
+                                <span class="price product-price">{{ "{:,.0f}".format(product.price_after_discount or product.price or 0) }} &lrm;ریال</span>
+                                {% endif %}
                             </div>
                             {% if has_discount %}
                             <div class="second-prices d-flex flex-wrap align-items-center">
-                                <span class="regular-price">{{ "{:,.0f}".format(product.price) }} ریال</span>
+                                <span class="regular-price">{{ "{:,.0f}".format(product.price) }} &lrm;ریال</span>
                             </div>
                             {% endif %}
                         </div>
                     </div>
                     <div class="buttons-sections">
-                        <button type="button" class="btn add-to-cart js-ajax-add-to-cart" data-id-product="{{ product.id }}">
+                        {% if product.number_of_variations == 1 %}
+                        <button type="button" class="btn add-to-cart js-ajax-add-to-cart" data-id-product="{{ product.id }}" tabindex="-1">
                             <span class="text-for-grid">خرید</span>
                         </button>
+                        {% else %}
+                        <button type="button" class="btn add-to-cart" data-id-product="{{ product.id }}" tabindex="-1">
+                            <span class="text-for-grid">خرید</span>
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
             </div>

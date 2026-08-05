@@ -1,0 +1,49 @@
+/* Vazirmatn — local font files added under app/static/fonts/fonts/vazirmatn */
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/static/fonts/fonts/vazirmatn/vazirmatnregular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/static/fonts/fonts/vazirmatn/vazirmatn200.woff2') format('woff2');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/static/fonts/fonts/vazirmatn/vazirmatn500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/static/fonts/fonts/vazirmatn/vazirmatn700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/static/fonts/fonts/vazirmatn/vazirmatn800.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/static/fonts/fonts/vazirmatn/vazirmatn900.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Force Vazirmatn on all text; keep icon fonts (Font Awesome / Material Icons) untouched */
+body,
+body *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(.fa-light):not(.fa-thin):not(.fa-duotone):not(.material-icons) {
+  font-family: 'Vazirmatn', 'IranSANS', 'Roboto', sans-serif !important;
+}

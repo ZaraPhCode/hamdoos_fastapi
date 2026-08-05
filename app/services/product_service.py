@@ -310,6 +310,133 @@ async def _get_category_and_child_ids(db: AsyncSession, category_id: uuid.UUID) 
     return ids
 
 
+async def search_products_net(
+    db: AsyncSession,
+    category_id: uuid.UUID | None = None,
+    branch_ids: list[uuid.UUID] | None = None,
+    brand_ids: list[uuid.UUID] | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    order: str = "AlphabetAsc",
+    query: str | None = None,
+    page: int = 1,
+    page_size: int = 28,
+) -> tuple[list[Product], int]:
+    """Mirror .NET CategoryController.Index product search.
+
+    - category_id → products in that category + all descendants
+    - branch_ids  → restrict to the given (child) category ids only
+    - order       → ProductOrder_t names: Sale, Id, AlphabetAsc, AlphabetDesc, Cheapest, Expensive
+      (in-stock products always sort first, like the .NET comparers)
+    """
+    stmt = (
+        select(Product)
+        .options(
+            selectinload(Product.category),
+            selectinload(Product.brand),
+            selectinload(Product.product_images),
+        )
+        .where(Product.is_removed == False, Product.no_display == False)
+    )
+    count_stmt = select(func.count(Product.id)).where(Product.is_removed == False, Product.no_display == False)
+
+    if branch_ids:
+        stmt = stmt.where(Product.category_id.in_(branch_ids))
+        count_stmt = count_stmt.where(Product.category_id.in_(branch_ids))
+    elif category_id:
+        cat_ids = await _get_category_and_child_ids(db, category_id)
+        stmt = stmt.where(Product.category_id.in_(cat_ids))
+        count_stmt = count_stmt.where(Product.category_id.in_(cat_ids))
+
+    if brand_ids:
+        stmt = stmt.where(Product.brand_id.in_(brand_ids))
+        count_stmt = count_stmt.where(Product.brand_id.in_(brand_ids))
+
+    if min_price is not None:
+        stmt = stmt.where(Product.price >= min_price)
+        count_stmt = count_stmt.where(Product.price >= min_price)
+
+    if max_price is not None:
+        stmt = stmt.where(Product.price <= max_price)
+        count_stmt = count_stmt.where(Product.price <= max_price)
+
+    if query:
+        like = f"%{query}%"
+        filter_cond = or_(
+            Product.name.ilike(like),
+            Product.en_name.ilike(like),
+            Product.part_number.ilike(like),
+            Product.model.ilike(like),
+            Product.short_description.ilike(like),
+            Product.keywords.ilike(like),
+        )
+        stmt = stmt.where(filter_cond)
+        count_stmt = count_stmt.where(filter_cond)
+
+    # .NET comparers: in-stock first, then the chosen key
+    in_stock = (Product.stock_quantity > 0).desc()
+    sort_key = {
+        "Sale": Product.sale.desc(),
+        "Id": Product.id.asc(),
+        "AlphabetAsc": Product.name.asc(),
+        "AlphabetDesc": Product.name.desc(),
+        "Cheapest": Product.price_after_discount.asc(),
+        "Expensive": Product.price_after_discount.desc(),
+    }.get(order, Product.name.asc())
+    stmt = stmt.order_by(in_stock, sort_key)
+
+    count_result = await db.execute(count_stmt)
+    total = count_result.scalar() or 0
+
+    offset = (page - 1) * page_size
+    stmt = stmt.offset(offset).limit(page_size)
+    result = await db.execute(stmt)
+    products = result.unique().scalars().all()
+
+    return list(products), total
+
+
+async def get_brand_facets(
+    db: AsyncSession,
+    category_id: uuid.UUID | None = None,
+    branch_ids: list[uuid.UUID] | None = None,
+) -> list[dict]:
+    """Group products by brand (id, name, count) for the facet sidebar, mirroring .NET ViewData['Brands']."""
+    stmt = (
+        select(Product.brand_id, Brand.name, func.count(Product.id))
+        .join(Brand, Product.brand_id == Brand.id)
+        .where(Product.is_removed == False, Product.no_display == False, Product.brand_id.isnot(None))
+    )
+    if branch_ids:
+        stmt = stmt.where(Product.category_id.in_(branch_ids))
+    elif category_id:
+        cat_ids = await _get_category_and_child_ids(db, category_id)
+        stmt = stmt.where(Product.category_id.in_(cat_ids))
+    stmt = stmt.group_by(Product.brand_id, Brand.name).order_by(Brand.name)
+    result = await db.execute(stmt)
+    return [
+        {"id": str(bid), "name": name, "count": count}
+        for bid, name, count in result.all()
+    ]
+
+
+async def get_category_price_range(
+    db: AsyncSession,
+    category_id: uuid.UUID | None = None,
+    branch_ids: list[uuid.UUID] | None = None,
+) -> tuple[float, float]:
+    """Min/max product price for the facet slider, mirroring .NET maxSlider."""
+    stmt = select(func.max(Product.price)).where(Product.is_removed == False, Product.no_display == False)
+    if branch_ids:
+        stmt = stmt.where(Product.category_id.in_(branch_ids))
+    elif category_id:
+        cat_ids = await _get_category_and_child_ids(db, category_id)
+        stmt = stmt.where(Product.category_id.in_(cat_ids))
+    result = await db.execute(stmt)
+    return 0.0, float(result.scalar() or 0)
+
+
+
 async def get_product_by_id(db: AsyncSession, product_id: uuid.UUID) -> Optional[Product]:
     stmt = (
         select(Product)
@@ -505,6 +632,78 @@ async def get_new_products(db: AsyncSession, limit: int = 10) -> list[Product]:
         )
         .order_by(Product.insert_date.desc())
         .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.unique().scalars().all())
+
+
+async def get_special_products(db: AsyncSession, limit: int = 12) -> list[Product]:
+    """Specials for the homepage tabs — mirrors .NET IsSpecial && stock > 0."""
+    stmt = (
+        select(Product)
+        .options(selectinload(Product.category), selectinload(Product.brand), selectinload(Product.product_images))
+        .where(
+            Product.is_special == True,
+            Product.stock_quantity > 0,
+            Product.is_removed == False,
+            Product.no_display == False,
+        )
+        .order_by(Product.insert_date.desc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.unique().scalars().all())
+
+
+async def get_restocked_products(db: AsyncSession, limit: int = 12) -> list[Product]:
+    """Restocked products for the homepage tabs — mirrors .NET Restocked && stock > 0."""
+    stmt = (
+        select(Product)
+        .options(selectinload(Product.category), selectinload(Product.brand), selectinload(Product.product_images))
+        .where(
+            Product.restocked == True,
+            Product.stock_quantity > 0,
+            Product.is_removed == False,
+            Product.no_display == False,
+        )
+        .order_by(Product.insert_date.desc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.unique().scalars().all())
+
+
+async def get_suggested_products(db: AsyncSession, limit: int = 12) -> list[Product]:
+    """Suggested products for the homepage — mirrors .NET Suggested && stock > 0."""
+    stmt = (
+        select(Product)
+        .options(selectinload(Product.category), selectinload(Product.brand), selectinload(Product.product_images))
+        .where(
+            Product.suggested == True,
+            Product.stock_quantity > 0,
+            Product.is_removed == False,
+            Product.no_display == False,
+        )
+        .order_by(Product.insert_date.desc())
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.unique().scalars().all())
+
+
+async def get_home_products_by_category(db: AsyncSession, category_id: uuid.UUID) -> list[Product]:
+    """Products in a category + all its children with stock — mirrors .NET GetProductByCategoryIdHomeAsync."""
+    cat_ids = await _get_category_and_child_ids(db, category_id)
+    stmt = (
+        select(Product)
+        .options(selectinload(Product.category), selectinload(Product.brand), selectinload(Product.product_images))
+        .where(
+            Product.category_id.in_(cat_ids),
+            Product.stock_quantity > 0,
+            Product.is_removed == False,
+            Product.no_display == False,
+        )
+        .order_by(Product.insert_date.desc())
     )
     result = await db.execute(stmt)
     return list(result.unique().scalars().all())

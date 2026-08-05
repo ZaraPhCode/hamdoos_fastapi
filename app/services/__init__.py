@@ -23,6 +23,9 @@ from app.services.product_service import (
     get_brand_by_id,
     create_brand,
     search_products,
+    search_products_net,
+    get_brand_facets,
+    get_category_price_range,
     get_product_by_id,
     get_product_by_slug,
     create_product,
@@ -117,6 +120,9 @@ __all__ = [
 
     # Products
     "search_products",
+    "search_products_net",
+    "get_brand_facets",
+    "get_category_price_range",
     "get_product_by_id",
     "get_product_by_slug",
     "create_product",

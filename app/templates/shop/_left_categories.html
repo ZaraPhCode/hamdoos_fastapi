@@ -1,0 +1,48 @@
+<div class="left-categories column-block md-bottom">
+    <p class="column-title" style="margin: 0 !important;">دسته بندی ها</p>
+    <div class="category-tree js-category-tree">
+        <ul>
+            {% for item in categories or [] %}
+            {% if item.children %}
+            <li data-depth="0">
+                <a href="/Shop/Category/Index/{{ item.en_title or item.slug or item.id }}" title="{{ item.title }}" data-category-id="{{ item.id }}">
+                    <span>{{ item.title }}</span>
+                </a>
+                <div class="collapse-icons collapsed" data-toggle="collapse" data-target="#exCollapsingNavbar{{ item.id }}" aria-expanded="false">
+                    <img src="/static/ThemeLayout/iconSVG/plus.svg" class="add">
+                    <img src="/static/ThemeLayout/iconSVG/dash.svg" class="remove">
+                </div>
+                <div class="category-sub-menu collapse" id="exCollapsingNavbar{{ item.id }}">
+                    <ul>
+                        {% for c1 in item.children %}
+                        {% if c1.children %}
+                        <li data-depth="1">
+                            <a href="/Shop/Category/Index/{{ c1.en_title or c1.slug or c1.id }}" title="{{ c1.title }}" data-category-id="{{ c1.id }}"><span>{{ c1.title }}</span></a>
+                            <div class="collapse-icons collapsed" data-toggle="collapse" data-target="#exCollapsingNavbar{{ c1.id }}" aria-expanded="false">
+                                <img src="/static/ThemeLayout/iconSVG/plus.svg" class="add">
+                                <img src="/static/ThemeLayout/iconSVG/dash.svg" class="remove">
+                            </div>
+                            <div class="category-sub-menu collapse" id="exCollapsingNavbar{{ c1.id }}">
+                                <ul>
+                                    {% for c2 in c1.children %}
+                                    <li data-depth="2">
+                                        <a href="/Shop/Category/Index/{{ c2.en_title or c2.slug or c2.id }}" title="{{ c2.title }}" data-category-id="{{ c2.id }}"><span>{{ c2.title }}</span></a>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li data-depth="1"><a href="/Shop/Category/Index/{{ c1.en_title or c1.slug or c1.id }}" title="{{ c1.title }}" data-category-id="{{ c1.id }}"><span>{{ c1.title }}</span></a></li>
+                        {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            </li>
+            {% else %}
+            <li data-depth="0"><a href="/Shop/Category/Index/{{ item.en_title or item.slug or item.id }}" title="{{ item.title }}" data-category-id="{{ item.id }}"><span>{{ item.title }}</span></a></li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+</div>

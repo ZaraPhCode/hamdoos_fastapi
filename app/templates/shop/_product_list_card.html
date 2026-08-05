@@ -1,0 +1,86 @@
+<article class="product-miniature js-product-miniature" data-id-product="{{ product.id }}" data-id-product-attribute="0" data-product-id-category="{{ product.category_id }}" data-product-id-manufacturer="{{ product.brand_id or 0 }}">
+    <a href="/products/{{ product.slug or product.part_number or product.id }}">
+        <div class="product-container product-style">
+            <div class="first-block">
+                <div class="product-thumbnail">
+                    <span class="product-cover-link">
+                        {% set card_img = product.feature_image_url or product.medium_image_url %}
+                        {% if card_img %}
+                        <img loading="lazy" id="{{ product.id }}" src="{{ card_img }}" alt="{{ product.image_description or product.short_description or '' }}" class="img-fluid" title="{{ product.image_title or product.name }}" width="278" height="278">
+                        {% else %}
+                        <img loading="lazy" id="{{ product.id }}" src="https://placehold.co/278x278" alt="{{ product.image_description or product.short_description or '' }}" class="img-fluid" title="{{ product.image_title or product.name }}" width="278" height="278">
+                        {% endif %}
+                    </span>
+                </div>
+                {% set has_discount = product.price_after_discount and product.price_after_discount < product.price %}
+                {% if has_discount and product.is_new %}
+                <div class="product-flags" style="right:73px">
+                    <span class="product-flag discount"><span>&lrm;− {{ ("%.2f"|format(product.discount_percentage or 0)).rstrip('0').rstrip('.') }}%</span></span>
+                    <span class="product-flag new"><span>جدید</span></span>
+                </div>
+                {% else %}
+                <div style="right:89px" class="product-flags">
+                    {% if has_discount %}
+                    <span class="product-flag discount"><span>&lrm;− {{ ("%.2f"|format(product.discount_percentage or 0)).rstrip('0').rstrip('.') }}%</span></span>
+                    {% endif %}
+                    {% if product.is_new %}
+                    <span class="product-flag new"><span>جدید</span></span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="second-third-block">
+                <div class="second-block">
+                    <h5 class="product-name" itemprop="name"><span title="{{ product.name }}">{{ product.name[:60] }}{% if product.name|length > 60 %}...{% endif %}</span></h5>
+                    {% if product.short_description %}
+                    <div class="product-description-short" itemprop="description">
+                        {{ product.short_description[:120] }}{% if product.short_description|length > 120 %}...{% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="product-reference">شماره فنی : <span>{{ product.part_number }}</span></div>
+                </div>
+                <div class="third-block">
+                    {% if product.stock_quantity > 0 %}
+                    <div class="third-block-left">
+                        <div class="product-price-and-shipping d-flex">
+                            <div class="first-prices d-flex flex-wrap align-items-center">
+                                {% if product.max_price %}
+                                <span class="price product-price">از {{ "{:,.0f}".format(product.price_after_discount or product.price or 0) }}&lrm;ریال</span>
+                                {% else %}
+                                <span class="price product-price">{{ "{:,.0f}".format(product.price_after_discount or product.price or 0) }}&lrm;ریال</span>
+                                {% endif %}
+                            </div>
+                            {% if has_discount %}
+                            <div class="second-prices d-flex flex-wrap align-items-center">
+                                <span class="regular-price">{{ "{:,.0f}".format(product.price or 0) }}&lrm;ریال</span>
+                            </div>
+                            {% endif %}
+                            <div class="third-prices d-flex flex-wrap align-items-center"></div>
+                        </div>
+                    </div>
+                    {% if product.number_of_variations == 1 %}
+                    <div class="buttons-sections">
+                        <button type="button" class="btn add-to-cart js-ajax-add-to-cart" data-id-product="{{ product.id }}">
+                            <span class="text-for-list">افزودن به سبد</span>
+                            <span class="text-for-grid">خرید</span>
+                            <span class="js-add-to-cart-quantity d-none">{{ product.minimum_purchase or 1 }}</span>
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="buttons-sections">
+                        <a class="btn add-to-cart details-link" href="/products/{{ product.slug or product.id }}">
+                            <span class="text-for-grid">مشخصات</span>
+                            <span class="text-for-list">جزئیات</span> &nbsp;<i class="caret-right text-for-list"></i>
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="third-block-left">
+                        <span class="out-of-stock">ناموجود</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </a>
+</article>

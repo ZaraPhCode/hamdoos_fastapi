@@ -21,15 +21,98 @@
 </aside>
 <h1 class="d-none">همدوس فروشگاه تخصصی لیزر، اپتیک و فوتونیک</h1>
 
-{% if product_tags_html %}
-{{ product_tags_html|safe }}
-{% endif %}
+<div class="outside-container top-column-content">
+    <div class="aone-homepage home-blocks-top">
+        <div class="container">
+            <div class="block block_id_2 clearfix box-bg md-bottom">
+                <div class="aone-tabs">
+                    <ul class="nav nav-tabs">
+                        {% if special_products %}
+                        <li class="nav-item">
+                            <a class="nav-link active" data-toggle="tab" href="#aHomeTabTab1" data-slickid="aSlickTab1">
+                                <span>کالای ویژه</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if new_products %}
+                        <li class="nav-item">
+                            <a class="nav-link not-first" data-toggle="tab" href="#aHomeTabTab3" data-slickid="aSlickTab3">
+                                <span>کالای جدید</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if restocked_products %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if not special_products and not new_products %}active{% else %}not-first{% endif %}" data-toggle="tab" href="#aHomeTabTab4" data-slickid="aSlickTab4">
+                                <span>کالای تازه موجود</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    <div class="tab-content">
+                        {% if special_products %}
+                        <div id="aHomeTabTab1" class="tab-pane fade show active">
+                            <div class="product-list">
+                                <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
+                                     id="aSlickTab1"
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                    {% for product in special_products %}
+                                    {% include "shop/_product_card.html" %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="view-all-link at-bottom">
+                                <a class="btn btn-secondary" href="/search?tag=special">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if new_products %}
+                        <div id="aHomeTabTab3" class="tab-pane fade">
+                            <div class="product-list">
+                                <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
+                                     id="aSlickTab3"
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:false,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                    {% for product in new_products %}
+                                    {% include "shop/_product_card.html" %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="view-all-link at-bottom">
+                                <a class="btn btn-secondary" href="/search?tag=new">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if restocked_products %}
+                        <div id="aHomeTabTab4" class="tab-pane fade {% if not special_products and not new_products %}show active{% endif %}">
+                            <div class="product-list">
+                                <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
+                                     id="aSlickTab4"
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                    {% for product in restocked_products %}
+                                    {% include "shop/_product_card.html" %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="view-all-link at-bottom">
+                                <a class="btn btn-secondary" href="/search?tag=restocked">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="main-content">
     <div class="container">
         <div class="row">
             <div id="left-column" class="sidebar-column col-12 col-md-4 col-lg-3">
                 <div class="column-wrapper md-bottom">
+                    {% if categories %}
+                    {% include "shop/_left_categories.html" %}
+                    {% endif %}
                     <div class="aone-column">
                         <div class="column-block md-bottom clearfix no-box">
                             <div class="static-html typo">
@@ -64,7 +147,7 @@
                                         <div class="banner2" style="margin-bottom:0;">
                                             <a href="/category/{{ top_category_poster.en_title or top_category_poster.slug }}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ top_category_poster.poster_image_url or top_category_poster.PosterImageURL }}" alt="{{ top_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ top_category_poster.poster_image_url }}" alt="{{ top_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>
@@ -103,7 +186,7 @@
                                         <div class="banner2">
                                             <a href="/category/{{ middle_category_poster.en_title or middle_category_poster.slug }}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ middle_category_poster.poster_image_url or middle_category_poster.PosterImageURL }}" alt="{{ middle_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ middle_category_poster.poster_image_url }}" alt="{{ middle_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>
@@ -142,7 +225,7 @@
                                     <div class="col-12 col-lg-6">
                                         <div class="banner2">
                                             <a href="/category/{{ mid_right_poster.en_title or mid_right_poster.slug }}">
-                                                <img loading="lazy" src="{{ mid_right_poster.poster_image_url or mid_right_poster.PosterImageURL }}" alt="{{ mid_right_poster.en_title or '' }}" width="840" height="350">
+                                                <img loading="lazy" src="{{ mid_right_poster.poster_image_url }}" alt="{{ mid_right_poster.en_title or '' }}" width="840" height="350">
                                             </a>
                                         </div>
                                     </div>
@@ -151,7 +234,7 @@
                                     <div class="col-12 col-lg-6">
                                         <div class="banner2">
                                             <a href="/category/{{ mid_left_poster.en_title or mid_left_poster.slug }}">
-                                                <img loading="lazy" src="{{ mid_left_poster.poster_image_url or mid_left_poster.PosterImageURL }}" alt="{{ mid_left_poster.en_title or '' }}" width="840" height="350">
+                                                <img loading="lazy" src="{{ mid_left_poster.poster_image_url }}" alt="{{ mid_left_poster.en_title or '' }}" width="840" height="350">
                                             </a>
                                         </div>
                                     </div>
@@ -190,7 +273,7 @@
                                         <div class="banner2">
                                             <a href="/category/{{ bottom_category_poster.en_title or bottom_category_poster.slug }}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ bottom_category_poster.poster_image_url or bottom_category_poster.PosterImageURL }}" alt="{{ bottom_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ bottom_category_poster.poster_image_url }}" alt="{{ bottom_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>
