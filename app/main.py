@@ -31,6 +31,7 @@ from app.api.v1.warehouse import router as warehouse_router
 from app.api.v1.seo import router as seo_router
 from app.api.v1.export import router as export_router
 from app.routes.shop_pages import router as shop_pages_router
+from app.routes.shop_auth import router as shop_auth_router
 from app.api.v1.notify import router as notify_router
 from app.middleware import register_middleware
 from app.utils.common_works import TimedHostedService
@@ -84,6 +85,7 @@ app.include_router(purchase_orders_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
 app.include_router(payments_router, prefix="/api/v1")
 app.include_router(shop_pages_router)
+app.include_router(shop_auth_router)
 app.include_router(seo_router)
 app.include_router(export_router, prefix="/api/v1")
 app.include_router(warehouse_router, prefix="/api/v1")

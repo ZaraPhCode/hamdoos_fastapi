@@ -1,86 +1,130 @@
 {% extends "shop/base.html" %}
 {% block title %}ورود | آشا شاپ{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/ThemeLayout/iverify-auth17.css" type="text/css" media="all">
+{% endblock %}
+{% block body_id %}module-iverify-authentication{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width st-wrapper{% endblock %}
 
 {% block content %}
-
-<div class="min-h-[calc(100vh-16rem)] flex items-center justify-center px-4 py-12">
-    <div class="w-full max-w-md">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-user text-2xl text-primary-500"></i>
-                </div>
-                <h1 class="text-2xl font-black text-gray-800">ورود به حساب کاربری</h1>
-                <p class="text-gray-500 text-sm mt-2">برای ورود شماره موبایل یا ایمیل و رمز عبور خود را وارد کنید</p>
-            </div>
-
-            <form method="POST" action="{{ url_for('shop_login') }}">
-                <input type="hidden" name="next" value="{{ request.query_params.get('next', '') }}">
-
-                {% if error %}
-                <div class="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg mb-5 flex items-center gap-2">
-                    <i class="fas fa-exclamation-circle"></i>
-                    {{ error }}
-                </div>
-                {% endif %}
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1.5">شماره موبایل یا ایمیل</label>
-                        <div class="relative">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fas fa-user"></i></span>
-                            <input type="text" name="username" required class="w-full pr-10 pl-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="۰۹۱۲۳۴۵۶۷۸۹ یا email@example.com" value="{{ request.form.username or '' }}">
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div id="center-column" class="center-column col-12">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title"></div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                {% if message %}
+                                <aside id="notifications">
+                                    <div class="container">
+                                        <article class="alert alert-success" role="alert" data-alert="success">
+                                            <ul><li>{{ message }}</li></ul>
+                                        </article>
+                                    </div>
+                                </aside>
+                                {% endif %}
+                                <div id="noSlide">
+                                    <div class="row justify-center-verif">
+                                        <div class="col-xs-12 col-sm-8 col-md-7" id="login">
+                                            {% if error %}<div class="alert alert-danger" id="login_error">{{ error }}</div>{% endif %}
+                                            <form method="post" action="{{ url_for('shop_login') }}" id="login_form" class="box ajax-form">
+                                                <h3 class="page-subheading">ورود با رمز عبور</h3>
+                                                <div class="form_content clearfix">
+                                                    <p style="margin: 20px 0">
+                                                        با استفاده از رمز عبور خود وارد شوید یا از گزینه فراموشی رمز استفاده کنید
+                                                    </p>
+                                                    <div class="form-group">
+                                                        <h3 class="verify-loginform">
+                                                            {{ email_or_phone }}
+                                                            <a id="change_number" href="{{ change_url }}">تغییر</a>
+                                                            {% if not email_confirmed %}
+                                                            | <button type="button" class="button btn btn-info" id="ResendEamil">
+                                                                <span><i class="icon-envelope left"></i> ارسال تأیید ایمیل</span>
+                                                            </button>
+                                                            {% endif %}
+                                                        </h3>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <input name="password" type="password" placeholder="رمز عبور" class="is_required validate account_input form-control" data-validate="isPasswd">
+                                                        {% if password_error %}<span class="text-danger">{{ password_error }}</span>{% endif %}
+                                                    </div>
+                                                    <input type="hidden" class="hidden" name="email_or_phone" value="{{ email_or_phone }}">
+                                                    <input type="hidden" class="hidden" name="returnUrl" value="{{ return_url or '/' }}">
+                                                    {% if not disable_captcha and cap_url %}
+                                                    <div class="form-group">
+                                                        <img id="capImg" src="{{ cap_url }}" alt="Image" style="margin-bottom: 1.2rem; max-width:100%;">
+                                                        <img class="refreshIcon" src="/static/ThemeLayout/iconsvg/icons8-refresh.svg" style="cursor:pointer;" alt="refresh">
+                                                        <div style="width: 15rem;">
+                                                            <input name="captcha_code" value="" placeholder="کد کپچا" class="is_required validate account_input form-control" type="number">
+                                                            {% if captcha_error %}<span class="text-danger">{{ captcha_error }}</span>{% endif %}
+                                                        </div>
+                                                        <input type="hidden" name="cap_id" value="{{ cap_id }}">
+                                                    </div>
+                                                    {% endif %}
+                                                    <p class="submit text-center">
+                                                        <button type="submit" id="SubmitLogin" name="SubmitLogin" class="button btn btn-success">
+                                                            <span><i class="icon-key left"></i> ورود با رمز عبور</span>
+                                                        </button>
+                                                    </p>
+                                                </div>
+                                                <br>
+                                                <div class="row loginsms">
+                                                    <h4 class="page-subheading col-12">
+                                                        <i class="icon icon-support"></i> رمز عبور خود را فراموش کرده‌اید؟
+                                                    </h4>
+                                                </div>
+                                                <div class="row">
+                                                    <p class="submit col-xs-12 col-md-5 text-center">
+                                                        <a class="button btn btn-info p-3" href="{{ forgot_url }}" style="font-size: initial;">
+                                                            <span><i class="icon-envelope left"></i> رمز عبور را فراموش کرده‌ام</span>
+                                                        </a>
+                                                    </p>
+                                                    <div class="col-xs-12 col-md-2"></div>
+                                                    <p class="submit col-xs-12 col-md-5 text-center">
+                                                        <a class="button btn btn-info p-3" id="SmsConfirm" href="{{ sms_login_url }}" style="font-size: initial;">
+                                                            <span><i class="icon-envelope left"></i> ورود با پیامک</span>
+                                                        </a>
+                                                    </p>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
                         </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1.5">رمز عبور</label>
-                        <div class="relative">
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fas fa-lock"></i></span>
-                            <input type="password" name="password" required class="w-full pr-10 pl-10 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="رمز عبور خود را وارد کنید">
-                            <button type="button" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 toggle-password" data-target="password">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" name="remember_me" class="w-4 h-4 accent-primary-500 rounded">
-                            <span class="text-sm text-gray-600">مرا به خاطر بسپار</span>
-                        </label>
-                        <a href="{{ url_for('shop_forgot_password') }}" class="text-sm text-primary-600 hover:text-primary-700 font-bold">فراموشی رمز عبور</a>
-                    </div>
+                    </section>
                 </div>
-
-                <button type="submit" class="w-full mt-6 bg-primary-500 text-white py-3 rounded-lg font-bold text-sm hover:bg-primary-600 transition shadow-lg shadow-primary-500/20 flex items-center justify-center gap-2">
-                    <i class="fas fa-sign-in-alt"></i> ورود
-                </button>
-            </form>
-
-            <div class="mt-6 text-center">
-                <p class="text-sm text-gray-500">حساب کاربری ندارید؟</p>
-                <a href="{{ url_for('shop_register') }}" class="inline-block mt-2 text-primary-600 hover:text-primary-700 font-bold text-sm">
-                    ثبت‌نام کنید
-                </a>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    document.querySelector('.toggle-password')?.addEventListener('click', function() {
-        const target = document.querySelector('input[name="password"]');
-        if (!target) return;
-        const icon = this.querySelector('i');
-        if (target.type === 'password') {
-            target.type = 'text';
-            icon.classList.replace('fa-eye', 'fa-eye-slash');
-        } else {
-            target.type = 'password';
-            icon.classList.replace('fa-eye-slash', 'fa-eye');
-        }
+    $(document).ready(function () {
+        $("#change_number").click(function (e) {
+            e.preventDefault();
+            window.location.href = $(this).attr('href');
+        });
+        {% if user_id %}
+        $("#ResendEamil").click(function () {
+            var btn = this;
+            btn.classList.add("disabled");
+            $.ajax({
+                url: '{{ url_for("shop_resend_confirm_email", user_id=user_id) }}',
+                type: "GET",
+                dataType: "json",
+                success: function (data) {
+                    if (data.success) { alert("ایمیل تأیید با موفقیت ارسال شد"); }
+                },
+                error: function () { },
+                complete: function () { btn.classList.remove("disabled"); }
+            });
+        });
+        {% endif %}
     });
 </script>
 {% endblock %}

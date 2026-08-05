@@ -1,0 +1,114 @@
+{% extends "shop/base.html" %}
+{% block title %}بازیابی رمز با پیامک | آشا شاپ{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/ThemeLayout/iverify-auth17.css" type="text/css" media="all">
+<style>
+    #ResetPassword {
+        font-size: 17px;
+        max-width: 271px !important;
+        width: 100% !important;
+        text-align: center !important;
+        line-height: 35px;
+        margin-top: -4px;
+    }
+</style>
+{% endblock %}
+{% block body_id %}module-iverify-authentication{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width st-wrapper{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div id="center-column" class="center-column col-12">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title"></div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <div id="noSlide">
+                                    <div class="row justify-center-verif">
+                                        <div class="col-xs-12 col-sm-6 col-md-5">
+                                            {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+                                            <form method="post" action="{{ url_for('shop_reset_by_sms') }}" class="box">
+                                                <input type="hidden" name="phone_number" value="{{ phone_number }}">
+                                                <input type="hidden" name="captcha_code" value="{{ captcha_code or '' }}">
+                                                <h3 class="page-subheading">بازیابی رمز با پیامک</h3>
+                                                <div class="form_content clearfix">
+                                                    <div class="form-group">
+                                                        <input name="password" placeholder="رمز عبور جدید" class="is_required validate account_input form-control" type="password">
+                                                        {% if password_error %}<span class="text-danger">{{ password_error }}</span>{% endif %}
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <input name="confirm_password" placeholder="تکرار رمز عبور" class="is_required validate account_input form-control" type="password">
+                                                        {% if confirm_error %}<span class="text-danger">{{ confirm_error }}</span>{% endif %}
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label for="code">لطفا کد تأیید ارسال شده به شماره خود را وارد کنید</label>
+                                                        <input placeholder="کد تأیید" name="sms_code" class="is_required validate account_input form-control" type="text" data-validate="isPasswd" id="passwd">
+                                                        {% if sms_error %}<span class="text-danger">{{ sms_error }}</span>{% endif %}
+                                                    </div>
+                                                    <p class="submit">
+                                                        <button type="submit" id="ResetPassword" class="button btn btn-success">
+                                                            <span><i class="icon-key left"></i> بازیابی رمز عبور</span>
+                                                        </button>
+                                                    </p>
+                                                    <div id="timerofsendcode" class="btn">
+                                                        <div class="countdown">{{ timer }}</div>
+                                                        <span>دقیقه</span>
+                                                    </div>
+                                                    <a id="resend" href="{{ resend_url }}" title="ارسال مجدد پیامک" rel="nofollow" class="resendsms btn btn-info" style="display: none;">
+                                                        <h4><i class="icon icon-repeat"></i> ارسال مجدد پیامک</h4>
+                                                    </a>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="text/javascript" src="/static/ThemeLayout/js/iverify_auth.js"></script>
+<script>
+    var resend_time = "{{ timer }}";
+    $(document).ready(function () {
+        $('#resend').hide();
+        $('.resendsms').hide();
+        verifyTimer();
+    });
+    function verifyTimer() {
+        if (resend_time == "-1:-1") {
+            $('#timerofsendcode').hide();
+            $('#resend').show();
+        } else {
+            $('#timerofsendcode').show();
+            $('#resend').hide();
+        }
+        var interval = setInterval(function () {
+            var timer = resend_time.split(':');
+            var minutes = parseInt(timer[0], 10);
+            var seconds = parseInt(timer[1], 10);
+            --seconds;
+            minutes = (seconds < 0) ? --minutes : minutes;
+            seconds = (seconds < 0) ? 59 : seconds;
+            seconds = (seconds < 10) ? '0' + seconds : seconds;
+            $('.countdown').html(minutes + ':' + seconds);
+            if (minutes < 0) clearInterval(interval);
+            if ((seconds <= 0) && (minutes <= 0)) clearInterval(interval);
+            resend_time = minutes + ':' + seconds;
+            if (seconds <= 0 && minutes <= 0) {
+                $('#timerofsendcode').hide();
+                $('#resend').show();
+            }
+        }, 1000);
+    }
+</script>
+{% endblock %}

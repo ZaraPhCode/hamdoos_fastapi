@@ -212,19 +212,45 @@ class BaleSmsSender(SmsSender):
         return True
 
 
+class DevSmsSender(SmsSender):
+    """Development fallback: logs the verification code instead of sending.
+
+    Used when no real SMS provider credentials are configured so the whole
+    phone/SMS verification flow remains testable locally.
+    """
+
+    async def send_verification_code(self, phone_number: str, code: str, full_name: str = "") -> bool:
+        logger.info(f"[DEV-SMS] Verification code for {phone_number}: {code}")
+        print(f"\n===== [DEV-SMS] کد تأیید برای {phone_number}: {code} =====\n")
+        return True
+
+    async def send_notify_product(self, phone_number: str, full_name: str, product_name: str, part_number: str) -> bool:
+        return True
+
+    async def send_order_notification(
+        self, phone_number: str, full_name: str, reference_code: int, price: float, date: datetime
+    ) -> bool:
+        return True
+
+
 class SelectedSmsSender(SmsSender):
     """Delegates to the configured provider. Mirrors SelectedSmsSender from .NET."""
 
     def __init__(self):
+        self._dev = True
+        self._primary: SmsSender = DevSmsSender()
         provider = settings.SMS_PROVIDER.lower()
-        self._primary: SmsSender
-        if provider == "farazsms":
+        if provider == "farazsms" and settings.FARAZSMS_USERNAME:
             self._primary = FarazSmsSender()
-        else:
+            self._dev = False
+        elif settings.MELIPAYAMAK_USERNAME:
             self._primary = MelipayamakSmsSender()
+            self._dev = False
         self._bale = BaleSmsSender()
 
     async def send_verification_code(self, phone_number: str, code: str, full_name: str = "") -> bool:
+        if self._dev:
+            return await self._primary.send_verification_code(phone_number, code, full_name)
         results = await asyncio.gather(
             self._primary.send_verification_code(phone_number, code, full_name),
             self._bale.send_verification_code(phone_number, code, full_name),

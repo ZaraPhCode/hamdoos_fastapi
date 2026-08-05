@@ -29,6 +29,9 @@ class EmailSender:
         self.from_addr = settings.EMAIL_FROM
         self.use_tls = settings.EMAIL_USE_TLS
 
+    def _is_configured(self) -> bool:
+        return bool(self.username and self.password and self.from_addr)
+
     async def _send(
         self,
         to: str,
@@ -157,3 +160,19 @@ class EmailSender:
         </body></html>
         """
         return await self._send(to, subject, body)
+
+    async def send_view_email(self, to: str, subject: str, template_path: str, context: dict) -> bool:
+        """Render a Jinja2 email template (mirrors .NET RenderViewToStringAsync +
+        SendViewEmailAsync) and send it. Falls back to logging the rendered body
+        when no SMTP credentials are configured (dev mode)."""
+        from fastapi.templating import Jinja2Templates
+
+        templates = Jinja2Templates(directory="app/templates")
+        rendered = templates.get_template(template_path).render(**context)
+
+        if not self._is_configured():
+            logger.info(f"[DEV-EMAIL] [{subject}] to {to}\n{rendered}")
+            print(f"\n===== [DEV-EMAIL] {subject} -> {to} =====\n{rendered}\n==============================\n")
+            return True
+
+        return await self._send(to, subject, rendered)
