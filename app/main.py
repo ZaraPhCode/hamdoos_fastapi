@@ -72,9 +72,28 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# Mount .NET wwwroot/Media directory for serving uploaded files
-if os.path.isdir("/app/media"):
-    app.mount("/media", StaticFiles(directory="/app/media"), name="media")
+# Serve uploaded product/media files under /media.
+# Preference order:
+#   1. external volume /app/media (mounted from the old .NET wwwroot/Media)
+#   2. bundled copy app/static/Media (shipped with the repo/image)
+# If the file exists in neither and MEDIA_BASE_URL is set (old site still
+# hosting the files), redirect to the given origin so images keep working on a
+# fresh VPS before the full Media folder is copied over.
+@app.get("/media/{file_path:path}")
+async def media_files(file_path: str):
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import RedirectResponse, FileResponse, JSONResponse
+
+    normalized = file_path.replace("\\", "/").lstrip("/")
+    for root in ("/app/media", "app/static/Media"):
+        candidate = os.path.join(root, normalized)
+        if os.path.isfile(candidate):
+            return FileResponse(candidate)
+
+    base = (settings.MEDIA_BASE_URL or "").rstrip("/")
+    if base:
+        return RedirectResponse(url=f"{base}/Media/{normalized}", status_code=301)
+    return JSONResponse({"detail": "File not found"}, status_code=404)
 
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(products_router, prefix="/api/v1")

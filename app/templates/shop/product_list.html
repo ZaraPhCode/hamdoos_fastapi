@@ -1,5 +1,5 @@
 {% extends "shop/base.html" %}
-{% block title %}{{ category.title if category else 'محصولات' }} - آشا شاپ{% endblock %}
+{% block title %}{{ category.title if category else (page_title or 'محصولات') }} - آشا شاپ{% endblock %}
 {% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-category tax-display-enabled st-wrapper{% endblock %}
 {% block extra_head %}
 <style>
@@ -55,7 +55,7 @@
         <div class="col-lg-6 col-md-12 col-sm-12">
             <div class="category-cover mb-4">
                 {% if category.poster_image_url %}
-                <img style="width: 60%" class="img-fluid" src="{{ category.poster_image_url }}" alt="{{ category.title }}">
+                <img style="width: 60%" class="img-fluid" src="{{ category.poster_image_url|media_url }}" alt="{{ category.title }}">
                 {% else %}
                 <img style="width: 60%" class="img-fluid" src="https://placehold.co/394x197">
                 {% endif %}
@@ -89,7 +89,7 @@
                 <a href="/Shop/Category/Index/{{ child.en_title or child.slug }}" title="{{ child.title }}">
                     <div class="subcategory-image">
                         {% if child.poster_image_url %}
-                        <img src="{{ child.poster_image_url }}" class="img-fluid img-thumbnail" title="{{ child.title }}" width="200" height="90">
+                        <img src="{{ child.poster_image_url|media_url }}" class="img-fluid img-thumbnail" title="{{ child.title }}" width="200" height="90">
                         {% else %}
                         <img src="https://placehold.co/200x90" class="img-fluid img-thumbnail" title="{{ child.title }}" width="200" height="90">
                         {% endif %}
@@ -102,6 +102,19 @@
         </div>
     </aside>
     {% endif %}
+</div>
+{% endif %}
+
+{% if not category and page_title %}
+<div class="shadow-box md-bottom">
+    <div class="container" style="padding-top: 25px">
+        <div class="row align-items-center">
+            <div class="col-12">
+                <h1 class="page-heading"><span>{{ page_title }}</span></h1>
+                <div class="total-products d-lg-block"><p>{{ total }} کالا</p></div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endif %}
 
@@ -121,6 +134,12 @@
                                     <input type="hidden" name="category" value="{{ category.en_title or category.slug }}">
                                     {% endif %}
                                     <input type="hidden" name="order" value="{{ order }}">
+                                    {% if query %}
+                                    <input type="hidden" name="query" value="{{ query }}">
+                                    {% endif %}
+                                    {% if tags %}
+                                    <input type="hidden" name="tag" value="{{ tags|join(',') }}">
+                                    {% endif %}
                                     {% if children %}
                                     <section class="facet clearfix">
                                         <h5 class="facet-title d-none d-md-block"><i class="fa fa-angle-double-right" aria-hidden="true"></i>شاخه‌ها</h5>

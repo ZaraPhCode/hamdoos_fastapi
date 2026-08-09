@@ -18,6 +18,14 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://ashauser:ashapass@db:5432/ashadb"
 
+    # Media: the migration stores relative paths like "Media/laser/...". The app
+    # serves them from /media (bundled copy or mounted .NET wwwroot/Media). For
+    # files not present locally (e.g. fresh VPS before Media is copied over),
+    # set MEDIA_BASE_URL to the old site that still hosts the files, e.g.
+    #   MEDIA_BASE_URL=https://hamdoos.ir
+    # and /media/... requests will fall back to that origin.
+    MEDIA_BASE_URL: str = "https://hamdoos.ir"
+
     # ZarinPal
     ZARINPAL_MERCHANT_ID: str = ""
     ZARINPAL_SITE_URL: str = "https://hamdoos.ir"

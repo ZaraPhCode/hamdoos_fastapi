@@ -25,7 +25,7 @@ from app.models.order import (
 from app.models.common import Address, ProvinceCity
 from app.models.finance import PaymentRequest, Receipt
 from app.models.invoice import Invoice, InvoiceProduct
-from app.utils.persian_tools import to_farsi, to_farsi_full, from_farsi_date
+from app.utils.persian_tools import to_farsi, to_farsi_full, from_farsi_date, normalize_image_url
 
 # ── Order status display names (matches .NET OrderStatus_t enum) ──
 
@@ -184,7 +184,7 @@ async def enrich_cart_with_products(db: AsyncSession, cart: Cart):
         if product:
             item.product_name = product.name
             item.product_slug = product.slug or ""
-            item.product_image = product.medium_image_url
+            item.product_image = normalize_image_url(product.medium_image_url)
             item.unit_price = float(product.price or 0)
             item.price_after_discount = float(product.price_after_discount or product.price or 0)
             item.stock_quantity = product.stock_quantity
@@ -750,7 +750,7 @@ def build_order_response(order: Order) -> dict:
                 "id": op.id,
                 "product_id": op.product_id,
                 "product_name": op.product.name if hasattr(op, 'product') and op.product else "",
-                "product_image": op.product.medium_image_url if hasattr(op, 'product') and op.product else None,
+                "product_image": normalize_image_url(op.product.medium_image_url) if hasattr(op, 'product') and op.product else None,
                 "variety_id": op.variety_id,
                 "variety_value": op.variety_values,
                 "part_number": op.product.part_number if hasattr(op, 'product') and op.product else None,

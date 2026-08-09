@@ -35,6 +35,23 @@ from app.utils.persian_tools import normalize_image_url
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(tags=["Shop Pages"])
 
+
+def _normalize_media_url(url):
+    """Convert a stored path like \\Media\\laser\\file.jpg to /media/laser/file.jpg.
+    Only transforms paths that look like Media/... or \\Media\\...;
+    leaves absolute URLs, full URLs, and None unchanged."""
+    if not url:
+        return url
+    if url.startswith(("http://", "https://", "//", "/static/", "/media/")):
+        return url
+    normalized = url.replace("\\", "/").lstrip("/")
+    if normalized.lower().startswith("media/"):
+        normalized = normalized[len("media/"):]
+    return "/media/" + normalized
+
+
+templates.env.filters["media_url"] = _normalize_media_url
+
 NET_ORDER_OPTIONS = ("Sale", "Id", "AlphabetAsc", "AlphabetDesc", "Cheapest", "Expensive")
 
 
@@ -428,6 +445,41 @@ async def product_list_page(
     )
 
 
+@router.get("/search", response_class=HTMLResponse)
+async def search_page(
+    request: Request,
+    q: Optional[str] = Query(None),
+    query: Optional[str] = Query(None),
+    tag: Optional[str] = Query(None),
+    order: str = Query("AlphabetAsc"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(28, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user_from_cookie),
+):
+    search_term = query or q
+    tags = [t.strip() for t in tag.split(",") if t.strip()] if tag else None
+    tag_titles = {
+        "new": "محصولات جدید",
+        "special": "محصولات ویژه",
+        "restocked": "تازه‌های رسیده",
+        "suggested": "پیشنهاد آشا",
+    }
+    tags = [t for t in tags if t in tag_titles] if tags else None
+
+    page_title = None
+    if search_term:
+        page_title = f'نتایج جستجو برای «{search_term}»'
+    elif tags:
+        page_title = "، ".join(tag_titles[t] for t in tags)
+
+    return await _render_product_list(
+        request, db,
+        order=order, query=search_term, page=page, page_size=page_size,
+        tags=tags, page_title=page_title, current_user=current_user,
+    )
+
+
 async def _render_product_list(
     request: Request, db: AsyncSession, *,
     category_id: Optional[str] = None, category: Optional[str] = None,
@@ -436,6 +488,8 @@ async def _render_product_list(
     order: str = "AlphabetAsc", query: Optional[str] = None,
     page: int = 1, page_size: int = 28,
     current_user: Optional[User] = None,
+    tags: Optional[list[str]] = None,
+    page_title: Optional[str] = None,
 ) -> HTMLResponse:
     cat = await _resolve_category(db, category_id, category)
     if order not in NET_ORDER_OPTIONS:
@@ -448,7 +502,7 @@ async def _render_product_list(
     products, total = await product_service.search_products_net(
         db, category_id=cat_uuid, branch_ids=branch_ids or None,
         brand_ids=brand_ids or None, min_price=min_value, max_price=max_value,
-        order=order, query=query, page=page, page_size=page_size,
+        order=order, query=query, page=page, page_size=page_size, tags=tags,
     )
     brand_facets = await product_service.get_brand_facets(db, category_id=cat_uuid, branch_ids=branch_ids or None)
     _, price_max = await product_service.get_category_price_range(db, category_id=cat_uuid, branch_ids=branch_ids or None)
@@ -479,6 +533,8 @@ async def _render_product_list(
         parts.append(f"max_value={max_value}")
     if query:
         parts.append(f"query={query}")
+    if tags:
+        parts.append(f"tag={','.join(tags)}")
     filter_qs = "&".join(parts)
 
     cc = await _get_cart_context(request, db)
@@ -505,6 +561,7 @@ async def _render_product_list(
         "site_settings": site_settings,
         "category_hierarchy": category_hierarchy,
         "current_user": current_user,
+        "page_title": page_title,
         **cc,
     })
 
@@ -2767,15 +2824,18 @@ async def product_datasheet_download(
     if not ds or not ds.file_url:
         return HTMLResponse("Datasheet not found", status_code=404)
 
-    # Resolve path from the mounted .NET wwwroot/Media directory
+    # Resolve path from the mounted .NET wwwroot/Media directory (or bundled copy)
     rel = ds.file_url.replace("\\", "/").lstrip("/")
     # Strip the "Media/" prefix if present (it's the root of the mount)
     if rel.lower().startswith("media/"):
         rel = rel[len("media/"):]
-    candidate = os.path.join("/app/media", rel)
-    if os.path.exists(candidate):
-        file_path = candidate
-    else:
+    file_path = None
+    for root in ("/app/media", "app/static/Media"):
+        candidate = os.path.join(root, rel)
+        if os.path.exists(candidate):
+            file_path = candidate
+            break
+    if not file_path:
         return HTMLResponse("File not found", status_code=404)
 
     filename = os.path.basename(file_path)
@@ -2783,20 +2843,6 @@ async def product_datasheet_download(
 
 
 # ── Helpers ──
-
-def _normalize_media_url(url):
-    """Convert a stored path like \\Media\\laser\\file.jpg to /media/laser/file.jpg.
-    Only transforms paths that look like Media/... or \\Media\\...;
-    leaves absolute URLs, full URLs, and None unchanged."""
-    if not url:
-        return url
-    if url.startswith(("http://", "https://", "//", "/static/", "/media/")):
-        return url
-    normalized = url.replace("\\", "/").lstrip("/")
-    if normalized.lower().startswith("media/"):
-        normalized = normalized[len("media/"):]
-    return "/media/" + normalized
-
 
 def _fmt_tech_num(n):
     """Replicate .NET double→string with no decimal for integers."""
@@ -2896,16 +2942,18 @@ def _build_technical_tables(product):
 def _build_shop_detail(product):
     base = product_service._build_product_list_response(product)
     from collections import OrderedDict
+    _DEFAULT_OPTION = "پیش فرض"
     variety_values = OrderedDict()
     for v in (product.varieties or []):
         for pv in (v.product_varieties or []):
-            if pv.category_option:
-                key = pv.category_option.name
-                if key not in variety_values:
-                    variety_values[key] = []
-                if pv.value not in variety_values[key]:
-                    variety_values[key].append(pv.value)
-    variety_values_list = [{"category_name": k, "values": v} for k, v in variety_values.items()]
+            if not pv.category_option or pv.category_option.name == _DEFAULT_OPTION:
+                continue
+            key = pv.category_option.name
+            if key not in variety_values:
+                variety_values[key] = []
+            if pv.value not in variety_values[key]:
+                variety_values[key].append(pv.value)
+    variety_values_list = [{"category_name": k, "vals": v} for k, v in variety_values.items()]
     technical_tables = _build_technical_tables(product)
     specifications = []
     for tt in technical_tables:
@@ -2932,7 +2980,8 @@ def _build_shop_detail(product):
                        "price_after_discount": float(v.price_after_discount or v.price or 0),
                        "stock_quantity": v.stock_quantity,
                        "product_varieties": [{"category_option_name": pv.category_option.name if pv.category_option else None, "value": pv.value}
-                                             for pv in (v.product_varieties or [])] if hasattr(v, 'product_varieties') else []}
+                                             for pv in (v.product_varieties or [])
+                                             if pv.category_option and pv.category_option.name != _DEFAULT_OPTION] if hasattr(v, 'product_varieties') else []}
                       for v in (product.varieties or [])] if hasattr(product, 'varieties') else [],
         "menu_datasheets": [{"id": str(ds.id), "type": ds.type, "file_url": ds.file_url, "complete_file_url": ds.complete_file_url}
                             for ds in (product.menu_datasheets or []) if not ds.is_removed],

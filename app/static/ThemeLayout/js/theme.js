@@ -172,7 +172,7 @@ function setColumnBlockSlider(obj, opt) {
   $(obj).slick({
     slidesToShow: opt.slidesToShow,
     slidesToScroll: 1,
-    autoplaySpeed: 2000,
+    autoplaySpeed: opt.autoplaySpeed || 2000,
     infinite: true,
     draggable: opt.draggable,
     speed: 800,
@@ -259,7 +259,7 @@ function setHomeBlockSlider(obj, opt) {
   $(obj).slick({
     slidesToShow: opt.slidesToShow,
     slidesToScroll: 1,
-    autoplaySpeed: 2000,
+    autoplaySpeed: opt.autoplaySpeed || 2000,
     adaptiveHeight: false,
     infinite: true,
     draggable: opt.draggable,

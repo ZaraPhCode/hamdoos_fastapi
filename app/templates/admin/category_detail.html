@@ -42,7 +42,7 @@
         <div class="p-6">
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                 <div class="md:col-span-2 flex items-center gap-5">
-                    {% set img = category.poster_image_url or (category.medias|selectattr('display_photo')|map(attribute='url')|first if category.medias else none) %}
+                    {% set img = category.poster_image_url|media_url or (category.medias|selectattr('display_photo')|map(attribute='url')|first|media_url if category.medias else none) %}
                     {% if img %}
                     <img src="{{ img }}" class="w-20 h-20 object-cover rounded-lg border border-gray-200" alt="{{ category.title }}">
                     {% else %}
@@ -266,7 +266,7 @@
                         <tr class="border-b hover:bg-gray-50 transition-colors">
                             <td class="py-3 px-2 text-center text-gray-500">{{ loop.index }}</td>
                             <td class="py-3 px-2">
-                                {% set cimg = child.poster_image_url or (child.medias|selectattr('display_photo')|map(attribute='url')|first if child.medias else none) %}
+                                {% set cimg = child.poster_image_url|media_url or (child.medias|selectattr('display_photo')|map(attribute='url')|first|media_url if child.medias else none) %}
                                 {% if cimg %}
                                 <img src="{{ cimg }}" class="w-14 h-14 object-cover rounded-lg border border-gray-200">
                                 {% else %}

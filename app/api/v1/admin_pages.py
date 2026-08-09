@@ -350,6 +350,9 @@ def _normalize_media_url(url):
     return "/media/" + normalized
 
 
+templates.env.filters["media_url"] = _normalize_media_url
+
+
 @router.get("/products/{product_id}/details", response_class=HTMLResponse)
 async def admin_product_details(
     request: Request,

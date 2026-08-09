@@ -338,6 +338,7 @@ async def search_products_net(
     query: str | None = None,
     page: int = 1,
     page_size: int = 28,
+    tags: list[str] | None = None,
 ) -> tuple[list[Product], int]:
     """Mirror .NET CategoryController.Index product search.
 
@@ -389,6 +390,22 @@ async def search_products_net(
         )
         stmt = stmt.where(filter_cond)
         count_stmt = count_stmt.where(filter_cond)
+
+    if tags:
+        tag_conds = []
+        for tag in tags:
+            if tag == "new":
+                tag_conds.append(Product.is_new == True)
+            elif tag == "special":
+                tag_conds.append(Product.is_special == True)
+            elif tag == "restocked":
+                tag_conds.append(Product.restocked == True)
+            elif tag == "suggested":
+                tag_conds.append(Product.suggested == True)
+        if tag_conds:
+            tag_cond = tag_conds[0] if len(tag_conds) == 1 else or_(*tag_conds)
+            stmt = stmt.where(tag_cond)
+            count_stmt = count_stmt.where(tag_cond)
 
     # .NET comparers: in-stock first, then the chosen key
     in_stock = (Product.stock_quantity > 0).desc()
@@ -494,7 +511,7 @@ async def get_product_by_slug(db: AsyncSession, slug: str) -> Optional[Product]:
             selectinload(Product.brand),
             selectinload(Product.product_images),
             selectinload(Product.menu_datasheets),
-            selectinload(Product.varieties),
+            selectinload(Product.varieties).selectinload(Variety.product_varieties).selectinload(ProductVariety.category_option),
             selectinload(Product.related_products).selectinload(RelatedProduct.relate_product),
             selectinload(Product.similar_products).selectinload(SimilarProduct.similar),
             selectinload(Product.technical_table_products)

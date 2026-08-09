@@ -73,7 +73,7 @@
                         <tr class="border-b hover:bg-gray-50 transition-colors" data-search="{{ cat.title }} {{ cat.en_title or '' }} {{ cat.parent.title if cat.parent else '' }}">
                             <td class="py-3 px-2 text-center text-gray-500 cat-index">{{ loop.index }}</td>
                             <td class="py-3 px-2">
-                                {% set img = cat.poster_image_url or (cat.medias|selectattr('display_photo')|map(attribute='url')|first if cat.medias else none) %}
+                                {% set img = cat.poster_image_url|media_url or (cat.medias|selectattr('display_photo')|map(attribute='url')|first|media_url if cat.medias else none) %}
                                 {% if img %}
                                 <img src="{{ img }}" class="w-14 h-14 object-cover rounded-lg border border-gray-200" alt="{{ cat.title }}">
                                 {% else %}

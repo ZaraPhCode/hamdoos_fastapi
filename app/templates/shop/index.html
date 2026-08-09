@@ -55,7 +55,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
                                      id="aSlickTab1"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in special_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -71,7 +71,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
                                      id="aSlickTab3"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:false,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in new_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -87,7 +87,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
                                      id="aSlickTab4"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in restocked_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -147,7 +147,7 @@
                                         <div class="banner2" style="margin-bottom:0;">
                                             <a href="/category/{{ top_category_poster.en_title or top_category_poster.slug }}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ top_category_poster.poster_image_url }}" alt="{{ top_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ top_category_poster.poster_image_url|media_url }}" alt="{{ top_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>
@@ -169,7 +169,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
                                      id="aSlick10"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in new_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -186,7 +186,7 @@
                                         <div class="banner2">
                                             <a href="/category/{{ middle_category_poster.en_title or middle_category_poster.slug }}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ middle_category_poster.poster_image_url }}" alt="{{ middle_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ middle_category_poster.poster_image_url|media_url }}" alt="{{ middle_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>
@@ -208,7 +208,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
                                      id="aSlick1"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:false,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in top_category_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -225,7 +225,7 @@
                                     <div class="col-12 col-lg-6">
                                         <div class="banner2">
                                             <a href="/category/{{ mid_right_poster.en_title or mid_right_poster.slug }}">
-                                                <img loading="lazy" src="{{ mid_right_poster.poster_image_url }}" alt="{{ mid_right_poster.en_title or '' }}" width="840" height="350">
+                                                <img loading="lazy" src="{{ mid_right_poster.poster_image_url|media_url }}" alt="{{ mid_right_poster.en_title or '' }}" width="840" height="350">
                                             </a>
                                         </div>
                                     </div>
@@ -234,7 +234,7 @@
                                     <div class="col-12 col-lg-6">
                                         <div class="banner2">
                                             <a href="/category/{{ mid_left_poster.en_title or mid_left_poster.slug }}">
-                                                <img loading="lazy" src="{{ mid_left_poster.poster_image_url }}" alt="{{ mid_left_poster.en_title or '' }}" width="840" height="350">
+                                                <img loading="lazy" src="{{ mid_left_poster.poster_image_url|media_url }}" alt="{{ mid_left_poster.en_title or '' }}" width="840" height="350">
                                             </a>
                                         </div>
                                     </div>
@@ -254,9 +254,9 @@
                                 </a>
                             </div>
                             <div class="product-list">
-                                <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
-                                     id="aSlick13"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+<div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
+                                      id="aSlick13"
+                                      data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in middle_category_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -273,7 +273,7 @@
                                         <div class="banner2">
                                             <a href="/category/{{ bottom_category_poster.en_title or bottom_category_poster.slug }}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ bottom_category_poster.poster_image_url }}" alt="{{ bottom_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ bottom_category_poster.poster_image_url|media_url }}" alt="{{ bottom_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>
@@ -309,8 +309,8 @@
                             </div>
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
-                                     id="aSlick13"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:1200,&quot;autoplay&quot;:true,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     id="aSlick14"
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in bottom_category_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
