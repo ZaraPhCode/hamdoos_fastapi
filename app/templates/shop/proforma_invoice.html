@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<body>
+    <page>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="12">شماره منحصر به فرد مالیاتی</th>
+                    <td colspan="15">-</td>
+                    <th colspan="8">شماره سفارش</th>
+                    <td colspan="7">{{ invoice.order_reference_code }}</td>
+                    <th colspan="2"></th>
+                    <th colspan="12" rowspan="2" class="text-center invoice-type">
+                        پیش فاکتور
+                        {{ invoice.type }}
+                    </th>
+                    <th colspan="6"></th>
+                    <th colspan="9">موضوع صورتحساب</th>
+                    <td colspan="8">اصلی</td>
+                    <th colspan="10">تاریخ صدور</th>
+                    <td colspan="11" class="date-cell">{{ invoice.date }}</td>
+                </tr>
+                <tr>
+                    <th colspan="19">شماره منحصر به فرد مالیاتی صورتحساب مرجع</th>
+                    <td colspan="10">-</td>
+                    <th colspan="15"></th>
+                    <th colspan="6"></th>
+                    <th colspan="9">الگوی صورتحساب</th>
+                    <td colspan="8">فروش</td>
+                    <th colspan="10">تاریخ ایجاد</th>
+                    <td colspan="11" class="date-cell">-</td>
+                </tr>
+            </thead>
+            <thead>
+                <tr><th class="table-header" colspan="100">مشخصات فروشنده</th></tr>
+                <tr>
+                    <th colspan="2">نام</th>
+                    <td colspan="30">شرکت دانش‌بنیان نمایه پرتو آشا</td>
+                    <th colspan="6"></th>
+                    <th colspan="7">کد اقتصادی</th>
+                    <td colspan="10">140004840572</td>
+                    <th colspan="7"></th>
+                    <th colspan="7">کد شعبه</th>
+                    <td colspan="6">-</td>
+                    <th colspan="25"></th>
+                </tr>
+                <tr>
+                    <th colspan="7">شناسه ملی</th>
+                    <td colspan="7">14004840572</td>
+                    <th colspan="24"></th>
+                    <th colspan="7">تلفن ثابت</th>
+                    <td colspan="15">02188214641</td>
+                    <th colspan="2"></th>
+                    <th colspan="7">کد پستی</th>
+                    <td colspan="6">1434663785</td>
+                    <td colspan="25"></td>
+                </tr>
+                <tr>
+                    <th colspan="4">استان</th>
+                    <td colspan="6">تهران</td>
+                    <th colspan="5">شهرستان</th>
+                    <td colspan="6">تهران</td>
+                    <th colspan="4">شهر</th>
+                    <td colspan="6">تهران</td>
+                    <th colspan="4">نشانی</th>
+                    <td colspan="65">یوسف آباد، خیابان شهید عبدالمجید اکبری، خیابان سی و هفتم، پلاک ۱، طبقه سوم</td>
+                </tr>
+            </thead>
+            <thead>
+                <tr><th class="text-center table-header" colspan="100">مشخصات خریدار</th></tr>
+                <tr>
+                    <th colspan="2">نام</th>
+                    <td colspan="30">{{ invoice.first_name }} {{ invoice.last_name }}</td>
+                    <th colspan="6"></th>
+                    <th colspan="7">کد اقتصادی</th>
+                    <td colspan="10">{{ invoice.economic_code or '-' }}</td>
+                    <th colspan="7"></th>
+                    <th colspan="7">کد شعبه</th>
+                    <td colspan="6">-</td>
+                    <th colspan="12"></th>
+                    <th colspan="13"></th>
+                </tr>
+                <tr>
+                    <th colspan="7">کد/شناسه ملی</th>
+                    <td colspan="7">{{ invoice.national_code_or_id or '-' }}</td>
+                    <th colspan="24"></th>
+                    <th colspan="7">تلفن</th>
+                    <td colspan="15">{{ invoice.telephone or '-' }}</td>
+                    <th colspan="2"></th>
+                    <th colspan="7">کد پستی</th>
+                    <td colspan="6">{{ invoice.postal_code or '-' }}</td>
+                    <th colspan="25"></th>
+                </tr>
+                <tr>
+                    <th colspan="4">استان</th>
+                    <td colspan="6">{{ invoice.province or '-' }}</td>
+                    <th colspan="5">شهرستان</th>
+                    <td colspan="6">-</td>
+                    <th colspan="4">شهر</th>
+                    <td colspan="6">{{ invoice.identity_city or '-' }}</td>
+                    <th colspan="4">نشانی</th>
+                    <td colspan="65">{{ invoice.identity_address or '-' }}</td>
+                </tr>
+            </thead>
+        </table>
+        <table id="item-table">
+            <thead>
+                <tr><th class="table-header" colspan="34">مشخصات کالا و خدمات مورد معامله</th></tr>
+                <tr>
+                    <th colspan="1" class="text-center cell-rotated">ردیف</th>
+                    <th colspan="5">شماره قطعه</th>
+                    <th colspan="8">شرح کالا/خدمت</th>
+                    <th colspan="3">واحد اندازه گیری</th>
+                    <th colspan="2">تعداد / مقدار</th>
+                    <th colspan="4">مبلغ واحد (ریال / ارز)</th>
+                    <th colspan="2">نرخ مالیات بر ارزش افزوده</th>
+                    <th colspan="4">مبلغ مالیات بر ارزش افزوده</th>
+                    <th colspan="5">مبلغ کل کالا / خدمت</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.invoice_products %}
+                {% if item.total_amount_plus_taxes != 0 %}
+                <tr>
+                    <td colspan="1" class="text-center">{{ loop.index }}</td>
+                    <td colspan="5" class="pr-1">{{ item.part_number }}</td>
+                    <td colspan="8">{{ item.name }}</td>
+                    <td colspan="3" class="text-center">{{ item.product_unit }}</td>
+                    <td colspan="2" class="text-center">{{ item.count }}</td>
+                    <td colspan="4" class="pr-1">{{ "{:,.0f}".format(item.unit_price) }}</td>
+                    <td colspan="2" class="text-center">{{ item.vat_rate }}</td>
+                    <td colspan="4" class="pr-1">{{ "{:,.0f}".format(item.taxes_and_duties) }}</td>
+                    <td colspan="5" class="pr-1">{{ "{:,.0f}".format(item.total_amount_plus_taxes) }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="6">جمع کل</th>
+                    <th colspan="8">-</th>
+                    <th colspan="3">-</th>
+                    <th colspan="2">-</th>
+                    <th colspan="4">-</th>
+                    <th colspan="2">-</th>
+                    <th colspan="4">{{ "{:,.0f}".format(invoice.total_taxes_and_duties) }}</th>
+                    <th colspan="5">{{ "{:,.0f}".format(invoice.total_price_plus_taxes) }}</th>
+                </tr>
+                <tr>
+                    <th colspan="34" style="text-align:right;">{{ "{:,.0f}".format(invoice.total_price_plus_taxes) }} ریال</th>
+                </tr>
+                <tr>
+                    <td colspan="34">
+                        <strong>توضیحات</strong><br />
+                        <span>جهت تأیید سفارش خواهشمند است مبلغ قابل پرداخت را به شماره حساب 9753057289 بانک ملت و یا شماره کارت 6104338800275915 و یا شماره شبا IR950120000000009753057289 به نام شرکت نمایه پرتو آشا واریز نمایید.</span>
+                        <span class="multiline">{{ invoice.description }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="signature-col" colspan="17">امضاء فروشنده</th>
+                    <th class="signature-col" colspan="17">امضاء خریدار</th>
+                </tr>
+            </tfoot>
+        </table>
+    </page>
+
+    <style>
+        body {
+            font-family: IRANSans, Vazir, Tahoma, sans-serif;
+            margin: 0;
+            max-width: 297mm;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        @media print {
+            @page { size: A4 landscape; margin: 5mm; }
+        }
+        table { table-layout: fixed; width: 100%; border-spacing: 0; }
+        thead { font-size: 8pt; display: table-header-group; }
+        tbody { font-size: min(8pt, 1vw); }
+        tfoot { font-size: min(8pt, 1vw); display: table-footer-group; }
+        thead > tr > th { text-align: right; }
+        #item-table > thead > tr > th, .text-center { text-align: center; }
+        tbody > tr > th, tbody > tr > td, tfoot > tr > th, tfoot > tr > td,
+        #item-table > thead > tr > th, table { border: 0.4px solid; overflow-wrap: anywhere; }
+        .cell-rotated {
+            -ms-writing-mode: tb-rl;
+            -webkit-writing-mode: vertical-rl;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            white-space: nowrap;
+        }
+        .invoice-type { font-size: 11pt; font-weight: bold; }
+        .table-header { text-align: center; font-size: 10pt; font-weight: bold; background-color: #bbb; }
+        .date-cell { direction: ltr; text-align: right; }
+        .pr-1 { padding-right: 8px; }
+        .signature-col { border-right: none; border-left: none; border-bottom: none; text-align: right; vertical-align: top; padding: 8px; height: 4rem; }
+        #item-table { border-bottom: none; }
+        .multiline { white-space: pre-wrap; }
+    </style>
+</body>
+</html>

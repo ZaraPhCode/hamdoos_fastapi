@@ -31,18 +31,6 @@
     }
 }
 
-.product-additional-info .social-sharing-button:hover {
-     background-color: #00a8ff !important;
-     border-radius: 50%;
-     transition: background ease 0.15s;
-     border: none;
-     opacity: 1 !important;
-     color: #fff;
-     display: flex;
-     top: -4px;
-     font-size: 1rem;
- }
-
 .socials-icons {
     display: flex;
     justify-content: space-around;

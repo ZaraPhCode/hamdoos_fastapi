@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="theme-color" content="#f9f2e8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>تسویه حساب - آشا شاپ</title>
+    <meta name="description" content="فروشگاه تخصصی لیزر و اپتیک همدوس فروش اینترنتی لیزر، قطعات اپتیکی و فوتونیکی با کیفیت و قیمت مناسب">
+    <meta name="keywords" content="فروشگاه تخصصی الکترونیک، لیزر، اپتیک، فوتونیک، قطعات الکترونیکی">
+    <meta name="enamad" content="954080" />
+    
+    <link rel="icon" type="image/vnd.microsoft.icon" href="/static/ThemeLayout/img/laserfavicon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/ThemeLayout/img/laserfavicon.png">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/ThemeLayout/theme.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/ps_searchbar.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/style_rtl.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/jquery.rateyo.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/productrating.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/override.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/jquery-ui.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/jquery.ui.theme.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/wishlist.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/jquery.fancybox.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/custom_rtl.min.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/vazirmatn.css" type="text/css" media="all">
+    <script src="/static/lib/jquery/dist/jquery.min.js"></script>
+    <script src="/static/ThemeLayout/js/js.js"></script>
+    <script>
+        var prestashop = {
+            "cart": { "products": [], "totals": { "total": { "type": "total", "label": "مجموع", "amount": 0, "value": "0 ریال" }, "total_including_tax": { "type": "total", "label": "جمع (با مالیات)", "amount": 0, "value": "0 ریال" }, "total_excluding_tax": { "type": "total", "label": "هزینه نهایی (بدون مالیات)", "amount": 0, "value": "0 ریال" } }, "subtotals": { "products": { "type": "products", "label": "جمع محصولات", "amount": 0, "value": "0 ریال" }, "discounts": null, "shipping": { "type": "shipping", "label": "ارسال", "amount": 0, "value": "" }, "tax": null }, "products_count": 0, "summary_string": "0 مورد", "vouchers": { "allowed": 1, "added": [] }, "discounts": [], "minimalPurchase": 0, "minimalPurchaseRequired": "" },
+            "currency": { "id": 1, "name": "ریال ایران", "iso_code": "IRR", "iso_code_num": "364", "sign": "ریال" },
+            "customer": { "is_logged": true },
+            "language": { "name": "پارسی (Persian)", "iso_code": "fa", "locale": "fa-IR", "language_code": "fa-ir", "is_rtl": "1", "date_format_lite": "Y-m-d", "date_format_full": "Y-m-d H:i:s", "id": 1 },
+            "page": { "title": "", "canonical": null, "meta": { "title": "فروشگاه تخصصی الکترونیک" } }
+        };
+        var productsAlreadyTagged = [];
+        var removeFromWishlistUrl = "#";
+        var varGetFinalDateController = "#";
+        var varGetFinalDateMiniatureController = "#";
+        var varPSAjaxCart = 1;
+        var wishlistAddProductToCartUrl = "#";
+        var wishlistUrl = "#";
+    </script>
+    <meta property="og:url" content="http://localhost:8001/checkout">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="فروشگاه تخصصی آشا شاپ">
+    <meta property="og:description" content="فروشگاه تخصصی الکترونیک، لیزر، اپتیک و فوتونیک">
+    <meta property="og:image" content="/static/ThemeLayout/img/logo.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="فروشگاه تخصصی آشا شاپ">
+    <meta name="twitter:description" content="فروشگاه تخصصی الکترونیک، لیزر، اپتیک و فوتونیک">
+    <meta name="twitter:image" content="/static/ThemeLayout/img/logo.jpg">
+    <style type="text/css">
+        a, .btn-outline-primary, .btn-outline-primary.disabled, .btn-outline-primary:disabled, .btn-link, .page-link, .text-primary, .products-selection .total-products p, .products-selection .products-sort-order .product-display .display-select .selected, #header .left-nav-trigger .left-nav-icon, #footer .footer-about-us .fa, #footer .footer-about-us .material-icons, .feature .material-icons, .feature .fa, .feature2 a:hover { color: #00a693 }
+        .btn-primary, .btn-primary.disabled, .btn-primary:disabled, .btn-outline-primary:hover, .btn-outline-primary:not(:disabled):not(.disabled):active, .btn-outline-primary:not(:disabled):not(.disabled).active, .show > .btn-outline-primary.dropdown-toggle, .nav-pills .nav-link.active, .nav-pills .show > .nav-link, .page-item.active .page-link, .badge-primary, .progress-bar, .list-group-item.active, .bg-primary, .btn.btn-primary, .btn.btn-primary.disabled, .btn.btn-primary:disabled, .group-span-filestyle .btn-default, .add-to-cart, .add-to-cart.disabled, .add-to-cart:disabled, .sidebar-currency .currency-list .current .dropdown-item, .sidebar-language .language-list .current .dropdown-item, .pace .pace-progress, .pace-bounce .pace-activity, #header .mobile-header-version .mobile-menu-icon, .banner3:hover, #product-comments-list-pagination ul li.active span { background-color: #00a693 }
+        .btn-primary, .btn-primary.disabled, .btn-primary:disabled, .btn-outline-primary, .btn-outline-primary:hover, .btn-outline-primary:not(:disabled):not(.disabled):active, .btn-outline-primary:not(:disabled):not(.disabled).active, .show > .btn-outline-primary.dropdown-toggle, .page-item.active .page-link, .list-group-item.active, .border-primary, .product-combinations .combination-item.active .switch-cbnt, .product-swatches .swatches-list > li.selected > span, .pace .pace-activity { border-color: #00a693 }
+        .btn-primary:hover, .btn-primary:focus, .btn.btn-primary:hover, .btn-primary:not(:disabled):not(.disabled):active, .btn-primary:not(:disabled):not(.disabled).active, .btn.btn-primary:not(:disabled):not(.disabled):active, .btn.btn-primary:not(:disabled):not(.disabled).active, .add-to-cart:hover, .add-to-cart:not(:disabled):not(.disabled):active, .add-to-cart:not(:disabled):not(.disabled).active { background-color: #298665 }
+        a:hover, .btn-link:hover, .page-link:hover, .product-price, .price-total, .product-name a:hover, a.product-name:hover, .product-list .product-miniature .grid-hover-btn a, .main-product-details .product-cover .layer .zoom-in, #product-modal .arrows, .cart-items-review .product-line-grid .product-prices .qty, .st-menu-close:hover, .aone-slideshow .nivoSlider .nivo-directionNav .nivo-prevNav, .aone-slideshow .nivoSlider .nivo-directionNav .nivo-nextNav, #header .left-nav-trigger .left-nav-icon:hover, .feature a:hover, .feature2 .material-icons, .feature2 .fa, .icon-link:hover { color: #3ac01b }
+        .custom-checkbox input[type="checkbox"]:checked + .check-shape, .custom-radio input[type="radio"]:checked + .check-shape, .category-tree > ul > li > a:hover:before, .discount-percentage, .discount-amount, .product-flags .product-flag.discount span, .product-flags .product-flag.on-sale span, .add-to-cart.added:after, .main-product-details .scroll-box-arrows .left, .main-product-details .scroll-box-arrows .right, .cart-preview .cart-header .cart-products-count, .slick-prev, .slick-next, .slick-dots li button, .anav-top .amenu-link > sup, .anav-top .acategory-content .category-subs li a:hover:before, .aone-slideshow .nivoSlider .nivo-controlNav a, .aone-popupnewsletter button.close, #header .sticky-icon-cart .cart-products-count, #scrollTopButton .scroll-button, .typoImageSlider .scrollArrows .left, .typoImageSlider .scrollArrows .right { background-color: #23883c }
+        #wrapper { background-color: #eef1f7 }
+        .icon-link:hover, .active-filters .filter-block .material-icons, .product-list .product-miniature .grid-hover-btn a, .main-product-details .product-cover .layer .zoom-in, #product-modal .arrows, .st-menu-close:hover, .aone-slideshow .nivoSlider .nivo-directionNav .nivo-prevNav, .aone-slideshow .nivoSlider .nivo-directionNav .nivo-nextNav { color: #298665 }
+        .modal .modal-header .close:hover, .add-to-cart.added:after, .main-product-details .scroll-box-arrows .left, .main-product-details .scroll-box-arrows .right, .slick-prev, .slick-next, .slick-dots li button, .aone-slideshow .nivoSlider .nivo-controlNav a, .aone-popupnewsletter button.close, #scrollTopButton .scroll-button, .typoImageSlider .scrollArrows .left, .typoImageSlider .scrollArrows .right { background-color: #00a693 }
+        .aone-slideshow .nivoSlider .nivo-controlNav a.active { border-color: #fd6282 }
+    </style>
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+<style>
+.select2-container--default .select2-selection--single {
+    height: 38px; border: 1px solid #ced4da; border-radius: 4px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 38px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+</style>
+
+</head>
+<body id="checkout" class="lang-fa lang-rtl country-ir currency-irr layout-full-width page-order tax-display-enabled customer-has-logged st-wrapper">
+    <div class="st-menu st-effect-left" data-st-menu>
+        <div class="st-menu-title h4">شاخه‌ها</div>
+        <div class="js-sidebar-category-tree sidebar-menu">
+    <div class="category-tree sidebar-category-tree js-sidebar-categories">
+        <ul>
+            
+            <li>
+                    <a href="/Shop/Category/Index/laser" title="لیزر" data-category-id="de3a3d9b-b83b-44aa-af0a-04691ab78b44">
+                        <span>لیزر</span>
+                    </a>
+                    
+                    <div class="collapse-icons js-collapse-trigger">
+                        <img src="/static/ThemeLayout/iconSVG/plus.svg" class="add" style="display:inline-block">
+                        <img src="/static/ThemeLayout/iconSVG/dash.svg" class="remove" style="display:none">
+                    </div>
+                    <div class="category-sub-menu js-sub-categories" style="display:none">
+                        <ul>
+                            
+                            <li>
+                                <a href="/Shop/Category/Index/gas-laser" title="لیزر گازی" data-category-id="e6c12444-3a53-4e5a-814f-98d055595078"><span>لیزر گازی</span></a>
+                                
+                            </li>
+                            
+                        </ul>
+                    </div>
+                    
+            </li>
+            
+            <li>
+                    <a href="/Shop/Category/Index/optic" title="اپتیک" data-category-id="9f473066-a3f1-461c-b19e-067e35d46c31">
+                        <span>اپتیک</span>
+                    </a>
+                    
+            </li>
+            
+            <li>
+                    <a href="/Shop/Category/Index/photonic" title="فوتونیک" data-category-id="55c755fa-a621-49d5-89e9-a50ba8577f17">
+                        <span>فوتونیک</span>
+                    </a>
+                    
+            </li>
+            
+            <li>
+                    <a href="/Shop/Category/Index/prto" title="پرتو" data-category-id="1d117a6f-4fd3-4ec8-9b80-82adaaf8b04c">
+                        <span>پرتو</span>
+                    </a>
+                    
+            </li>
+            
+            <li>
+                    <a href="/Shop/Category/Index/bareke" title="باریکه" data-category-id="01d2719c-25dd-40f8-b228-6378eaf656ae">
+                        <span>باریکه</span>
+                    </a>
+                    
+            </li>
+            
+        </ul>
+    </div>
+</div>
+    </div>
+    <div class="st-menu profile-effect-left" data-profile-menu>
+        <div class="block-myaccount-infos column-block"></div>
+    </div>
+    <main id="page" class="st-pusher">
+        <header id="header">
+    <div class="desktop-header-version">
+        <div class="header-banner clearfix"></div>
+        <div class="header-nav clearfix">
+            <div class="container">
+                <div class="header-nav-wrapper d-flex align-items-center justify-content-between">
+                    <div class="left-nav d-flex"></div>
+                    <div class="right-nav d-flex"></div>
+                </div>
+            </div>
+        </div>
+        <div class="main-header clearfix">
+            <div class="container">
+                <div class="header-wrapper d-flex align-items-center">
+                    <div class="header-logo">
+                        <a href="/" title="فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس">
+                            <img class="logo" src="/static/ThemeLayout/img/logo.jpg" alt="فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس" width="334" height="100">
+                        </a>
+                    </div>
+                    <div class="header-right flex-grow-1">
+                        <div class="display-top align-items-center d-flex flex-wrap flex-lg-nowrap justify-content-end">
+                            <div class="searchbar-wrapper">
+                                <div id="search_widget" class="js-search-source" data-search-controller-url="/search/autocomplete">
+                                    <div class="search-widget ui-front">
+                                        <form method="get" action="/search">
+                                            <span role="status" aria-live="polite" class="ui-helper-hidden-accessible"></span>
+                                            <input class="form-control ui-autocomplete-input" type="text" name="q" value="" placeholder="جستجوی محصول مورد نظر ..." aria-label="جستجو" autocomplete="off">
+                                            <button type="submit" class="btn-primary">
+                                                <img src="/static/ThemeLayout/iconSVG/search-normal.svg" alt="جستجو">
+                                            </button>
+                                        </form>
+                                        <ul class="ui-autocomplete ui-front ui-menu ui-widget ui-widget-content ui-corner-all" id="ui-id-1" tabindex="0" style="display: none;"></ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="customer-signin-module">
+                                <div class="user-info">
+                                    <div class="customer-logged">
+                                        <div class="js-account-source">
+                                            <ul>
+                                                <li>
+                                                    <div class="account-link account">
+                                                        <a href="/profile" title="حساب کاربری من" rel="nofollow">
+                                                            <img src="/static/ThemeLayout/iconSVG/user.svg" alt="user">
+                                                            <span>کاربر مدیر</span>
+                                                        </a>
+                                                    </div>
+                                                    <a href="/auth/logout" class="logout-link">
+                                                        <i class="fa fa-sign-out" aria-hidden="true"></i>
+                                                        <span>خروج</span>
+                                                    </a>
+                                                    <div class="dropdown-customer-account-links">
+                                                        <ul class="dropdown-menu mt-2 dropdown-menu-right">
+                                                            <li><a href="/profile" class="dropdown-item"><span>اطلاعات من</span><img src="/static/ThemeLayout/iconSVG/profile-circle.svg"></a></li>
+                                                            <li><a href="/orders" class="dropdown-item"><span>تاریخچه سفارشات</span><img src="/static/ThemeLayout/iconSVG/calendar-1.svg"></a></li>
+                                                            <li><a href="/orders/next" class="dropdown-item"><span>سفارش بعدی</span><img src="/static/ThemeLayout/iconSVG/basket-fill.svg"></a></li>
+                                                            <li><a href="/profile/favorites" class="dropdown-item"><span>علاقه‌مندی‌ها</span><img src="/static/ThemeLayout/iconSVG/heart.svg"></a></li>
+                                                            <li><a href="#" class="dropdown-item"><span>خریدهای من</span><img src="/static/ThemeLayout/iconSVG/local-offer.svg"></a></li>
+                                                            <li><a href="#" class="dropdown-item"><span>نظرات</span><img src="/static/ThemeLayout/iconSVG/message.svg"></a></li>
+                                                            <li><a href="/profile/addresses" class="dropdown-item"><span>آدرس‌ها</span><img src="/static/ThemeLayout/iconSVG/location-on.svg"></a></li>
+                                                            <li><a href="/profile/phones" class="dropdown-item"><span>شماره‌های من</span><img src="/static/ThemeLayout/iconSVG/contact-phone.svg"></a></li>
+                                                            <li><a href="/profile/change-password" class="dropdown-item"><span>عملیات رمز عبور</span><img src="/static/ThemeLayout/iconSVG/vpn-key.svg"></a></li>
+                                                            <li><a href="/profile/bank-info" class="dropdown-item"><span>اطلاعات حساب بانکی</span><img src="/static/ThemeLayout/iconSVG/bank.svg"></a></li>
+                                                            <li class="logout"><a href="/auth/logout" rel="nofollow"><span>خروج</span></a></li>
+                                                        </ul>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="shopping-cart-module">
+                                <div class="blockcart cart-preview" data-refresh-url="/cart/refresh-preview" data-sidebar-cart-trigger>
+                                    <ul class="cart-header">
+                                        <li data-header-cart-source>
+                                            <a style="border-radius: 10px" rel="nofollow" href="/cart" class="cart-link btn-primary">
+                                                <span class="cart-design">
+                                                    <i class="fa fa-shopping-basket" aria-hidden="true"></i>
+                                                    <span class="cart-products-count js-cart-count" id="cart-badge-header">0</span>
+                                                </span>
+                                                <span class="cart-total-value">0 ریال</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="header-bottom clearfix">
+            <div class="desktop-sticky-wrapper">
+                <div class="header-main-menu" data-sticky-menu>
+                    <div class="container">
+                        <div class="header-main-menu-wrapper">
+                            <div class="left-nav-trigger" data-left-nav-trigger>
+                                <div class="left-nav-icon d-flex align-items-center justify-content-center" style="width: 100px;">
+                                    <div class="category-btn-header-body">
+                                        <i class="material-icons">view_headline</i>
+                                        <span>دسته‌بندی</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sticky-icon-cart" data-sticky-cart data-sidebar-cart-trigger style="display:none;">
+                                <a style="border-radius:10px" rel="nofollow" href="#" class="cart-link btn-primary">
+                                    <span class="cart-design">
+                                        <img src="/static/ThemeLayout/iconSVG/shopping_cart_icon.svg" alt="cart">
+                                        <span class="cart-products-count js-cart-count">0</span>
+                                    </span>
+                                    <span class="cart-total-value">0 ریال</span>
+                                </a>
+                            </div>
+                            <div id="amegamenu" class="amegamenu_rtl">
+                                <ul class="anav-top">
+                                    <li class="amenu-item mm1">
+                                        <a href="/" class="amenu-link">
+                                            <span><img src="/static/ThemeLayout/iconSVG/home.svg" alt="home">&nbsp; خانه</span>
+                                        </a>
+                                    </li>
+                                    
+                                    
+                                    <li class="amenu-item mm2 plex">
+                                        <a href="/Shop/Category/Index/laser" class="amenu-link">
+                                            <span>لیزر</span>
+                                        </a>
+                                        
+                                        <div class="adropdown adrd3">
+                                            <div class="dropdown-wrapper">
+                                                <div class="dropdown-bgimage"></div>
+                                                <div class="dropdown-content acot3 dd9 category-horizontally">
+                                                    <div class="content-grid acategory-content">
+                                                        <div class="aitem">
+                                                            <p class="category-title h5">
+                                                                <a href="/Shop/Category/Index/laser"><span>لیزر</span></a>
+                                                            </p>
+                                                            <ul class="category-subs">
+                                                                
+                                                                <li>
+                                                                    <a href="/Shop/Category/Index/gas-laser"><span>لیزر گازی</span></a>
+                                                                </li>
+                                                                
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                    </li>
+                                    
+                                    <li class="amenu-item mm2 plex">
+                                        <a href="/Shop/Category/Index/optic" class="amenu-link">
+                                            <span>اپتیک</span>
+                                        </a>
+                                        
+                                    </li>
+                                    
+                                    <li class="amenu-item mm2 plex">
+                                        <a href="/Shop/Category/Index/photonic" class="amenu-link">
+                                            <span>فوتونیک</span>
+                                        </a>
+                                        
+                                    </li>
+                                    
+                                    <li class="amenu-item mm2 plex">
+                                        <a href="/Shop/Category/Index/prto" class="amenu-link">
+                                            <span>پرتو</span>
+                                        </a>
+                                        
+                                    </li>
+                                    
+                                    <li class="amenu-item mm2 plex">
+                                        <a href="/Shop/Category/Index/bareke" class="amenu-link">
+                                            <span>باریکه</span>
+                                        </a>
+                                        
+                                    </li>
+                                    
+                                    
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+        <section id="wrapper" style="overflow-x: visible">
+            
+<aside id="notifications"><div class="container"></div></aside>
+<div class="main-content">
+    <div class="container">
+        <div class="row ">
+            <div id="center-column" class="center-column col-12">
+                <div class="center-wrapper">
+                    <section id="main">
+                        <div class="cart-grid mb-3 row">
+                            <div class="cart-grid-body col-12 col-lg-8 mb-4">
+                                <div class="checkout-step-order box-bg js-checkoutStepOrderBox"></div>
+                                
+<div class="js-stepPart d-none">
+    <div class="step-part" data-step-part-id="checkout-personal-information-step">
+        <div class="part-icon">
+            <span class="circle"></span>
+            <span class="done">✓</span>
+            <span class="position">1</span>
+            <span class="line"></span>
+            <span class="edit">✎</span>
+        </div>
+        <div class="part-text"><span>اطلاعات هویتی</span></div>
+    </div>
+</div>
+<div class="js-stepPart d-none">
+    <div class="step-part" data-step-part-id="checkout-addresses-step">
+        <div class="part-icon">
+            <span class="circle"></span>
+            <span class="done">✓</span>
+            <span class="position">2</span>
+            <span class="line"></span>
+            <span class="edit">✎</span>
+        </div>
+        <div class="part-text"><span>تحویل گیرنده</span></div>
+    </div>
+</div>
+<div class="js-stepPart d-none">
+    <div class="step-part" data-step-part-id="checkout-delivery-step">
+        <div class="part-icon">
+            <span class="circle"></span>
+            <span class="done">✓</span>
+            <span class="position">3</span>
+            <span class="line"></span>
+            <span class="edit">✎</span>
+        </div>
+        <div class="part-text"><span>روش ارسال</span></div>
+    </div>
+</div>
+<div class="js-stepPart d-none">
+    <div class="step-part" data-step-part-id="checkout-payment-step">
+        <div class="part-icon">
+            <span class="circle"></span>
+            <span class="done">✓</span>
+            <span class="position">4</span>
+            <span class="line"></span>
+            <span class="edit">✎</span>
+        </div>
+        <div class="part-text"><span>پرداخت</span></div>
+    </div>
+</div>
+                                <div class="checkout-step-display">
+                                    
+                                    <div id="checkout-personal-information-step" class="checkout-step -current -reachable js-current-step">
+                                        <div class="content">
+                                            <div class="light-box-bg mb-4">
+                                                <h5 class="identity">فاکتور به نام چه کسی صادر شود؟</h5>
+                                                <br />
+                                                <form method="get" action="/checkout">
+                                                    <div class="col-md-4">
+                                                        
+                                                        <select id="IdentityId" name="identityId" class="form-control select2">
+                                                            <option value="">انتخاب کنید</option>
+                                                            
+                                                            <option value="80392350-f70b-422b-9e6a-f955a7b8a9ff" >Test User</option>
+                                                            
+                                                        </select>
+                                                        
+                                                    </div>
+                                                    <br />
+                                                    <h5 class="identity">متصل شده به عنوان <a href="/profile">کاربر</a>.</h5>
+                                                    <p class="mb-0">شما نیستید؟ <a href="/logout">خروج</a></p>
+                                                    <div class="step-button-continue text-left">
+                                                        <button id="submitIdentity" disabled class="continue btn btn-primary" type="submit">ادامه</button>
+                                                        <p class="add-address mb-3" dir="rtl" style="display:inline">
+                                                            <a class="btn add-new-address" href="/identity-information/create?redirect=true">ایجاد اطلاعات هویتی جدید</a>
+                                                        </p>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="checkout-addresses-step" class="checkout-step -unreachable">
+                                        <div class="content">
+                                            <form method="post" action="/checkout">
+                                                <section class="shipping-address mb-4 light-box-bg">
+                                                    <h5 class="page-subheading">آدرس حمل و نقل</h5>
+                                                    <div id="delivery-addresses" class="address-selector js-address-selector">
+                                                        <div class="row">
+                                                            
+                                                            
+                                                            <div class="col-12 col-md-12">
+                                                                <article class="address-item selected" data-id-address="ea8bea21-cc8f-47b7-934f-dadccd8461a7" id="id-address-delivery-address-ea8bea21-cc8f-47b7-934f-dadccd8461a7" style="width:100%">
+                                                                    <label class="custom-radio" style="width:100%">
+                                                                        <span class="check-wrap">
+                                                                            <input type="radio" name="address_id" value="ea8bea21-cc8f-47b7-934f-dadccd8461a7" checked>
+                                                                            <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                                        </span>
+                                                                        <div class="address-body address-box-bg" style="width:100%">
+                                                                            <div class="address-header">
+                                                                                <div style="display:flex">
+                                                                                    <h5>Test User</h5>
+                                                                                    <span class="fullname-address" style="padding:0 0.5rem">Test User</span>
+                                                                                </div>
+                                                                                <div style="display:flex">
+                                                                                    <a class="edit-address-link" href="/profile/addresses/edit/ea8bea21-cc8f-47b7-934f-dadccd8461a7" data-link-action="edit-address">
+                                                                                        <i class="d-none material-icons">&#xE254;</i>
+                                                                                        <span class="edit-address">ویرایش</span>
+                                                                                    </a>
+                                                                                    <a class="delete-address-link" href="/profile/addresses/delete/ea8bea21-cc8f-47b7-934f-dadccd8461a7" data-link-action="delete-address" onclick="return confirm('آدرس حذف شود؟')">
+                                                                                        <i class="d-none material-icons">&#xE872;</i>
+                                                                                        <span class="delete-address">حذف</span>
+                                                                                    </a>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="address-content">
+                                                                                <i class="fa fa-map-marker" aria-hidden="true" style="color:#e70036"></i>
+                                                                                <address>Iran , تبریز</address>
+                                                                            </div>
+                                                                            <div class="address-footer">
+                                                                                <div class="post-code">
+                                                                                    <span>1234567890</span>
+                                                                                    <i class="fa fa-envelope" aria-hidden="true"></i>
+                                                                                </div>
+                                                                                <div class="mobile">
+                                                                                    <span>09123456789</span>
+                                                                                    <i class="fa fa-mobile" aria-hidden="true"></i>
+                                                                                </div>
+                                                                                <div class="phone">
+                                                                                    <span>--------</span>
+                                                                                    <i class="fa fa-phone" aria-hidden="true"></i>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </label>
+                                                                </article>
+                                                            </div>
+                                                            
+                                                            
+                                                        </div>
+                                                    </div>
+                                                    <p class="add-address mb-3" style="display:inline">
+                                                        <a class="btn add-new-address" href="/addresses/create?backToOrder=true">ایجاد آدرس جدید</a>
+                                                    </p>
+                                                    <div class="step-button-continue text-right" style="display:inline">
+                                                        <button style="float:left" type="submit" class="btn btn-primary continue" name="confirm-addresses" value="1">ادامه</button>
+                                                    </div>
+                                                </section>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="checkout-delivery-step" class="checkout-step -unreachable">
+                                        <div class="content">
+                                            <div class="light-box-bg">
+                                                <div class="row">
+                                                    <div class="col-6"><h5 class="page-subheading">روش ارسال</h5></div>
+                                                    <div class="col-6"><h5 class="page-subheading"></h5></div>
+                                                </div>
+                                                <div id="hook-display-before-carrier"></div>
+                                                <form class="clearfix" id="js-delivery" method="post" action="/checkout">
+                                                    <div class="delivery-options-list pt-2">
+                                                        <div class="form-fields">
+                                                            <div class="delivery-options grid-small-padding">
+                                                                
+                                                                <div class="delivery-option row">
+                                                                    <div class="custom-radio">
+                                                                        <span class="check-wrap">
+                                                                            
+                                                                            <input type="radio" name="PostTypeId" id="delivery_option_0" value="e04b09ef-1561-4173-b5a7-b794c68f4f7e">
+                                                                            
+                                                                            <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                                        </span>
+                                                                    </div>
+                                                                    <label for="delivery_option_0" class="delivery-option-0">
+                                                                        <div class="d-flex align-items-center carrier-box-bg">
+                                                                            <div class="carrier-logo">
+                                                                                
+                                                                                <img src="https://placehold.co/80x80" width="80" height="80" />
+                                                                                
+                                                                            </div>
+                                                                            <div class="w-100 d-flex flex-md-nowrap flex-wrap justify-content-between">
+                                                                                <span class="col-md-4 col-12 carrier-name">ارسال پستی</span>
+                                                                                <span class="col-md-5 col-12 text-justify carrier-delay">ارسال با پست پیشتاز</span>
+                                                                                
+                                                                                <span class="col-md-3 col-12 carrier-price text-md-center">50,000</span>
+                                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                    </label>
+                                                                </div>
+                                                                
+                                                                <div class="carrier-extra-content row"></div>
+                                                                
+                                                                
+                                                            </div>
+                                                            <div class="order-options">
+                                                                <div id="delivery" class="mb-3">
+                                                                    <label for="delivery_message" class="text-left">اگر توضیح خاصی دارید بنویسید</label>
+                                                                    <textarea rows="2" cols="120" id="delivery_message" class="form-control" name="note"></textarea>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="step-button-continue text-right">
+                                                        <button type="submit" class="continue btn btn-primary" name="confirmDeliveryOption" value="1">ادامه</button>
+                                                    </div>
+                                                </form>
+                                                <div id="hook-display-after-carrier"></div>
+                                                <div id="extra_carrier"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="checkout-payment-step" class="checkout-step -unreachable">
+                                        <div class="content">
+                                            <div class="light-box-bg">
+                                                <h5 class="page-subheading">پرداخت</h5>
+                                                <div id="invoice_option_area" style="margin-top:3rem;margin-bottom:2rem;">
+                                                    <div class="checkbox">
+                                                        <label for="invoice-required" style="text-align:right;">
+                                                            <input id="invoice-required" type="checkbox" class="checkbox-inline" name="paperInvoice" >
+                                                            <span style="font-size:1.1rem;">مایل به دریافت فاکتور کاغذی هستم</span><br>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div style="display:none" class="js-cart-payment-step-refresh"></div>
+                                                <div class="payment-options">
+                                                    
+                                                    <div class="payment-line">
+                                                        <div id="payment-option-1-container" class="payment-option clearfix">
+                                                            <div class="custom-radio">
+                                                                <span class="check-wrap">
+                                                                    <input class="ps-shown-by-js" id="payment-option-1" data-module-name="ps_wirepayment" name="payment-option" type="radio" value="cd362d22-42c2-43c9-8b07-d52f9269be74" required>
+                                                                    <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                                </span>
+                                                                <label for="payment-option-1">
+                                                                    <span class="option-text">پرداخت آنلاین (زرین‌پال)</span>
+                                                                </label>
+                                                            </div>
+                                                            <form method="GET" class="ps-hidden-by-js">
+                                                                <button class="ps-hidden-by-js" type="submit" name="select_payment_option" value="payment-option-1">گزینش</button>
+                                                            </form>
+                                                        </div>
+                                                        <div id="payment-option-1-additional-information" class="js-additional-information definition-list additional-information ps-hidden">
+                                                            <section><p>پرداخت امن با زرین‌پال</p></section>
+                                                        </div>
+                                                        <div id="pay-with-payment-option-1-form" class="js-payment-option-form ps-hidden">
+                                                            <form id="payment-form" method="POST" action="/checkout/payment">
+                                                                <input type="hidden" name="pay_method_id" value="cd362d22-42c2-43c9-8b07-d52f9269be74">
+                                                                <button style="display:none" id="pay-with-payment-option-1" type="submit"></button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                </div>
+                                                <div class="payment-final">
+                                                    <form id="conditions-to-approve" method="GET" class="mb-3">
+                                                        <ul>
+                                                            <li>
+                                                                <label class="custom-checkbox">
+                                                                    <span class="check-wrap">
+                                                                        <input id="conditions_to_approve[terms-and-conditions]" name="conditions_to_approve[terms-and-conditions]" required type="checkbox" value="1" class="ps-shown-by-js">
+                                                                        <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                                    </span>
+                                                                    <span class="js-terms">من با <a href="/page/terms" id="cta-terms-and-conditions-0">شرایط خدمات</a> موافقم و بی قید و شرط به آن‌ها پایبندم.</span>
+                                                                </label>
+                                                            </li>
+                                                        </ul>
+                                                    </form>
+                                                    <div id="payment-confirmation">
+                                                        <div class="ps-shown-by-js text-center">
+                                                            <button type="submit" disabled class="btn btn-primary btn-large btn-wrap" id="cta-payment-and-order">پرداخت و سفارش</button>
+                                                        </div>
+                                                        <div class="ps-hidden-by-js"></div>
+                                                        <br />
+                                                    </div>
+                                                    <a href="/checkout/proforma-invoice/dd364345-920b-427e-a0b6-52b34e2c0540" target="_blank" class="btn btn-primary btn-small">مشاهده پیش فاکتور</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="cart-grid-right col-12 col-lg-4 mb-4">
+                                <div class="cart-items light-box-bg cart-summary" style="position:sticky;top:60px">
+                                    <section id="js-checkout-summary" class="cart-detailed-totals">
+                                        <div class="cart-products-count alert-info">
+                                            <div class="cart-summary-products cart-items">
+                                                <div class="cart-summary-line">
+                                                    <label>1 کالا</label>
+                                                    <span class="value">
+                                                        <a href="#" data-toggle="modal" data-target="#cart-summary-product-list" class="show-details">مشاهده جزییات <i class="fa fa-info-circle" aria-hidden="true"></i></a>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="cart-summary-line cart-subtotal">
+                                            <span class="label">جمع کالاها</span>
+                                            <span class="value">0 ریال</span>
+                                        </div>
+                                        <div class="cart-summary-line cart-subtotal">
+                                            <span class="label">هزینه ارسال</span>
+                                            <span class="value">---</span>
+                                        </div>
+                                        
+                                        <div class="cart-summary-line cart-total">
+                                            <span class="label">مبلغ قابل پرداخت</span>
+                                            <span class="value">0 ریال</span>
+                                        </div>
+                                        
+                                    </section>
+                                    <div class="js-cart-update-voucher page-loading-overlay cart-overview-loading">
+                                        <div class="page-loading-backdrop d-flex align-items-center justify-content-center">
+                                            <span class="uil-spin-css"><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="cart-summary-product-list" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h5 class="modal-title">سبد خرید</h5>
+            </div>
+            <div class="modal-body">
+                <div class="cart-items cart-items-review">
+                    
+                    <div class="cart-item">
+                        <div class="product-line-grid">
+                            <div class="product-line-grid-left">
+                                <div class="product-image">
+                                    <img src="https://placehold.co/278x278?text=Product" alt="محصول نمونه 1" class="img-fluid">
+                                </div>
+                                <div class="product-line-grid-body">
+                                    <a href="/products/sample-product-1" target="_blank">
+                                        <span class="product-name">محصول نمونه 1</span><br />
+                                        
+                                    </a>
+                                    <div class="product-prices">
+                                        <span class="price">0 ریال</span>
+                                        <span class="qty px-1">x</span>
+                                        <span class="qty">1</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="product-line-grid-right">
+                                <div class="price-col">
+                                    <span class="price product-price">0 ریال</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        </section>
+        <style>
+    .col-lg-20 { width: 20%; }
+    #hamdoosfooter ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; }
+    #hamdoosfooter ul span { flex: 1; min-width: 20%; cursor: pointer; }
+    #hamdoosfooter li {
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px 10px; border-left: 1px solid #6666; gap: 10px; text-align: center;
+    }
+    #hamdoosfooter li:last-child { border-left: none; }
+    #hamdoosfooter li img.feature-img { width: 48px; transition: all 0.2s ease; }
+    #hamdoosfooter li:hover img { transform: scale(0.9); filter: saturate(2); }
+    #hamdoosfooter li span { color: #606060; font-size: 14px; }
+    #hamdoosfooter li span:hover { color: #00a693 !important; }
+    @media (max-width: 1200px) { #hamdoosfooter li { flex-direction: column; border: none; } #hamdoosfooter li span { margin-top: 8px; } }
+    @media (max-width: 768px) { #hamdoosfooter ul span { min-width: 50%; } #hamdoosfooter li { font-size: 13px; } }
+    @media (max-width: 567px) {
+        #hamdoosfooter ul span { min-width: 100%; }
+        #hamdoosfooter li { padding: 1em 0; font-size: 16px; text-align: right !important; display: block !important; float: right; border: none; }
+        #hamdoosfooter li a { padding-right: 1em; }
+    }
+</style>
+<footer id="footer">
+    <div class="footer-top clearfix">
+        <div class="container">
+            <div style="padding: 20px 0;">
+                <div class="row">
+                    <div id="hamdoosfooter" class="clearfix col-xs-12 col-sm-12 col-md-12">
+                        <ul>
+                            <span data-toggle="modal" data-target="#myModal0">
+                                <li class="hamdoosli" style="float:right;border-left:1px solid #6666;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;">
+                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/store.svg" alt="نحوه خرید از فروشگاه" style="width:48px;">
+                                    <span style="color:#606060;">نحوه خرید از فروشگاه</span>
+                                </li>
+                            </span>
+                            <span data-toggle="modal" data-target="#myModal1">
+                                <li class="hamdoosli" style="float:right;border-left:1px solid #6666;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;">
+                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/credit-card.svg" alt="شماره حساب‌ها" style="width:48px;">
+                                    <span style="color:#606060;">شماره حساب‌ها</span>
+                                </li>
+                            </span>
+                            <span data-toggle="modal" data-target="#myModal2">
+                                <li class="hamdoosli" style="float:right;border-left:1px solid #6666;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;">
+                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/free-delivery.svg" alt="ارسال رایگان" style="width:48px;">
+                                    <span style="color:#606060;">ارسال رایگان</span>
+                                </li>
+                            </span>
+                            <span data-toggle="modal" data-target="#myModal3">
+                                <li class="hamdoosli" style="float:right;border-left:1px solid #6666;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;">
+                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/support.svg" alt="تماس با ما" style="width:48px;">
+                                    <span style="color:#606060;">تماس با ما</span>
+                                </li>
+                            </span>
+                            <span data-toggle="modal" data-target="#myModal4">
+                                <li class="hamdoosli" style="float:right;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;border:none;">
+                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/tools.svg" alt="پشتیبانی فنی و مشاوره" style="width:48px;">
+                                    <span style="color:#606060;">پشتیبانی فنی و مشاوره</span>
+                                </li>
+                            </span>
+                        </ul>
+                    </div>
+                    
+                    <div class="modal fade hamdoosfooter" id="myModal0" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    <h4 class="modal-title" id="myModalLabel">نحوه خرید از فروشگاه</h4>
+                                </div>
+                                <div class="modal-body"><p>اطلاعات نحوه خرید از فروشگاه</p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade hamdoosfooter" id="myModal1" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    <h4 class="modal-title" id="myModalLabel">شماره حساب‌ها</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <p style="color:#d0121a;">بانک ملی ایران</p>
+                                    <p dir="rtl">شماره حساب: ---<br>شماره کارت: ---<br>شماره شبا: ---<br>صاحب حساب: ---</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade hamdoosfooter" id="myModal2" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    <h4 class="modal-title" id="myModalLabel">ارسال رایگان</h4>
+                                </div>
+                                <div class="modal-body"><p>اطلاعات ارسال رایگان</p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade hamdoosfooter" id="myModal3" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    <h4 class="modal-title" id="myModalLabel">تماس با ما</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <p>تماس با دفتر مرکزی فروشگاه تهران</p>
+                                    <p>تلفن: 021-88214641</p>
+                                    <p>ایمیل: <a href="mailto:">---</a></p>
+                                    <p>---</p>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade hamdoosfooter" id="myModal4" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    <h4 class="modal-title" id="myModalLabel">پشتیبانی فنی و مشاوره</h4>
+                                </div>
+                                <div class="modal-body">اطلاعات پشتیبانی فنی و مشاوره</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-main clearfix">
+        <div class="container">
+            <div class="row main-main">
+                <div class="footer-left col-sm-12 col-md-6 col-lg-3">
+                    <div class="footer-about-us md-bottom">
+                        <div class="typo">
+                            <p class="h4">اطلاعات</p>
+                            
+                            <p class="py-1">تلفن: 021-88214641</p>
+                            <p class="py-1 mt-2">ایمیل: None</p>
+                            <p>آدرس: <br>None</p>
+                            
+                        </div>
+                    </div>
+                    <div class="block-social md-bottom">
+                        <ul class="social-links">
+                            <li class="instagram"><a href="#" title="اینستاگرام" target="_blank" data-toggle="tooltip" data-placement="top" rel="noopener">اینستاگرام</a></li>
+                            <li class="telegram"><a href="#" title="تلگرام" target="_blank" data-toggle="tooltip" data-placement="top" rel="noopener">تلگرام</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="footer-right col-sm-12 col-md-6 col-lg-9">
+                    <style>.footer-menu a:hover { color: #2aff91 !important; }</style>
+                    <div class="footer-menu js-toggle-linklist-mobile">
+                        <div class="row">
+                            <div class="linklist col-12 col-lg-4">
+                                <p class="h4">بخش‌های فروشگاه</p>
+                                <ul></ul>
+                            </div>
+                            <div class="linklist col-12 col-lg-8">
+                                <div class="row">
+                                    <div class="col-12 col-lg-6">
+                                        <p class="h4">بخش‌های سایت</p>
+                                        <ul>
+                                            <li><a href="/">صفحه اصلی</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-12 col-lg-6">
+                                        <a referrerpolicy="origin" target="_blank" href="https://trustseal.enamad.ir/?id=478916&Code=5mPQwlWn8ZjwKRJ5frFKlGfxPLYO05zp">
+                                            <img loading="lazy" referrerpolicy="origin" src="https://trustseal.enamad.ir/logo.aspx?id=478916&Code=5mPQwlWn8ZjwKRJ5frFKlGfxPLYO05zp" alt="" style="cursor:pointer" width="125" height="136" Code="5mPQwlWn8ZjwKRJ5frFKlGfxPLYO05zp">
+                                        </a>
+                                        <a href="https://emalls.ir/Shop/65515/" target="_blank"><img width="91" height="136" style="margin:2px;" alt="نشان اعتباری ایمالز" referrerpolicy="origin" src="https://service.emalls.ir/neshan?id=65515"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom clearfix">
+        <div class="container">
+            <div class="copyright-payment">
+                <div class="typo">
+                    <div style="text-align: center;">None</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+    </main>
+    <div class="js-popup-newsletter-form" data-ajax-submit-url="#"></div>
+    <div id="scrollTopButton" data-scroll-to-top>
+        <a class="scroll-button" href="#" title="بازگشت به بالا" data-toggle="tooltip" data-placement="top"><i class="fa fa-angle-double-up"></i></a>
+    </div>
+    <div class="st-menu-right st-effect-right" data-st-cart>
+        <div class="st-menu-close d-flex" data-close-st-cart><i class="material-icons">close</i></div>
+        <div id="js-cart-sidebar" class="sidebar-cart cart-preview">
+            <div class="cart-dropdown-wrapper">
+                <div class="cart-title h4">سبد خرید</div>
+                <div class="no-items">سبد خرید شما خالی است</div>
+            </div>
+            <div class="js-cart-update-quantity page-loading-overlay cart-overview-loading">
+                <div class="page-loading-backdrop d-flex align-items-center justify-content-center">
+                    <span class="uil-spin-css"><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span></span>
+                </div>
+            </div>
+        </div>
+        <div id="js-currency-sidebar" class="sidebar-currency"></div>
+    </div>
+    <div id="modalMessage" class="modal fade modal-message js-modal-message" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger mb-0" role="alert">
+                        <i class="material-icons">error_outline</i> <span class="js-modal-message-text"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade simple-modal" id="extraModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="extra-content typo js-modal-extra-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="st-overlay" data-close-st-menu data-close-st-cart data-close-profile-menu></div>
+    <script>
+        (function () {
+            function toggleMenu(open) {
+                var html = document.documentElement;
+                if (open) { html.classList.add('st-effect-left', 'st-menu-open'); }
+                else { html.classList.remove('st-effect-left', 'st-menu-open'); }
+            }
+            document.querySelectorAll('[data-left-nav-trigger]').forEach(function (el) {
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    toggleMenu(true);
+                });
+            });
+            document.querySelectorAll('[data-close-st-menu]').forEach(function (el) {
+                el.addEventListener('click', function () { toggleMenu(false); });
+            });
+            document.querySelectorAll('[data-close-profile-menu]').forEach(function (el) {
+                el.addEventListener('click', function () { toggleMenu(false); });
+            });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { toggleMenu(false); } });
+        })();
+    </script>
+    <script>
+        (function () {
+            function setupSidebarTree() {
+                document.querySelectorAll('.js-sidebar-categories').forEach(function (tree) {
+                    tree.querySelectorAll('.js-collapse-trigger').forEach(function (trigger) {
+                        if (trigger.dataset.treeBound) return;
+                        trigger.dataset.treeBound = '1';
+                        trigger.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            var li = trigger.parentElement;
+                            var sub = li ? li.querySelector(':scope > .js-sub-categories') : null;
+                            var opened = trigger.classList.contains('opened');
+                            if (opened) {
+                                trigger.classList.remove('opened');
+                                if (sub) { sub.style.display = 'none'; }
+                            } else {
+                                trigger.classList.add('opened');
+                                if (sub) { sub.style.display = 'block'; }
+                            }
+                            var add = trigger.querySelector('.add');
+                            var rem = trigger.querySelector('.remove');
+                            if (add) { add.style.display = opened ? 'inline-block' : 'none'; }
+                            if (rem) { rem.style.display = opened ? 'none' : 'inline-block'; }
+                        });
+                    });
+                });
+            }
+            setupSidebarTree();
+            document.addEventListener('DOMContentLoaded', setupSidebarTree);
+        })();
+    </script>
+    <script src="/static/ThemeLayout/js/core.js"></script>
+    <script src="/static/ThemeLayout/js/front.js"></script>
+    <script src="/static/ThemeLayout/js/theme.min.js"></script>
+    <script src="/static/ThemeLayout/js/jquery.rateyo.min.js"></script>
+    <script src="/static/ThemeLayout/js/productrating.min.js"></script>
+    <script src="/static/ThemeLayout/js/displayInvoiceOption.min.js"></script>
+    <script src="/static/ThemeLayout/js/notifyme.min.js"></script>
+    <script src="/static/ThemeLayout/js/GoogleAnalyticActionLib.min.js"></script>
+    <script src="/static/ThemeLayout/js/jquery-ui.min.js"></script>
+    <script src="/static/ThemeLayout/js/jquery.fancybox.js"></script>
+    <script src="/static/ThemeLayout/js/ps_searchbar.js"></script>
+    <script src="/static/ThemeLayout/js/ps_shoppingcart.min.js"></script>
+    <script src="/static/ThemeLayout/js/graphql.js"></script>
+    <script src="/static/ThemeLayout/js/vendors.js"></script>
+    
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(function(){
+    $("#IdentityId").change(function(){
+        $("#submitIdentity").prop('disabled', this.value == "");
+    });
+    $(".select2").select2({ dir: "rtl", width: "100%" });
+    if($("#IdentityId").val() != ""){ $("#submitIdentity").prop('disabled', false); }
+    // Terms checkbox gates payment button
+    $("#conditions_to_approve[terms-and-conditions]").on("change", function(){
+        $("#cta-payment-and-order").prop('disabled', !this.checked);
+    });
+    // Payment method selection triggers hidden form
+    $("input[name='payment-option']").on("change", function(){
+        var idx = $(this).val();
+        $("#payment-form input[name='pay_method_id']").val(idx);
+        if($("#conditions_to_approve\\[terms-and-conditions\\]").is(":checked")){
+            $("#cta-payment-and-order").prop('disabled', false);
+        }
+    });
+    // Paper invoice toggle
+    $("#invoice-required").on("change", function(){
+        $.post("/checkout/paper-invoice", { invoice_required: this.checked ? "true" : "false" });
+    });
+    // Payment confirmation button triggers hidden form for selected method
+    $("#cta-payment-and-order").on("click", function(e){
+        e.preventDefault();
+        var pmId = $("input[name='payment-option']:checked").val();
+        if(pmId){
+            $("input[name='pay_method_id']", "#payment-form").val(pmId);
+            $("#payment-form").submit();
+        }
+    });
+});
+</script>
+
+    <script>
+    // ── Direct cart refresh: updates header, dropdown & sidebar ──
+    function refreshCartUI(callback) {
+        fetch('/cart/refresh-preview')
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (!resp.preview) return;
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(resp.preview, 'text/html');
+                // 1. Update header: replace .cart-header inside .blockcart
+                var newHeader = doc.querySelector('.blockcart .cart-header');
+                var oldHeader = document.querySelector('.blockcart .cart-header');
+                if (newHeader && oldHeader) oldHeader.outerHTML = newHeader.outerHTML;
+                // 2. Update sticky cart
+                var headerSource = document.querySelector('[data-header-cart-source]');
+                var stickyCart = document.querySelector('[data-sticky-cart]');
+                if (headerSource && stickyCart) stickyCart.innerHTML = headerSource.innerHTML;
+                // 3. Populate sidebar directly from preview
+                var newDropdown = doc.querySelector('[data-shopping-cart-source]');
+                var sidebar = document.getElementById('js-cart-sidebar');
+                if (sidebar && newDropdown) {
+                    sidebar.innerHTML = newDropdown.innerHTML;
+                }
+                if (callback) callback(resp);
+            })
+            .catch(function() { if (callback) callback({}); });
+    }
+
+    // ── Refresh on page load ──
+    setTimeout(function() { refreshCartUI(); }, 100);
+
+    // ── Add-to-cart from product cards and detail page ──
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.js-ajax-add-to-cart');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var productId = btn.getAttribute('data-id-product');
+        if (!productId) return;
+        var formData = new FormData();
+        formData.append('product_id', productId);
+        var form = btn.closest('#add-to-cart-or-refresh');
+        if (form) {
+            var countInput = form.querySelector('input[name="count"]');
+            formData.append('count', countInput ? parseInt(countInput.value) || 1 : 1);
+            var varietyInput = form.querySelector('#selected-variety-id');
+            if (varietyInput && varietyInput.value) {
+                formData.append('variety_id', varietyInput.value);
+            }
+        } else {
+            formData.append('count', 1);
+            var qtyEl = btn.querySelector('.js-add-to-cart-quantity');
+            if (qtyEl) {
+                var minQty = parseInt(qtyEl.textContent) || 1;
+                formData.set('count', minQty);
+            }
+        }
+        btn.classList.add('disabled');
+        fetch('/cart/add-ajax', { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                btn.classList.remove('disabled');
+                if (data.success) {
+                    refreshCartUI();
+                }
+            })
+            .catch(function() { btn.classList.remove('disabled'); });
+    });
+
+    // ── Remove from cart (sidebar links) ──
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('.remove-from-cart');
+        if (!link) return;
+        var href = link.getAttribute('href');
+        if (href && href.indexOf('/cart/remove-ajax/') > -1) {
+            e.preventDefault();
+            fetch(href).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) refreshCartUI();
+            });
+        }
+    });
+
+    // ── Update quantity (sidebar inputs) ──
+    document.addEventListener('change', function(e) {
+        var input = e.target.closest('.js-cart-line-product-quantity');
+        if (!input) return;
+        var itemId = input.getAttribute('data-item-id');
+        var qty = parseInt(input.value) || 1;
+        if (qty < 1) qty = 1;
+        if (!itemId) return;
+        var formData = new FormData();
+        formData.append('quantity', qty);
+        fetch('/cart/update-ajax/' + itemId, { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) refreshCartUI();
+            });
+    });
+
+    // ── Basket icon click → open sliding sidebar ──
+    document.addEventListener('click', function(e) {
+        var trigger = e.target.closest('[data-sidebar-cart-trigger]');
+        if (!trigger) return;
+        e.preventDefault();
+        var html = document.documentElement;
+        if (html.classList.contains('st-effect-right') && html.classList.contains('st-menu-open')) {
+            html.classList.remove('st-effect-right', 'st-menu-open');
+            return;
+        }
+        // Refresh cart data, then open sidebar
+        refreshCartUI(function() {
+            html.classList.add('st-effect-right', 'st-menu-open');
+        });
+    });
+    document.querySelectorAll('[data-close-st-cart]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            document.documentElement.classList.remove('st-effect-right', 'st-menu-open');
+        });
+    });
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Website",
+        "name": "آشا شاپ",
+        "url": "http://localhost:8001/home"
+    }
+    </script>
+</body>
+</html>

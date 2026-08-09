@@ -305,7 +305,12 @@ class FavoriteProductList(Base, BaseEntityMixin):
     int_id: Mapped[int] = mapped_column("IntId", Integer, unique=True, nullable=False)
 
     user: Mapped["User"] = relationship("User", foreign_keys=[user_id], back_populates="favorite_product_lists")
-    favorite_list_items: Mapped[list["FavoriteListItem"]] = relationship("FavoriteListItem", back_populates="favorite_product_list", lazy="selectin")
+    favorite_list_items: Mapped[list["FavoriteListItem"]] = relationship(
+        "FavoriteListItem",
+        back_populates="favorite_product_list",
+        lazy="selectin",
+        primaryjoin="and_(FavoriteListItem.favorite_product_list_id == FavoriteProductList.id, FavoriteListItem.is_removed == False)",
+    )
 
 
 class FavoriteListItem(Base, BaseEntityMixin):

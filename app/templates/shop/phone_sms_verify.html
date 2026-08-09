@@ -1,0 +1,107 @@
+{% extends "shop/base.html" %}
+{% block title %}تایید شماره موبایل - آشا شاپ{% endblock %}
+{% block body_id %}module-iverify-authentication{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page- tax-display-enabled st-wrapper{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="1" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+        </ol>
+    </div>
+</nav>
+
+<aside id="notifications">
+    <div class="container"></div>
+</aside>
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div id="center-column" class="center-column col-12">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title"></div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <div id="noSlide">
+                                    <div class="row justify-center-verif">
+                                        <div class="col-xs-12 col-sm-6 col-md-5" id="verify">
+                                            <div class="alert alert-danger" id="verify_error" {% if not code_error %}style="display:none"{% endif %}>{{ code_error or '' }}</div>
+                                            <form action="/profile/phone-numbers/send-sms-code" method="post" id="login_form" class="box ajax-form">
+                                                <h3 class="page-subheading">تایید شماره موبایل</h3>
+                                                <div class="form_content clearfix">
+                                                    <h4 class="verify-loginform">{{ phone_number }} <a id="change_number" href="/profile/phone-numbers">تغییر</a></h4>
+                                                    <div class="form-group">
+                                                        <label>لطفا کد تایید ارسال شده به شماره خود را وارد کنید</label>
+                                                        <input placeholder="کد تایید" class="is_required validate account_input form-control" type="text" data-validate="isPasswd" id="passwd" name="code" value="">
+                                                        {% if code_error %}<span style="color:red">{{ code_error }}</span>{% endif %}
+                                                    </div>
+                                                    <p class="submit">
+                                                        <input type="hidden" name="phone_number" value="{{ phone_number }}">
+                                                        <input type="hidden" name="address_id" value="{{ address_id }}">
+                                                        <button type="submit" id="SubmitLogin" name="SubmitLogin" class="button btn btn-success">
+                                                            <span><i class="fa fa-check"></i> تایید</span>
+                                                        </button>
+                                                    </p>
+                                                    <div id="timerofsendcode" class="btn" {% if timer == '-1:-1' %}style="display:none"{% endif %}>
+                                                        <div class="countdown">{{ timer }}</div>
+                                                        <span>دقیقه</span>
+                                                    </div>
+                                                    <a id="resend" href="/profile/phone-numbers/resend-code?phone_number={{ phone_number }}&address_id={{ address_id }}" title="ارسال مجدد پیامک" rel="nofollow" class="resendsms btn btn-info" {% if timer != '-1:-1' %}style="display:none"{% endif %}>
+                                                        <h4><i class="icon icon-repeat"></i> ارسال مجدد پیامک</h4>
+                                                    </a>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="page-footer"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+var resend_time = "{{ timer }}";
+$(document).ready(function() {
+    $('#resend').hide();
+    $('.resendsms').hide();
+    verifyTimer();
+});
+function verifyTimer() {
+    if (resend_time == "-1:-1") {
+        $('#timerofsendcode').hide();
+        $('#resend').show();
+        return;
+    }
+    var interval = setInterval(function() {
+        var timer = resend_time.split(':');
+        var minutes = parseInt(timer[0], 10);
+        var seconds = parseInt(timer[1], 10);
+        --seconds;
+        minutes = (seconds < 0) ? --minutes : minutes;
+        seconds = (seconds < 0) ? 59 : seconds;
+        seconds = (seconds < 10) ? '0' + seconds : seconds;
+        $('.countdown').html(minutes + ':' + seconds);
+        if (minutes < 0 || (seconds <= 0 && minutes <= 0)) {
+            clearInterval(interval);
+            $('#timerofsendcode').hide();
+            $('#resend').show();
+        }
+        resend_time = minutes + ':' + seconds;
+    }, 1000);
+}
+</script>
+{% endblock %}

@@ -1,65 +1,91 @@
 {% extends "shop/base.html" %}
 {% block title %}سبد خرید - آشا شاپ{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page-cart tax-display-enabled st-wrapper{% endblock %}
 {% block content %}
-<h1 class="text-xl font-bold mb-6">سبد خرید</h1>
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="2" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/"><i class="fa fa-home home" aria-hidden="true"></i><span itemprop="name">صفحه اصلی</span></a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <span itemprop="name">سبد خرید</span>
+                <meta itemprop="position" content="2">
+            </li>
+        </ol>
+    </div>
+</nav>
+<aside id="notifications"><div class="container"></div></aside>
 
-{% if cart and cart.items %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 space-y-4">
-        {% for item in cart.items %}
-        <div class="bg-white rounded-lg shadow-sm border p-4 flex items-center gap-4">
-            <img src="{{ item.product_image or '/static/img/placeholder.png' }}" class="w-20 h-20 object-contain">
-            <div class="flex-1">
-                <a href="/products/{{ item.product_slug or item.product_id }}" class="font-medium hover:text-indigo-600">{{ item.product_name }}</a>
-                {% if item.variety_value %}<p class="text-xs text-gray-500">تنوع: {{ item.variety_value }}</p>{% endif %}
-                <p class="text-indigo-600 font-bold mt-1">{{ "{:,.0f}".format(item.unit_price or 0) }} تومان</p>
+<div class="container">
+    <section id="content" class="page-content cart-page">
+        <h1 class="text-center mb-4">سبد خرید</h1>
+        {% if cart_items and cart_count > 0 %}
+        <div class="row">
+            <div class="col-12 col-lg-8">
+                <div class="cart-items-list">
+                    {% for item in cart_items %}
+                    <div class="cart-item-row bg-white shadow-sm border rounded p-3 mb-2 d-flex align-items-center">
+                        <a class="cart-item-image" href="/products/{{ item.part_number or item.product_id }}" style="flex: 0 0 100px;">
+                            <img src="{{ item.image_url or 'https://placehold.co/100x100' }}" alt="{{ item.name }}" class="img-fluid" width="100" height="100">
+                        </a>
+                        <div class="cart-item-details flex-grow-1 px-3">
+                            <a class="cart-item-name font-weight-bold" href="/products/{{ item.part_number or item.product_id }}">{{ item.name }}</a>
+                            {% if item.variety_values_str %}
+                            <div class="cart-item-attributes text-muted small">{{ item.variety_values_str }}</div>
+                            {% endif %}
+                            <div class="cart-item-prices mt-1">
+                                {% if item.regular_price %}
+                                <span class="regular-price text-muted"><del>{{ item.regular_price }} ريال</del></span>
+                                {% endif %}
+                                <span class="product-price font-weight-bold text-success">{{ item.price }} ريال</span>
+                            </div>
+                        </div>
+                        <div class="cart-item-qty d-flex align-items-center">
+                            <div class="qty">
+                                <input class="js-cart-line-product-quantity form-control text-center" type="number" value="{{ item.quantity }}" min="1" data-item-id="{{ item.id }}" style="width: 60px;">
+                            </div>
+                        </div>
+                        <div class="cart-item-total px-3 text-left" style="min-width: 120px;">
+                            {% set item_total = (item.price|replace(',','')|replace(' ریال','')|replace(',','')|float) * item.quantity %}
+                            <span class="font-weight-bold">{{ "{:,.0f}".format(item_total) }} ريال</span>
+                        </div>
+                        <div class="cart-item-actions">
+                            <a class="remove-from-cart text-danger" href="/cart/remove-ajax/{{ item.id }}" data-item-id="{{ item.id }}" title="حذف"><i class="fa fa-trash-o"></i></a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <div class="flex items-center border rounded-lg">
-                <button onclick="updateCart('{{ item.id }}', {{ item.quantity - 1 }})" class="px-2 py-1 hover:bg-gray-100">−</button>
-                <span class="px-3 py-1">{{ item.quantity }}</span>
-                <button onclick="updateCart('{{ item.id }}', {{ item.quantity + 1 }})" class="px-2 py-1 hover:bg-gray-100">+</button>
-            </div>
-            <div class="text-left">
-                <p class="font-bold">{{ "{:,.0f}".format(item.total_price or 0) }} تومان</p>
-                <button onclick="removeFromCart('{{ item.id }}')" class="text-red-500 text-sm hover:underline mt-1">حذف</button>
+            <div class="col-12 col-lg-4">
+                <div class="cart-summary bg-white shadow-sm border rounded p-4">
+                    <h4 class="mb-3">خلاصه سبد خرید</h4>
+                    <div class="cart-summary-line">
+                        <span>تعداد کالا</span>
+                        <span class="float-left">{{ cart_count }}</span>
+                    </div>
+                    <hr>
+                    <div class="cart-summary-line cart-subtotal-products">
+                        <span>جمع محصولات</span>
+                        <span class="float-left price-total font-weight-bold">{{ cart_total }} ريال</span>
+                    </div>
+                    <div class="cart-summary-line shipping-hook"></div>
+                    <hr>
+                    <div class="cart-action text-center mt-3">
+                        <a href="/checkout" class="btn btn-primary btn-block">مشاهده و پرداخت &nbsp;<i class="caret-right"></i></a>
+                    </div>
+                </div>
             </div>
         </div>
-        {% endfor %}
-    </div>
-
-    <div class="bg-white rounded-lg shadow-sm border p-6 h-fit">
-        <h3 class="font-bold mb-4">خلاصه سبد خرید</h3>
-        <div class="space-y-2 text-sm">
-            <div class="flex justify-between"><span>تعداد کالا</span><span>{{ cart.total_items }}</span></div>
-            <div class="flex justify-between"><span>جمع کل</span><span class="font-bold">{{ "{:,.0f}".format(cart.total_price) }} تومان</span></div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fa fa-shopping-cart fa-4x text-muted mb-3"></i>
+            <p class="h5 text-muted mb-3">سبد خرید شما خالی است</p>
+            <a href="/products" class="btn btn-primary">مشاهده محصولات</a>
         </div>
-        <hr class="my-4">
-        <a href="/checkout" class="block w-full bg-indigo-600 text-white text-center py-2.5 rounded-lg hover:bg-indigo-700 font-medium">
-            <i class="fas fa-credit-card ml-2"></i>تسویه حساب
-        </a>
-        <a href="/products" class="block w-full text-center py-2 text-indigo-600 text-sm mt-2 hover:underline">ادامه خرید</a>
-    </div>
+        {% endif %}
+    </section>
 </div>
-{% else %}
-<div class="text-center py-16 text-gray-400">
-    <i class="fas fa-shopping-cart text-5xl mb-4"></i>
-    <p class="text-lg mb-4">سبد خرید شما خالی است</p>
-    <a href="/products" class="inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700">مشاهده محصولات</a>
-</div>
-{% endif %}
-
-<script>
-function updateCart(itemKey, qty) {
-    if (qty <= 0) { removeFromCart(itemKey); return; }
-    fetch('/api/v1/cart/update/' + itemKey, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({quantity: qty})
-    }).then(r => { if (r.ok) location.reload(); });
-}
-function removeFromCart(itemKey) {
-    fetch('/api/v1/cart/remove/' + itemKey, {method: 'DELETE'})
-    .then(r => { if (r.ok) location.reload(); });
-}
-</script>
 {% endblock %}

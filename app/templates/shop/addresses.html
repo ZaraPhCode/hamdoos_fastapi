@@ -1,36 +1,118 @@
 {% extends "shop/base.html" %}
 {% block title %}آدرس‌های من - آشا شاپ{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-address tax-display-enabled page-customer-account customer-has-logged st-wrapper{% endblock %}
 {% block content %}
-<h1 class="text-xl font-bold mb-6">آدرس‌های من</h1>
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 space-y-4">
-        {% for addr in addresses %}
-        <div class="bg-white rounded-lg shadow-sm border p-4 flex justify-between items-start">
-            <div>
-                <p class="font-medium">{{ addr.first_name }} {{ addr.last_name }}</p>
-                <p class="text-sm text-gray-600 mt-1">{{ addr.address_description }}</p>
-                <p class="text-sm text-gray-500">{{ addr.postal_code }} - {{ addr.phone_number }}</p>
-            </div>
-            <form method="POST" action="/profile/addresses/{{ addr.id }}/delete" onsubmit="return confirm('حذف شود؟')">
-                <button class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
-            </form>
-        </div>
-        {% else %}
-        <p class="text-gray-400 text-center py-8">آدرسی ثبت نشده است</p>
-        {% endfor %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="3" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile/addresses">
+                    <span itemprop="name">آدرس‌ها</span>
+                </a>
+                <meta itemprop="position" content="3">
+            </li>
+        </ol>
     </div>
-    <div class="bg-white rounded-lg shadow-sm border p-4">
-        <h3 class="font-bold mb-4">آدرس جدید</h3>
-        <form method="POST" action="/profile/addresses/add" class="space-y-3">
-            <div><input name="first_name" placeholder="نام" required class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><input name="last_name" placeholder="نام خانوادگی" required class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><input name="phone_number" placeholder="شماره تماس" required class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><textarea name="address_description" placeholder="آدرس" required rows="3" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea></div>
-            <div><input name="postal_code" placeholder="کد پستی" required class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><input name="province" placeholder="استان" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><input name="city" placeholder="شهر" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">افزودن آدرس</button>
-        </form>
+</nav>
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                آدرس‌های شما
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                {% if notification %}
+                                <aside id="notifications">
+                                    <div class="container">
+                                        <article class="alert alert-success" role="alert" data-alert="success">
+                                            <ul>
+                                                <li>{{ notification }}</li>
+                                            </ul>
+                                        </article>
+                                    </div>
+                                </aside>
+                                {% endif %}
+                                <div class="row">
+                                    {% for item in addresses %}
+                                    <div class="col-12 col-md-12">
+                                        <article class="address address-box-bg">
+                                            <div class="address-body">
+                                                <div class="address-header">
+                                                    <div style="display: flex">
+                                                        <h5>{{ item.alias or '' }}</h5>
+                                                        <span class="fullname-address" style="padding: 0 0.5rem;">{{ item.first_name }} {{ item.last_name }}</span>
+                                                    </div>
+                                                    <div style="display: flex">
+                                                        <a href="/profile/addresses/edit/{{ item.id }}" data-link-action="edit-address" style="border-left: 1px solid #6666;padding: 0 0.5rem;color: #00a8ff;">
+                                                            <i class="d-none material-icons">&#xe254;</i>
+                                                            <span class="edit-address">ویرایش</span>
+                                                        </a>
+                                                        <a style="padding: 0 0.5rem;" href="/profile/addresses/delete/{{ item.id }}" data-link-action="delete-address" onclick="return confirm('آدرس حذف شود؟')">
+                                                            <i class="d-none material-icons">&#xe872;</i>
+                                                            <span class="delete-address">حذف</span>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <span class="fullname-address d-none" style="padding: 1rem 1.5rem;">{{ item.first_name }} {{ item.last_name }}</span>
+                                                <div class="address-content">
+                                                    <i class="fa fa-map-marker" aria-hidden="true" style="color: #e70036"></i>
+                                                    <address>ایران ، {% if item.province_city %}{{ item.province_city.name }}{% endif %} ، {{ item.address_description }}</address>
+                                                </div>
+                                                <div class="address-footer">
+                                                    <div class="post-code">
+                                                        <span>{{ item.postal_code }}</span>
+                                                        <i class="fa fa-envelope" aria-hidden="true"></i>
+                                                    </div>
+                                                    <div class="mobile">
+                                                        <span>{{ item.phone_number }}</span>
+                                                        <i class="fa fa-mobile" aria-hidden="true"></i>
+                                                    </div>
+                                                    <div class="phone">
+                                                        <span>{{ item.telephone or '--------' }}</span>
+                                                        <i class="fa fa-phone" aria-hidden="true"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="clearfix"></div>
+                                <div class="addresses-footer">
+                                    <a href="/profile/addresses/create" data-link-action="add-address" class="btn add-address-btn add-btn">
+                                        <span>ایجاد آدرس جدید</span>
+                                    </a>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="page-footer"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

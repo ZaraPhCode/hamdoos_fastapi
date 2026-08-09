@@ -1,0 +1,331 @@
+{% extends "shop/base.html" %}
+{% block title %}ثبت فیش - آشا شاپ{% endblock %}
+{% block body_id %}module-submitcashtransfer-submit{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page- tax-display-enabled customer-has-logged st-wrapper{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/ThemeLayout/kamadatepicker.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.css" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.css" crossorigin="anonymous">
+<style>
+    .upload_area { border: 2px dashed #ddd; border-radius: 10px; padding: 20px; text-align: center; }
+    .dropzone { border: none !important; background: transparent; min-height: 150px; }
+    .dropzone .dz-message { margin: 2em 0; }
+    .dropzone .dz-message i { font-size: 3rem; color: #00a693; display: block; margin-bottom: 10px; }
+    .dz-clickable { cursor: pointer; }
+    .register-tabs { display: flex; border-bottom: 2px solid #e9ecef; margin-bottom: 25px; padding: 0; list-style: none; }
+    .register-tabs a { display: block; padding: 10px 25px; margin-bottom: -2px; color: #666; text-decoration: none; font-size: 1rem; border: 1px solid transparent; border-bottom: 2px solid transparent; border-radius: 5px 5px 0 0; transition: all 0.2s; }
+    .register-tabs a:hover { color: #00a693; }
+    .register-tabs a.active { color: #00a693; border-color: #e9ecef #e9ecef #fff; border-bottom-color: #00a693; font-weight: bold; }
+</style>
+{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="1" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+        </ol>
+    </div>
+</nav>
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                ثبت اطلاعات پرداخت
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <aside id="notifications">
+                                    <div class="container"></div>
+                                </aside>
+                                <section class="contact-form">
+                                    <div class="block">
+                                        <div class="block_content">
+                                            <p style="margin-top: 20px; margin-bottom: 20px;background-color: #fff3cd;padding: 20px;line-height: 2;border-radius: 20px;font-size: 1.1rem;">
+                                                ضمن تشکر از واریز مبلغ سفارش، خواهشمند است تا نسبت به تکمیل فرم زیر اقدام فرمایید.<br>
+                                                پس از پرکردن و ارسال فرم زیر نیازی به تماس تلفنی با فروشگاه نمی باشد.<br>
+                                                در صورتی که موفق به ثبت اطلاعات نشدید، خواهشمند است تا همین اطلاعات را به آدرس ایمیل
+                                                فروشگاه"hamdoos@outlook.com" ارسال نمایید.<br>
+                                            </p>
+                                            <p style="margin-top: 20px;color: #333; font-size: 1.5rem; font-weight: bold;text-align: center">
+                                                ثبت از طریق :
+                                            </p>
+                                            <form class="form-horizontal" id="form_id" enctype="multipart/form-data">
+                                                <nav class="register-tabs">
+                                                    <a id="tab-paymentInfo" href="#" class="active">اطلاعات پرداخت</a>
+                                                    <a id="tab-loadImage" href="#">آپلود تصویر</a>
+                                                </nav>
+                                                <div class="row">
+                                                    <input type="hidden" value="/profile/register-receipt" id="submit_link">
+                                                    <div class="col-md-6 col-md-offset-2 col-sm-12">
+                                                        <div id="section-paymentInfo" class="form-section">
+                                                            <div class="form-group row">
+                                                                <label class="control-label col-sm-4" for="destination_bank"><i class="fa fa-star"></i> نام بانک مقصد</label>
+                                                                <div class="col-sm-8">
+                                                                    <select class="form-control" name="destination_bank" id="destination_bank">
+                                                                        <option value="">---</option>
+                                                                        <option value="Aiandeh">بانک آینده</option>
+                                                                        <option value="Mellat">بانک ملت</option>
+                                                                        <option value="Melli">بانک ملی</option>
+                                                                        <option value="Saderat">بانک صادرات</option>
+                                                                        <option value="Pasarghad">بانک پاسارگاد</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            <div class="form-group row">
+                                                                <label class="control-label col-sm-4" for="order_id">
+                                                                    <i class="fa fa-star"></i>
+                                                                    شماره سفارش
+                                                                </label>
+                                                                <div class="col-sm-8">
+                                                                    <select name="order_id" id="order_id" class="form-control" onchange="window.showTotalPrice()">
+                                                                        {% if receipt_orders|length == 0 %}
+                                                                        <option data-price="0" value="">----</option>
+                                                                        {% else %}
+                                                                        {% for item in receipt_orders %}
+                                                                        {% if selected_order_id and selected_order_id == item.id|string %}
+                                                                        <option selected data-price="{{ item.payable }}" value="{{ item.id }}">{{ item.reference_code }}</option>
+                                                                        {% else %}
+                                                                        <option data-price="{{ item.payable }}" value="{{ item.id }}">{{ item.reference_code }}</option>
+                                                                        {% endif %}
+                                                                        {% endfor %}
+                                                                        {% endif %}
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            <div class="form-group row">
+                                                                <label class="control-label col-sm-4" for="price">
+                                                                    <i class="fa fa-star"></i> مبلغ واریزی
+                                                                </label>
+                                                                <div class="col-sm-8">
+                                                                    <input name="price" type="text" class="form-control" id="price" placeholder="مبلغ واریزی (ریال)">
+                                                                </div>
+                                                            </div>
+                                                            <div id="section-paymentInfo-fields">
+                                                                <div class="form-group row">
+                                                                    <label class="control-label col-sm-4" for="date">
+                                                                        <i class="fa fa-star"></i> تاریخ واریز
+                                                                    </label>
+                                                                    <div class="col-sm-8">
+                                                                        <input name="deposit_date" type="text" class="form-control" id="date" placeholder="تاریخ دقیق واریز وجه (روز/ماه/سال)" autocomplete="off">
+                                                                    </div>
+                                                                </div>
+                                                                <div class="form-group row">
+                                                                    <label class="control-label col-sm-4" for="paya">
+                                                                        حواله
+                                                                    </label>
+                                                                    <div class="col-sm-8">
+                                                                        <input type="radio" id="paya_yes" name="paya" value="true">
+                                                                        <label for="paya_yes" style="margin-left: 25px;">بله</label>
+                                                                        <input type="radio" id="paya_no" name="paya" value="false" checked>
+                                                                        <label for="paya_no">خیر</label>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="form-group row">
+                                                                    <label class="control-label col-sm-4" for="description">توضیحات</label>
+                                                                    <div class="col-sm-8">
+                                                                        <textarea name="description" class="form-control" cols="30" rows="4" id="description" wrap="off"></textarea>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div id="section-loadImage" class="form-section" style="display:none;">
+                                                            <div class="upload_area dz-clickable">
+                                                                <p class="text-info"><i class="fa fa-info"></i> حجم فایل باید کمتر از ۱ مگابایت باشد</p>
+                                                                <div id="design-image" class="dropzone">
+                                                                    <div class="dz-message" data-dz-message>
+                                                                        <i class="fa fa-picture-o"></i>
+                                                                        <span>برای آپلود کلیک کنید یا عکس را اینجا بکشید</span>
+                                                                    </div>
+                                                                    <div style="border: none !important;padding: 0 1.5rem; text-align: center" class="dropzone-previews"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <input type="hidden" name="tab" id="tab_value" value="paymentInfo">
+                                                <div class="form-group row">
+                                                    <div class="col-lg-12" style="text-align: center">
+                                                        <button type="button" class="btn btn-primary" id="submit_cash_transfer">
+                                                            <i class="fa fa-check"></i>
+                                                            <span>ثبت فیش</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </section>
+                                <div id="result_alert" class="modal fade" role="dialog">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                            </div>
+                                            <div class="modal-body"></div>
+                                            <div class="modal-footer" style="border: none; text-align: center">
+                                                <button type="button" class="btn btn-default ok-btn" data-dismiss="modal">تائید</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="page-footer"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/ThemeLayout/js/kamadatepicker.min.js"></script>
+<script src="/static/ThemeLayout/js/kamadatepicker.holidays.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.js"></script>
+<script>
+(function() {
+    var submit_link = document.getElementById('submit_link').value;
+
+    window.showTotalPrice = function() {
+        var select = document.getElementById('order_id');
+        var selectedOption = select.options[select.selectedIndex];
+        var price = selectedOption.getAttribute('data-price') || '0';
+        document.getElementById('price').value = price;
+    };
+
+    function switchTab(tab) {
+        document.querySelectorAll('.form-section').forEach(function(el) { el.style.display = 'none'; });
+        document.querySelectorAll('.register-tabs a').forEach(function(el) { el.classList.remove('active'); });
+        document.getElementById('section-' + tab).style.display = '';
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.getElementById('tab_value').value = tab;
+    }
+
+    document.getElementById('tab-paymentInfo').addEventListener('click', function(e) { e.preventDefault(); switchTab('paymentInfo'); });
+    document.getElementById('tab-loadImage').addEventListener('click', function(e) { e.preventDefault(); switchTab('loadImage'); });
+
+    var dateInput = document.getElementById('date');
+    if (dateInput && typeof kamaDatepicker === 'function') {
+        kamaDatepicker('date', {
+            forceFarsiDigits: true,
+            markToday: true,
+            markHolidays: true,
+            highlightSelectedDay: true,
+            sync: true,
+            pastYearsCount: 0,
+            futureYearsCount: 3,
+            swapNextPrev: true,
+        });
+    } else if (dateInput) {
+        dateInput.addEventListener('focus', function() {
+            this.type = 'date';
+        });
+        dateInput.addEventListener('blur', function() {
+            if (!this.value) this.type = 'text';
+        });
+    }
+
+    Dropzone.autoDiscover = false;
+
+    var designImage = document.getElementById('design-image');
+    var myDropzone = null;
+    if (designImage && typeof Dropzone !== 'undefined') {
+        myDropzone = new Dropzone("div#design-image", {
+            autoProcessQueue: false,
+            url: submit_link,
+            paramName: "img",
+            previewsContainer: '.dropzone-previews',
+            maxFilesize: 2,
+            addRemoveLinks: true,
+            maxFiles: 1,
+            parallelUploads: 1,
+            dictRemoveFile: "\u062D\u0630\u0641 \u0641\u0627\u06CC\u0644",
+            dictFileTooBig: "\u062D\u062C\u0645 \u0641\u0627\u06CC\u0644 \u0628\u0627\u06CC\u062F \u06A9\u0645\u062A\u0631 \u0627\u0632 \u06F1 \u0645\u06AF\u0627\u0628\u0627\u06CC\u062A \u0628\u0627\u0634\u062F",
+        });
+        myDropzone.on("maxfilesexceeded", function(file) {
+            myDropzone.removeFile(file);
+        });
+    }
+
+    document.getElementById('submit_cash_transfer').addEventListener('click', function(e) {
+        if (typeof $.confirm === 'function') {
+            $.confirm({
+                title: '\u062A\u0627\u0626\u06CC\u062F',
+                content: '\u0622\u06CC\u0627 \u0645\u0637\u0645\u0626\u0646 \u0647\u0633\u062A\u06CC\u062F\u061F',
+                buttons: {
+                    confirm: {
+                        text: "\u0628\u0644\u0647",
+                        action: function() { registerReceipt(e); }
+                    },
+                    cancel: {
+                        text: "\u062E\u06CC\u0631",
+                        action: function() {}
+                    },
+                }
+            });
+        } else {
+            if (confirm('\u0622\u06CC\u0627 \u0645\u0637\u0645\u0626\u0646 \u0647\u0633\u062A\u06CC\u062F\u061F')) {
+                registerReceipt(e);
+            }
+        }
+    });
+
+    function registerReceipt(e) {
+        var formData = new FormData(document.getElementById('form_id'));
+        var tab_value = document.getElementById('tab_value').value;
+        var err = '';
+        if (myDropzone) {
+            var data = myDropzone.getAcceptedFiles();
+            for (var i = 0; i < data.length; i++) {
+                formData.append('img', data[i]);
+            }
+        }
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', submit_link, true);
+        xhr.onload = function() {
+            try {
+                var res = JSON.parse(xhr.responseText);
+                var bodyEl = document.querySelector('#result_alert .modal-body');
+                if (res.success && res.success.length !== 0) {
+                    bodyEl.innerHTML = '<i class="fa fa-check"></i> ' + res.success;
+                } else {
+                    for (var k in res.errors) { err = err + res.errors[k] + '<br>'; }
+                    bodyEl.innerHTML = '<i class="fa fa-remove"></i> ' + err;
+                }
+            } catch(ex) {
+                document.querySelector('#result_alert .modal-body').innerHTML = '<i class="fa fa-remove"></i> \u062E\u0637\u0627 \u062F\u0631 \u0639\u0645\u0644\u06CC\u0627\u062A';
+            }
+            setTimeout(function() {
+                $('#result_alert').modal('show');
+            }, 100);
+            document.getElementById('order_id').value = '';
+            document.getElementById('destination_bank').value = '';
+            document.getElementById('price').value = '';
+            document.getElementById('date').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('paya_yes').checked = false;
+            document.getElementById('paya_no').checked = true;
+        };
+        xhr.onerror = function() {
+            document.querySelector('#result_alert .modal-body').innerHTML = '<i class="fa fa-remove"></i> \u062E\u0637\u0627 \u062F\u0631 \u0639\u0645\u0644\u06CC\u0627\u062A';
+            setTimeout(function() { $('#result_alert').modal('show'); }, 100);
+        };
+        xhr.send(formData);
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "shop/base.html" %}
+{% block title %}اطلاعات حساب بانکی جدید - آشا شاپ{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-address tax-display-enabled page-customer-account customer-has-logged st-wrapper{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="4" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile/bank-info">
+                    <span itemprop="name">اطلاعات حساب بانکی</span>
+                </a>
+                <meta itemprop="position" content="3">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="#">
+                    <span itemprop="name">اطلاعات حساب بانکی جدید</span>
+                </a>
+                <meta itemprop="position" content="4">
+            </li>
+        </ol>
+    </div>
+</nav>
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                ثبت اطلاعات حساب بانکی
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <section class="contact-form">
+                                    <div class="block">
+                                        <div class="block_content">
+                                            <div class="row">
+                                                <div class="col-md-6 col-md-offset-2 col-sm-12">
+                                                    <form class="form-horizontal" action="/profile/bank-info/create" method="post">
+                                                        <div class="form-group row" style="margin-top: 10px !important;">
+                                                            <label class="control-label col-sm-4">نام بانک</label>
+                                                            <div class="col-sm-8">
+                                                                <input name="bank_name" type="text" id="bank_name" class="form-control" placeholder="نام بانک خود را وارد کنید" required="required" value="{{ form.bank_name or '' }}">
+                                                                <span class="error" style="color:red">{% if errors and errors.bank_name %}{{ errors.bank_name }}{% endif %}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row" style="margin-top: 10px !important;">
+                                                            <label class="control-label col-sm-4">صاحب حساب</label>
+                                                            <div class="col-sm-8">
+                                                                <input name="account_owner" type="text" id="bank_account_owner_name" class="form-control" placeholder="نام و نام خانوادگی دارنده حساب" required="required" value="{{ form.account_owner or '' }}">
+                                                                <span class="error" style="color:red">{% if errors and errors.account_owner %}{{ errors.account_owner }}{% endif %}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">شماره شبا</label>
+                                                            <div class="col-sm-8">
+                                                                <input name="sheba_number" type="text" class="form-control" id="shaba" placeholder="شماره شبا" required="required" value="{{ form.sheba_number or '' }}">
+                                                                <span class="error" style="color:red">{% if errors and errors.sheba_number %}{{ errors.sheba_number }}{% endif %}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <div class="col-sm-4"></div>
+                                                            <div class="col-sm-8">
+                                                                <button type="submit" class="btn btn-primary" name="submit_bank_info">
+                                                                    ثبت مشخصات حساب
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </section>
+                        </div>
+                        <div class="page-footer"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

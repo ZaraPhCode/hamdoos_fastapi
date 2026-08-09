@@ -22,6 +22,7 @@ from app.models.order import (
     OrderProduct, OrderStatusRecord, Discount,
     PayMethod, PostType,
 )
+from app.models.common import Address, ProvinceCity
 from app.models.finance import PaymentRequest, Receipt
 from app.models.invoice import Invoice, InvoiceProduct
 from app.utils.persian_tools import to_farsi, to_farsi_full, from_farsi_date
@@ -301,17 +302,23 @@ async def create_order(
         post_type_id=request.post_type_id,
         notes=request.notes,
         date=datetime.now(timezone.utc),
+        pay_date=datetime.now(timezone.utc),
         email=user.email,
 
         total_price=subtotal,
+        total_price_plus_taxes=0,
+        total_taxes_and_duties=0,
         total_price_after_discount=total_after_discount,
         total_discount_price=discount_value,
         discount_price=discount_value,
         payable=payable,
+        vat=0,
+        packaging_cost=0,
+        packaging_vat=0,
+        packaging_vat_rate=0,
         postage_fee=postage_fee,
         post_vat=post_vat,
         post_vat_rate=post_vat_rate,
-        vat=0,
 
         first_name=request.address.first_name,
         last_name=request.address.last_name,
@@ -341,8 +348,10 @@ async def create_order(
             count=cart_item.quantity,
             unit_price=unit_price,
             total_price=total,
+            discount=0,
             price_after_discount=unit_price,
             total_price_after_discount=total,
+            vat_rate=0,
             variety_values=cart_item.variety_value,
             insert_date=datetime.now(timezone.utc),
             update_date=datetime.now(timezone.utc),
@@ -366,6 +375,251 @@ async def create_order(
     save_cart(user.id, cart)
 
     return order
+
+
+# ── OrderingStep (multi-step checkout, mirrors .NET OrderController.OrderingStep) ──
+
+async def get_ordering_order_full(db: AsyncSession, user_id: uuid.UUID) -> Optional[Order]:
+    """Load the user's most recent persistent 'Ordering'-status order with all checkout relations."""
+    stmt = (
+        select(Order)
+        .options(
+            selectinload(Order.order_products).selectinload(OrderProduct.product),
+            selectinload(Order.order_products).selectinload(OrderProduct.variety),
+            selectinload(Order.post_type),
+            selectinload(Order.pay_method),
+            selectinload(Order.identity_information),
+        )
+        .where(Order.user_id == user_id, Order.order_status == "Ordering", Order.is_removed == False)
+        .order_by(Order.date.desc(), Order.insert_date.desc())
+    )
+    result = await db.execute(stmt)
+    orders = result.unique().scalars().all()
+    return orders[0] if orders else None
+
+
+async def _set_order_products_from_cart(db: AsyncSession, order: Order, items) -> None:
+    """Persist cookie-cart items as OrderProduct rows on the ordering order."""
+    for item in items:
+        try:
+            pid = uuid.UUID(item.product_id)
+        except (ValueError, AttributeError):
+            continue
+        vid = None
+        if getattr(item, "variety_id", None):
+            try:
+                vid = uuid.UUID(item.variety_id)
+            except ValueError:
+                vid = None
+        quantity = int(getattr(item, "quantity", 1) or 1)
+        unit_price = float(getattr(item, "price_after_discount", None) or getattr(item, "price", 0) or 0)
+        total = unit_price * quantity
+        order.order_products.append(OrderProduct(
+            id=uuid.uuid4(),
+            order_id=order.id,
+            product_id=pid,
+            variety_id=vid,
+            count=quantity,
+            unit_price=unit_price,
+            total_price=total,
+            discount=0,
+            price_after_discount=unit_price,
+            total_price_after_discount=total,
+            vat_rate=float(getattr(item, "vat_rate", 0) or 0),
+            variety_values=getattr(item, "variety_values_str", None),
+            insert_date=datetime.now(timezone.utc),
+            update_date=datetime.now(timezone.utc),
+        ))
+    await db.flush()
+
+
+async def _refresh_ordering_totals(db: AsyncSession, order: Order) -> None:
+    """Recalculate order totals from products + selected post type (mirrors .NET Order.Refresh)."""
+    total = sum(float(op.unit_price or 0) * op.count for op in order.order_products)
+    total_after = sum(float(op.price_after_discount or 0) * op.count for op in order.order_products)
+    order.count = sum(op.count for op in order.order_products)
+    order.total_price = total
+    order.total_price_after_discount = total_after
+    post_type = None
+    if order.post_type_id:
+        post_type = await db.get(PostType, order.post_type_id)
+    if post_type:
+        order.postage_fee = float(post_type.price or 0)
+        order.post_vat_rate = float(post_type.post_vat_rate or 0)
+        order.post_vat = round(order.postage_fee * order.post_vat_rate / 100, 2)
+    else:
+        order.postage_fee = 0
+        order.post_vat = 0
+        order.post_vat_rate = 0
+    order.payable = (
+        float(order.total_price_after_discount or 0)
+        + float(order.postage_fee or 0)
+        + float(order.post_vat or 0)
+    )
+    await db.flush()
+
+
+async def sync_ordering_order_from_cart(
+    db: AsyncSession, user: User, cookie_cart
+) -> tuple[Optional[Order], bool]:
+    """Create or refresh the user's persistent 'Ordering' order from the cookie cart.
+
+    Returns (order, consumed). ``consumed`` is True when the cookie cart items were
+    moved into the order and the cookie cart should be cleared.
+    """
+    order = await get_ordering_order_full(db, user.id)
+    items = getattr(cookie_cart, "items", None) or []
+    if not items:
+        return order, False
+
+    # Consolidate any leftover 'Ordering' orders into a single one (legacy cleanup).
+    stmt = (
+        select(Order)
+        .options(
+            selectinload(Order.order_products).selectinload(OrderProduct.product),
+            selectinload(Order.order_products).selectinload(OrderProduct.variety),
+        )
+        .where(Order.user_id == user.id, Order.order_status == "Ordering", Order.is_removed == False)
+        .order_by(Order.date.desc(), Order.insert_date.desc())
+    )
+    existing = (await db.execute(stmt)).unique().scalars().all()
+    order = existing[0] if existing else None
+    for extra in existing[1:]:
+        for op in list(extra.order_products or []):
+            await db.delete(op)
+        await db.delete(extra)
+    if len(existing) > 1:
+        await db.flush()
+
+    if order:
+        for op in list(order.order_products or []):
+            await db.delete(op)
+        await db.flush()
+        order.order_products = []
+    else:
+        order = Order(
+            id=uuid.uuid4(),
+            reference_code=await _generate_reference_code(db),
+            order_status="Ordering",
+            user_id=user.id,
+            email=user.email,
+            count=0,
+            total_price=0,
+            total_price_plus_taxes=0,
+            total_taxes_and_duties=0,
+            total_price_after_discount=0,
+            total_discount_price=0,
+            discount_price=0,
+            payable=0,
+            vat=0,
+            packaging_cost=0,
+            packaging_vat=0,
+            packaging_vat_rate=0,
+            postage_fee=0,
+            post_vat=0,
+            post_vat_rate=0,
+            date=datetime.now(timezone.utc),
+            pay_date=datetime.now(timezone.utc),
+            insert_date=datetime.now(timezone.utc),
+            update_date=datetime.now(timezone.utc),
+        )
+        order.order_products = []
+        db.add(order)
+        await db.flush()
+
+    await _set_order_products_from_cart(db, order, items)
+    await _refresh_ordering_totals(db, order)
+    await db.commit()
+    return order, True
+
+
+async def set_ordering_identity(db: AsyncSession, user: User, order: Order, identity_id: uuid.UUID) -> None:
+    identity = await db.get(IdentityInformation, identity_id)
+    if not identity or identity.user_id != user.id:
+        raise ValueError("اطلاعات هویتی انتخاب شده معتبر نیست")
+    order.identity_information_id = identity.id
+    await db.flush()
+
+
+async def set_ordering_address(db: AsyncSession, user: User, order: Order, address_id: uuid.UUID) -> None:
+    address = await db.get(Address, address_id)
+    if not address or address.user_id != user.id:
+        raise ValueError("آدرس انتخاب شده معتبر نیست")
+    order.address_id = address.id
+    order.first_name = address.first_name
+    order.last_name = address.last_name
+    order.phone_number = address.phone_number
+    order.telephone = address.telephone or ""
+    order.address_description = address.address_description
+    order.postal_code = address.postal_code
+    order.country = address.country
+
+    city = await db.get(ProvinceCity, address.province_city_id)
+    order.city = city.name if city else ""
+    province = None
+    if address.province_id:
+        stmt = select(ProvinceCity).where(
+            ProvinceCity.int_id == address.province_id, ProvinceCity.province_id.is_(None)
+        )
+        province = (await db.execute(stmt)).scalar_one_or_none()
+    order.province = province.name if province else (city.name if city else "")
+    await db.flush()
+
+
+async def set_ordering_post(db: AsyncSession, order: Order, post_type_id: uuid.UUID, note: Optional[str] = None) -> None:
+    post_type = await db.get(PostType, post_type_id)
+    if not post_type:
+        raise ValueError("روش ارسال انتخاب شده معتبر نیست")
+    order.post_type_id = post_type.id
+    if note:
+        order.notes = note
+    await _refresh_ordering_totals(db, order)
+    await db.flush()
+
+
+async def pay_ordering_order(db: AsyncSession, order: Order, pay_method_id: uuid.UUID) -> Order:
+    """Finalize the ordering order: set pay method and transition to AwaitingPayment."""
+    pay_method = await db.get(PayMethod, pay_method_id)
+    if not pay_method:
+        raise ValueError("روش پرداخت انتخاب شده معتبر نیست")
+    if not order.address_id or not order.post_type_id:
+        raise ValueError("مراحل سفارش کامل نشده است")
+    order.pay_method_id = pay_method.id
+    order.pay_method_name = pay_method.name
+    order.order_status = "AwaitingPayment"
+    order.date = datetime.now(timezone.utc)
+    order.pay_date = datetime.now(timezone.utc)
+    db.add(OrderStatusRecord(
+        id=uuid.uuid4(),
+        order_id=order.id,
+        status="AwaitingPayment",
+        comment="ثبت سفارش",
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    ))
+    await db.commit()
+    return order
+
+
+async def get_user_identities(db: AsyncSession, user_id: uuid.UUID) -> list[IdentityInformation]:
+    stmt = select(IdentityInformation).where(
+        IdentityInformation.user_id == user_id,
+        IdentityInformation.is_removed == False,
+        IdentityInformation.status.in_(["AwaitingConfirmation", "Confirmed"]),
+    ).order_by(IdentityInformation.insert_date.desc())
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_user_addresses(db: AsyncSession, user_id: uuid.UUID) -> list[Address]:
+    stmt = (
+        select(Address)
+        .options(selectinload(Address.province_city))
+        .where(Address.user_id == user_id, Address.is_removed == False)
+        .order_by(Address.insert_date.desc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def update_order_status(
@@ -397,8 +651,8 @@ async def get_order_by_id(db: AsyncSession, order_id: uuid.UUID) -> Optional[Ord
     stmt = (
         select(Order)
         .options(
-            selectinload(Order.order_products),
-            selectinload(Order.order_status_records).order_by(OrderStatusRecord.insert_date),
+            selectinload(Order.order_products).selectinload(OrderProduct.product),
+            selectinload(Order.order_status_records),
         )
         .where(Order.id == order_id, Order.is_removed == False)
     )
@@ -418,7 +672,7 @@ async def get_user_orders(
     stmt = (
         select(Order)
         .options(
-            selectinload(Order.order_products),
+            selectinload(Order.order_products).selectinload(OrderProduct.product),
             selectinload(Order.order_status_records),
         )
         .where(Order.user_id == user_id, Order.is_removed == False)
@@ -445,7 +699,7 @@ async def get_all_orders(
     stmt = (
         select(Order)
         .options(
-            selectinload(Order.order_products),
+            selectinload(Order.order_products).selectinload(OrderProduct.product),
             selectinload(Order.order_status_records),
             selectinload(Order.user),
         )
@@ -742,3 +996,48 @@ def product_picker_data(products: list[Product]) -> list[dict]:
         }
         for p in products
     ]
+
+
+async def build_proforma_invoice(db: AsyncSession, order: Order) -> dict:
+    """Build a proforma invoice dict from an Order (mirrors .NET OrderController.ProformaInvoice)."""
+    identity = order.identity_information
+    invoice_products = []
+    for op in (order.order_products or []):
+        product = op.product
+        unit_price = float(op.unit_price or 0)
+        count = op.count or 1
+        vat_rate = float(op.vat_rate or 0)
+        taxes = round(unit_price * vat_rate / 100, 2)
+        total = unit_price * count + taxes
+        invoice_products.append({
+            "part_number": product.part_number if product else "",
+            "name": product.name if product else "",
+            "product_unit": op.product_unit or (product.product_unit.name if product and product.product_unit else "عدد"),
+            "count": count,
+            "unit_price": unit_price,
+            "vat_rate": vat_rate,
+            "taxes_and_duties": taxes,
+            "total_amount_plus_taxes": total,
+        })
+    # Reorder: skip 2 then append them (mirrors .NET template)
+    ordered = invoice_products[2:] + invoice_products[:2]
+    total_taxes = sum(p["taxes_and_duties"] for p in invoice_products)
+    total_plus = sum(p["total_amount_plus_taxes"] for p in invoice_products)
+    return {
+        "order_reference_code": order.reference_code,
+        "type": "پیش فاکتور",
+        "date": order.date,
+        "first_name": order.first_name or "",
+        "last_name": order.last_name or "",
+        "economic_code": identity.economic_code if identity else "",
+        "national_code_or_id": identity.national_code_or_id if identity else "",
+        "telephone": order.telephone or "",
+        "postal_code": order.postal_code or "",
+        "province": order.province or "",
+        "identity_city": order.city or "",
+        "identity_address": order.address_description or "",
+        "total_taxes_and_duties": round(total_taxes, 2),
+        "total_price_plus_taxes": round(total_plus, 2),
+        "description": order.notes or "",
+        "invoice_products": ordered,
+    }

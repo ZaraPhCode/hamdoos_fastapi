@@ -1,21 +1,22 @@
 <style>
-    .col-lg-20 { width: 20%; }
     #hamdoosfooter ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; }
-    #hamdoosfooter ul span { flex: 1; min-width: 20%; cursor: pointer; }
     #hamdoosfooter li {
+        flex: 0 0 20%;
+        box-sizing: border-box;
         display: flex; align-items: center; justify-content: center;
-        padding: 20px 10px; border-left: 1px solid #6666; gap: 10px; text-align: center;
+        padding: 20px 12px; border-left: 1px solid #6666; gap: 12px; text-align: center; cursor: pointer;
     }
     #hamdoosfooter li:last-child { border-left: none; }
-    #hamdoosfooter li img.feature-img { width: 48px; transition: all 0.2s ease; }
+    #hamdoosfooter li img.feature-img { width: 48px; height: 48px; object-fit: contain; flex: 0 0 48px; transition: all 0.2s ease; }
     #hamdoosfooter li:hover img { transform: scale(0.9); filter: saturate(2); }
-    #hamdoosfooter li span { color: #606060; font-size: 14px; }
+    #hamdoosfooter li span { color: #606060; font-size: 14px; white-space: nowrap; }
     #hamdoosfooter li span:hover { color: #00a693 !important; }
-    @media (max-width: 1200px) { #hamdoosfooter li { flex-direction: column; border: none; } #hamdoosfooter li span { margin-top: 8px; } }
-    @media (max-width: 768px) { #hamdoosfooter ul span { min-width: 50%; } #hamdoosfooter li { font-size: 13px; } }
+    @media (max-width: 1200px) { #hamdoosfooter li { flex-direction: column; border: none; } #hamdoosfooter li span { margin-top: 8px; white-space: normal; } }
+    @media (max-width: 768px) { #hamdoosfooter li { flex: 0 0 50%; } #hamdoosfooter li span { font-size: 13px; } }
     @media (max-width: 567px) {
-        #hamdoosfooter ul span { min-width: 100%; }
-        #hamdoosfooter li { padding: 1em 0; font-size: 16px; text-align: right !important; display: block !important; float: right; border: none; }
+        #hamdoosfooter li { flex: 0 0 100%; padding: 1em 0; font-size: 16px; text-align: right !important; justify-content: flex-start; flex-direction: row; border: none; }
+        #hamdoosfooter li img.feature-img { width: 40px; height: 40px; flex-basis: 40px; }
+        #hamdoosfooter li span { white-space: normal; }
         #hamdoosfooter li a { padding-right: 1em; }
     }
 </style>
@@ -26,104 +27,98 @@
                 <div class="row">
                     <div id="hamdoosfooter" class="clearfix col-xs-12 col-sm-12 col-md-12">
                         <ul>
-                            <span data-toggle="modal" data-target="#myModal0">
-                                <li class="hamdoosli" style="float:right;border-left:1px solid #6666;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;">
-                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/store.svg" alt="نحوه خرید از فروشگاه" style="width:48px;">
-                                    <span style="color:#606060;">نحوه خرید از فروشگاه</span>
-                                </li>
-                            </span>
-                            <span data-toggle="modal" data-target="#myModal1">
-                                <li class="hamdoosli" style="float:right;border-left:1px solid #6666;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;">
-                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/credit-card.svg" alt="شماره حساب‌ها" style="width:48px;">
-                                    <span style="color:#606060;">شماره حساب‌ها</span>
-                                </li>
-                            </span>
-                            <span data-toggle="modal" data-target="#myModal2">
-                                <li class="hamdoosli" style="float:right;border-left:1px solid #6666;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;">
-                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/free-delivery.svg" alt="ارسال رایگان" style="width:48px;">
-                                    <span style="color:#606060;">ارسال رایگان</span>
-                                </li>
-                            </span>
-                            <span data-toggle="modal" data-target="#myModal3">
-                                <li class="hamdoosli" style="float:right;border-left:1px solid #6666;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;">
-                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/support.svg" alt="تماس با ما" style="width:48px;">
-                                    <span style="color:#606060;">تماس با ما</span>
-                                </li>
-                            </span>
-                            <span data-toggle="modal" data-target="#myModal4">
-                                <li class="hamdoosli" style="float:right;width:20%;display:flex;align-items:center;justify-content:center;gap:10px;padding:20px 10px;cursor:pointer;border:none;">
-                                    <img class="feature-img" src="/static/ThemeLayout/iconSVG/tools.svg" alt="پشتیبانی فنی و مشاوره" style="width:48px;">
-                                    <span style="color:#606060;">پشتیبانی فنی و مشاوره</span>
-                                </li>
-                            </span>
+                            <li data-toggle="modal" data-target="#myModal0">
+                                <img class="feature-img" src="/static/ThemeLayout/iconSVG/store.svg" alt="نحوه خرید از فروشگاه">
+                                <span>نحوه خرید از فروشگاه</span>
+                            </li>
+                            <li data-toggle="modal" data-target="#myModal1">
+                                <img class="feature-img" src="/static/ThemeLayout/iconSVG/credit-card.svg" alt="شماره حساب‌ها">
+                                <span>شماره حساب‌ها</span>
+                            </li>
+                            <li data-toggle="modal" data-target="#myModal2">
+                                <img class="feature-img" src="/static/ThemeLayout/iconSVG/free-delivery.svg" alt="ارسال رایگان">
+                                <span>ارسال رایگان</span>
+                            </li>
+                            <li data-toggle="modal" data-target="#myModal3">
+                                <img class="feature-img" src="/static/ThemeLayout/iconSVG/support.svg" alt="تماس با ما">
+                                <span>تماس با ما</span>
+                            </li>
+                            <li data-toggle="modal" data-target="#myModal4">
+                                <img class="feature-img" src="/static/ThemeLayout/iconSVG/tools.svg" alt="پشتیبانی و مشاوره فنی">
+                                <span>پشتیبانی و مشاوره فنی</span>
+                            </li>
                         </ul>
                     </div>
-                    {% if site_settings %}
-                    <div class="modal fade hamdoosfooter" id="myModal0" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                    <div class="modal fade hamdoosfooter" id="myModal0" tabindex="-1" role="dialog" aria-labelledby="myModal0Label">
                         <div class="modal-dialog" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-                                    <h4 class="modal-title" id="myModalLabel">نحوه خرید از فروشگاه</h4>
-                                </div>
-                                <div class="modal-body"><p>{{ site_settings.how_to_buy or 'اطلاعات نحوه خرید از فروشگاه' }}</p></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal fade hamdoosfooter" id="myModal1" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-                                    <h4 class="modal-title" id="myModalLabel">شماره حساب‌ها</h4>
+                                    <h4 class="modal-title" id="myModal0Label">نحوه خرید از فروشگاه</h4>
                                 </div>
                                 <div class="modal-body">
-                                    <p style="color:#d0121a;">{{ site_settings.bank_name or 'بانک ملی ایران' }}</p>
-                                    <p dir="rtl">شماره حساب: {{ site_settings.account_number or '---' }}<br>شماره کارت: {{ site_settings.card_number or '---' }}<br>شماره شبا: {{ site_settings.sheba_number or '---' }}<br>صاحب حساب: {{ site_settings.account_owner or '---' }}</p>
+                                    <p>ابتدا یک حساب کاربری ایجاد و اطلاعات خواسته شده را وارد کنید. بعد از آن کالاهای موردنظر را انتخاب و به سبد خرید خود اضافه کنید. در مراحل بعدی به ترتیب می‌بایست آدرس و نحوه ارسال، انتخاب گردد و در نهایت نیز هزینه پرداخت شود.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal fade hamdoosfooter" id="myModal2" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                    <div class="modal fade hamdoosfooter" id="myModal1" tabindex="-1" role="dialog" aria-labelledby="myModal1Label">
                         <div class="modal-dialog" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-                                    <h4 class="modal-title" id="myModalLabel">ارسال رایگان</h4>
-                                </div>
-                                <div class="modal-body"><p>{{ site_settings.free_delivery or 'اطلاعات ارسال رایگان' }}</p></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal fade hamdoosfooter" id="myModal3" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-                                    <h4 class="modal-title" id="myModalLabel">تماس با ما</h4>
+                                    <h4 class="modal-title" id="myModal1Label">شماره حساب‌ها</h4>
                                 </div>
                                 <div class="modal-body">
-                                    <p>تماس با دفتر مرکزی فروشگاه تهران</p>
-                                    <p>تلفن: {{ site_settings.telephone or '---' }}</p>
-                                    <p>ایمیل: <a href="mailto:{{ site_settings.email or '' }}">{{ site_settings.email or '---' }}</a></p>
-                                    <p>{{ site_settings.address or '---' }}</p>
-                                    {{ site_settings.contact_us or ''|safe }}
+                                    <p style="color:#d0121a;font-weight:bold;">قرض الحسنه مهر ایران</p>
+                                    <p dir="rtl" style="line-height:2;">شماره حساب: 3013.710.19913662.1<br>شماره کارت: 6063737005358039<br>شماره شبا: IR170600301371019913662001<br>صاحب حساب: شرکت نمایه پرتو آشا</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="modal fade hamdoosfooter" id="myModal4" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+                    <div class="modal fade hamdoosfooter" id="myModal2" tabindex="-1" role="dialog" aria-labelledby="myModal2Label">
                         <div class="modal-dialog" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
-                                    <h4 class="modal-title" id="myModalLabel">پشتیبانی فنی و مشاوره</h4>
+                                    <h4 class="modal-title" id="myModal2Label">ارسال رایگان</h4>
                                 </div>
-                                <div class="modal-body">{{ site_settings.technical_support or 'اطلاعات پشتیبانی فنی و مشاوره'|safe }}</div>
+                                <div class="modal-body">
+                                    <p>در صورتی که خرید شما بیشتر از 5 میلیون تومان باشد ارسال رایگان خواهد بود.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    {% endif %}
+                    <div class="modal fade hamdoosfooter" id="myModal3" tabindex="-1" role="dialog" aria-labelledby="myModal3Label">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    <h4 class="modal-title" id="myModal3Label">تماس با ما</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <p>تماس با دفتر مرکزی فروشگاه (تهران)</p>
+                                    <p>تلفن: 09018401833 (تماس تلفنی + تلگرام / بله)</p>
+                                    <p>ایمیل: <span id="footer-email" data-email="ashabeam@gmail.com" style="color:#00a693;cursor:pointer;font-weight:bold;" title="برای کپی کلیک کنید">ashabeam@gmail.com</span></p>
+                                    <p>تهران، میدان انقلاب اسلامی، ابتدای خیابان کارگر شمالی، بن‌بست امین، پلاک 16، طبقه چهارم (واحد اپتیک و لیزر)</p>
+                                    <p>برای تماس با ما می‌توانید با شماره 09018401833 تماس بگیرید.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal fade hamdoosfooter" id="myModal4" tabindex="-1" role="dialog" aria-labelledby="myModal4Label">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    <h4 class="modal-title" id="myModal4Label">پشتیبانی و مشاوره فنی</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <p>تیم پشتیبانی ما با تخصص و تعهد در تلاش است تا به تمامی سوالات و مشکلات فنی شما پاسخ دهد و راه‌حل‌های مناسب را ارائه دهد. برای مشاوره شماره (09018401833) برای تماس و همچنین در پیام‌رسان‌های "بله" و "تلگرام" پاسخگوی سوالات شما عزیزان است!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -195,3 +190,35 @@
         </div>
     </div>
 </footer>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var emailEl = document.getElementById('footer-email');
+        if (emailEl) {
+            emailEl.addEventListener('click', function () {
+                var email = emailEl.getAttribute('data-email');
+                function done(ok) {
+                    var original = emailEl.textContent;
+                    emailEl.textContent = ok ? 'کپی شد! ✓' : 'خطا در کپی';
+                    emailEl.style.color = ok ? '#2e7d32' : '#d0121a';
+                    setTimeout(function () {
+                        emailEl.textContent = original;
+                        emailEl.style.color = '#00a693';
+                    }, 2000);
+                }
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(email).then(function () { done(true); }, function () { done(false); });
+                } else {
+                    var ta = document.createElement('textarea');
+                    ta.value = email;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    try { done(document.execCommand('copy')); } catch (e) { done(false); }
+                    document.body.removeChild(ta);
+                }
+            });
+        }
+    });
+</script>

@@ -53,12 +53,14 @@
                                                     <div class="dropdown-customer-account-links">
                                                         <ul class="dropdown-menu mt-2 dropdown-menu-right">
                                                             <li><a href="/profile" class="dropdown-item"><span>اطلاعات من</span><img src="/static/ThemeLayout/iconSVG/profile-circle.svg"></a></li>
-                                                            <li><a href="/orders" class="dropdown-item"><span>تاریخچه سفارشات</span><img src="/static/ThemeLayout/iconSVG/calendar-1.svg"></a></li>
+                                                            <li><a href="/orders/history" class="dropdown-item"><span>تاریخچه سفارشات</span><img src="/static/ThemeLayout/iconSVG/calendar-1.svg"></a></li>
                                                             <li><a href="/orders/next" class="dropdown-item"><span>سفارش بعدی</span><img src="/static/ThemeLayout/iconSVG/basket-fill.svg"></a></li>
                                                             <li><a href="/profile/favorites" class="dropdown-item"><span>علاقه‌مندی‌ها</span><img src="/static/ThemeLayout/iconSVG/heart.svg"></a></li>
                                                             <li><a href="#" class="dropdown-item"><span>خریدهای من</span><img src="/static/ThemeLayout/iconSVG/local-offer.svg"></a></li>
                                                             <li><a href="#" class="dropdown-item"><span>نظرات</span><img src="/static/ThemeLayout/iconSVG/message.svg"></a></li>
                                                             <li><a href="/profile/addresses" class="dropdown-item"><span>آدرس‌ها</span><img src="/static/ThemeLayout/iconSVG/location-on.svg"></a></li>
+                                                            <li><a href="#" class="dropdown-item"><span>پیگیری سفارشات</span><img src="/static/ThemeLayout/iconSVG/search-normal.svg"></a></li>
+                                                            <li><a href="/profile/register-receipt" class="dropdown-item"><span>ثبت فیش</span><img src="/static/ThemeLayout/iconSVG/bank.svg"></a></li>
                                                             <li><a href="/profile/phones" class="dropdown-item"><span>شماره‌های من</span><img src="/static/ThemeLayout/iconSVG/contact-phone.svg"></a></li>
                                                             <li><a href="/profile/change-password" class="dropdown-item"><span>عملیات رمز عبور</span><img src="/static/ThemeLayout/iconSVG/vpn-key.svg"></a></li>
                                                             <li><a href="/profile/bank-info" class="dropdown-item"><span>اطلاعات حساب بانکی</span><img src="/static/ThemeLayout/iconSVG/bank.svg"></a></li>
@@ -90,7 +92,7 @@
                             </div>
                             {% endif %}
                             <div class="shopping-cart-module">
-                                <div class="blockcart cart-preview" data-sidebar-cart-trigger>
+                                <div class="blockcart cart-preview" data-refresh-url="/cart/refresh-preview" data-sidebar-cart-trigger>
                                     <ul class="cart-header">
                                         <li data-header-cart-source>
                                             <a style="border-radius: 10px" rel="nofollow" href="/cart" class="cart-link btn-primary">
@@ -102,59 +104,6 @@
                                             </a>
                                         </li>
                                     </ul>
-                                    <div class="cart-dropdown" data-shopping-cart-source>
-                                        <div class="cart-dropdown-wrapper">
-                                            <div class="cart-title h4">سبد خرید</div>
-                                            <ul class="cart-items _allow-update-quantity">
-                                                {% for item in cart_items or [] %}
-                                                <li class="cart-product-line">
-                                                    <a class="product-image" href="/product/{{ item.product_id }}">
-                                                        <img src="{{ item.image_url or '/static/ThemeLayout/img/placeholder.png' }}" alt="{{ item.name }}" class="img-fluid">
-                                                    </a>
-                                                    <div class="product-infos">
-                                                        <a class="product-name" href="/product/{{ item.product_id }}">{{ item.name }}</a>
-                                                        <div class="product-attributes"></div>
-                                                        <div class="product-price-quantity">
-                                                            <div class="product-quantity-touchspin">
-                                                                <input class="js-cart-line-product-quantity" type="number" value="{{ item.quantity }}" name="product-sidebar-quantity-spin" min="1">
-                                                            </div>
-                                                            <div class="product-cart-price">
-                                                                <div style="display: grid">
-                                                                    {% if item.regular_price and item.regular_price > item.price %}
-                                                                    <span class="regular-price">{{ item.regular_price }} ریال</span>
-                                                                    {% endif %}
-                                                                    <span class="product-price">{{ item.price }} ریال</span>
-                                                                </div>
-                                                                <span class="x-character">x</span>
-                                                                <span class="product-qty">{{ item.quantity }}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <a class="remove-from-cart icon-link" rel="nofollow" href="#" title="حذف">
-                                                        <i class="fa fa-trash-o" aria-hidden="true"></i>
-                                                    </a>
-                                                </li>
-                                                {% else %}
-                                                <li class="text-center py-3 text-muted">سبد خرید شما خالی است</li>
-                                                {% endfor %}
-                                            </ul>
-                                            <div class="cart-bottom">
-                                                <p class="cart-products-count alert-info">{{ cart_count or 0 }} کالا در سبد خرید شما</p>
-                                                <div class="cart-summary-subtotals">
-                                                    <div class="cart-summary-line cart-subtotal-products">
-                                                        <label>جمع محصولات</label>
-                                                        <span class="price price-total">{{ cart_total or 0 }} ریال</span>
-                                                    </div>
-                                                    <div class="cart-summary-line shipping-hook"></div>
-                                                </div>
-                                                <div class="cart-action">
-                                                    <div class="text-center">
-                                                        <a href="/cart" class="btn btn-primary">مشاهده و پرداخت &nbsp;<i class="caret-right"></i></a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>

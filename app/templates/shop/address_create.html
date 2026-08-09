@@ -1,0 +1,221 @@
+{% extends "shop/base.html" %}
+{% block title %}آدرس جدید - آشا شاپ{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-address tax-display-enabled page-customer-account customer-has-logged st-wrapper{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="4" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile/addresses">
+                    <span itemprop="name">آدرس‌ها</span>
+                </a>
+                <meta itemprop="position" content="3">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="#">
+                    <span itemprop="name">آدرس جدید</span>
+                </a>
+                <meta itemprop="position" content="4">
+            </li>
+        </ol>
+    </div>
+</nav>
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                آدرس جدید
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <aside id="notifications">
+                                    <div class="container"></div>
+                                </aside>
+                                <div class="address-form">
+                                    <div class="js-address-form">
+                                        <form method="POST" action="/profile/addresses/create">
+                                            {% if back_to_order %}
+                                            <input type="hidden" name="back_to_order" value="true">
+                                            {% endif %}
+                                            <section class="form-fields">
+                                                <div class="form-group row alias">
+                                                    <label class="col-12 col-lg-3 form-control-label">لقب</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <input class="form-control" name="alias" type="text" maxlength="32" value="{{ form.alias or '' }}">
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment">اختیاری</div>
+                                                </div>
+
+                                                <div class="form-group row firstname">
+                                                    <label class="col-12 col-lg-3 form-control-label required">نام</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <input class="form-control" name="first_name" type="text" maxlength="255" required value="{{ form.first_name or '' }}">
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment"></div>
+                                                </div>
+
+                                                <div class="form-group row lastname">
+                                                    <label class="col-12 col-lg-3 form-control-label required">نام خانوادگی</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <input class="form-control" name="last_name" type="text" maxlength="255" required value="{{ form.last_name or '' }}">
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment"></div>
+                                                </div>
+
+                                                <div class="form-group row id_country">
+                                                    <label class="col-12 col-lg-3 form-control-label required">کشور</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <select class="form-control form-control-select js-country" name="country">
+                                                            <option value="" disabled>انتخاب کنید</option>
+                                                            <option value="Iran" selected>ایران</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment"></div>
+                                                </div>
+
+                                                <div class="form-group row city">
+                                                    <label class="col-12 col-lg-3 form-control-label required">استان</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <select name="province_id" id="ProvinceId" class="form-control form-control-select">
+                                                            <option value="">انتخاب کنید</option>
+                                                            {% for p in provinces %}
+                                                            <option value="{{ p.id }}" {% if selected_province_id and p.id|string == selected_province_id %}selected{% endif %}>{{ p.name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment"></div>
+                                                </div>
+
+                                                <div class="form-group row city">
+                                                    <label class="col-12 col-lg-3 form-control-label required">شهر</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <select name="province_city_id" id="ProvinceCityId" class="form-control form-control-select">
+                                                            <option value="">انتخاب کنید</option>
+                                                            {% for c in cities %}
+                                                            <option value="{{ c.id }}">{{ c.name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                        <span class="error" style="color:red">{% if errors and errors.province_city_id %}{{ errors.province_city_id }}{% endif %}</span>
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment"></div>
+                                                </div>
+
+                                                <div class="form-group row address1">
+                                                    <label class="col-12 col-lg-3 form-control-label required">آدرس</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <input name="address_description" class="form-control" type="text" maxlength="128" required value="{{ form.address_description or '' }}">
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment"></div>
+                                                </div>
+
+                                                <div class="form-group row phone">
+                                                    <label class="col-12 col-lg-3 form-control-label">تلفن ثابت</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <input name="telephone" class="form-control" type="tel" maxlength="32" value="{{ form.telephone or '' }}">
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment">اختیاری</div>
+                                                </div>
+
+                                                <div class="form-group row phone_mobile">
+                                                    <label class="col-12 col-lg-3 form-control-label required">موبایل</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <input name="phone_number" class="form-control" type="text" maxlength="11" pattern="09\d{9}" title="شماره موبایل باید با 09 شروع شده و 11 رقم باشد" required value="{{ form.phone_number or '' }}">
+                                                        <span class="error" style="color:red">{% if errors and errors.phone_number %}{{ errors.phone_number }}{% endif %}</span>
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment"></div>
+                                                </div>
+
+                                                <div class="form-group row postcode">
+                                                    <label class="col-12 col-lg-3 form-control-label required">کد پستی</label>
+                                                    <div class="col-12 col-lg-6">
+                                                        <input name="postal_code" class="form-control" type="text" maxlength="10" pattern="\d{10}" title="کد پستی باید 10 رقم باشد" required value="{{ form.postal_code or '' }}">
+                                                        <span class="error" style="color:red">{% if errors and errors.postal_code %}{{ errors.postal_code }}{% endif %}</span>
+                                                    </div>
+                                                    <div class="col-12 col-lg-3 form-control-comment"></div>
+                                                </div>
+                                            </section>
+
+                                            <div class="form-footer row align-items-end">
+                                                <div class="col-lg-3"></div>
+                                                <div class="col-lg-6 text-center">
+                                                    <button class="btn btn-primary form-control-submit" type="submit"><i class="fa fa-save"></i> ذخیره</button>
+                                                </div>
+                                                <div class="col-12"></div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="page-footer"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+$(document).ready(function(){
+    getCities();
+});
+$("#ProvinceId").change(function () {
+    getCities();
+});
+function getCities(){
+    var pid = $("#ProvinceId").val();
+    if (!pid) {
+        $("#ProvinceCityId").empty().append('<option value="">انتخاب کنید</option>');
+        return;
+    }
+    $.ajax({
+        type: 'GET',
+        url: "/profile/addresses/cities/" + pid,
+        async: true,
+        dataType: "json",
+        success: function (jsonData) {
+            if (jsonData.succeded && jsonData.cities) {
+                var city = $("#ProvinceCityId");
+                city.empty();
+                city.append($('<option>', { value: '', text: 'انتخاب کنید' }));
+                for (var index = 0; index < jsonData.cities.length; index++) {
+                    city.append($('<option>', {
+                        value: jsonData.cities[index].value,
+                        text: jsonData.cities[index].text,
+                    }));
+                }
+            } else {
+                alert("خطا در عملیات");
+            }
+        },
+        error: function () {
+            alert("خطا در عملیات");
+        }
+    });
+}
+</script>
+{% endblock %}

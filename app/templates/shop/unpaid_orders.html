@@ -1,0 +1,98 @@
+{% extends "shop/base.html" %}
+{% block title %}سفارش‌های پرداخت نشده - آشا شاپ{% endblock %}
+{% block body_id %}my-account{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-my-account tax-display-enabled customer-has-logged st-wrapper{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="2" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری شما</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row ">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="">
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <aside id="notifications">
+                                    <div class="container">
+                                    </div>
+                                </aside>
+                                <div class="dashboard-latest-orders box-bg-title-body">
+                                    <div class="title">
+                                        <i class="fa fa-history" style="color: #59f273"></i>
+                                        سفارش‌های پرداخت نشده
+                                    </div>
+                                    <div class="body">
+                                        {% for item in orders %}
+                                        <div class="order-item">
+                                            <div class="order-item-header">
+                                                <span style="font-weight: bolder;">کد سفارش : {{ item.reference_code or item.id[:8] }}</span>
+                                                <span style="font-size: 0.8rem; color: #a6a6a6;">{{ item.date }}</span>
+                                            </div>
+                                            <div class="order-item-products">
+                                                {% set chosens = item.order_products[:4] %}
+                                                {% for op in chosens %}
+                                                <div class="order-product">
+                                                    <a target="_blank" href="/products/{{ op.part_number or '' }}">
+                                                        <div class="overlay">{{ op.product_name }}</div>
+                                                    </a>
+                                                    <img src="{{ op.product_image or 'https://placehold.co/128x128' }}" alt="">
+                                                    <span class="quantity">x {{ op.count }}</span>
+                                                </div>
+                                                {% endfor %}
+                                                {% if item.order_products|length > 4 %}
+                                                {% set extras = item.count - chosens|sum(attribute='count') %}
+                                                <div class="order-product more">+{{ extras }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="order-item-footer">
+                                                <span class="font-weight-bold">
+                                                    <span style="color: #a6a6a6">مبلغ فاکتور : </span>
+                                                    <span style="color: #00b33f">{{ "%.0f"|format(item.payable or 0) }} ریال</span>
+                                                </span>
+                                                <a target="_blank" href="/orders/{{ item.id }}" class="btn-chevron">
+                                                    مشاهده
+                                                    <svg style="width: 1rem;" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
+                                                    </svg>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <p class="text-center text-muted py-4">هیچ سفارش پرداخت نشده‌ای وجود ندارد</p>
+                                        {% endfor %}
+                                        <a href="/orders/history" class="col-lg-12 btn btn-primary btn-large p-3">
+                                            مشاهده همه سفارشات
+                                        </a>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="page-footer">
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

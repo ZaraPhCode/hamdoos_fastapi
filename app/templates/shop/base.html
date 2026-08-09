@@ -197,6 +197,125 @@
     <script src="/static/ThemeLayout/js/graphql.js"></script>
     <script src="/static/ThemeLayout/js/vendors.js"></script>
     {% block extra_scripts %}{% endblock %}
+    <script>
+    // ── Direct cart refresh: updates header, dropdown & sidebar ──
+    function refreshCartUI(callback) {
+        fetch('/cart/refresh-preview')
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (!resp.preview) return;
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(resp.preview, 'text/html');
+                // 1. Update header: replace .cart-header inside .blockcart
+                var newHeader = doc.querySelector('.blockcart .cart-header');
+                var oldHeader = document.querySelector('.blockcart .cart-header');
+                if (newHeader && oldHeader) oldHeader.outerHTML = newHeader.outerHTML;
+                // 2. Update sticky cart
+                var headerSource = document.querySelector('[data-header-cart-source]');
+                var stickyCart = document.querySelector('[data-sticky-cart]');
+                if (headerSource && stickyCart) stickyCart.innerHTML = headerSource.innerHTML;
+                // 3. Populate sidebar directly from preview
+                var newDropdown = doc.querySelector('[data-shopping-cart-source]');
+                var sidebar = document.getElementById('js-cart-sidebar');
+                if (sidebar && newDropdown) {
+                    sidebar.innerHTML = newDropdown.innerHTML;
+                }
+                if (callback) callback(resp);
+            })
+            .catch(function() { if (callback) callback({}); });
+    }
+
+    // ── Refresh on page load ──
+    setTimeout(function() { refreshCartUI(); }, 100);
+
+    // ── Add-to-cart from product cards and detail page ──
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.js-ajax-add-to-cart');
+        if (!btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var productId = btn.getAttribute('data-id-product');
+        if (!productId) return;
+        var formData = new FormData();
+        formData.append('product_id', productId);
+        var form = btn.closest('#add-to-cart-or-refresh');
+        if (form) {
+            var countInput = form.querySelector('input[name="count"]');
+            formData.append('count', countInput ? parseInt(countInput.value) || 1 : 1);
+            var varietyInput = form.querySelector('#selected-variety-id');
+            if (varietyInput && varietyInput.value) {
+                formData.append('variety_id', varietyInput.value);
+            }
+        } else {
+            formData.append('count', 1);
+            var qtyEl = btn.querySelector('.js-add-to-cart-quantity');
+            if (qtyEl) {
+                var minQty = parseInt(qtyEl.textContent) || 1;
+                formData.set('count', minQty);
+            }
+        }
+        btn.classList.add('disabled');
+        fetch('/cart/add-ajax', { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                btn.classList.remove('disabled');
+                if (data.success) {
+                    refreshCartUI();
+                }
+            })
+            .catch(function() { btn.classList.remove('disabled'); });
+    });
+
+    // ── Remove from cart (sidebar links) ──
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest('.remove-from-cart');
+        if (!link) return;
+        var href = link.getAttribute('href');
+        if (href && href.indexOf('/cart/remove-ajax/') > -1) {
+            e.preventDefault();
+            fetch(href).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) refreshCartUI();
+            });
+        }
+    });
+
+    // ── Update quantity (sidebar inputs) ──
+    document.addEventListener('change', function(e) {
+        var input = e.target.closest('.js-cart-line-product-quantity');
+        if (!input) return;
+        var itemId = input.getAttribute('data-item-id');
+        var qty = parseInt(input.value) || 1;
+        if (qty < 1) qty = 1;
+        if (!itemId) return;
+        var formData = new FormData();
+        formData.append('quantity', qty);
+        fetch('/cart/update-ajax/' + itemId, { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); }).then(function(data) {
+                if (data.success) refreshCartUI();
+            });
+    });
+
+    // ── Basket icon click → open sliding sidebar ──
+    document.addEventListener('click', function(e) {
+        var trigger = e.target.closest('[data-sidebar-cart-trigger]');
+        if (!trigger) return;
+        e.preventDefault();
+        var html = document.documentElement;
+        if (html.classList.contains('st-effect-right') && html.classList.contains('st-menu-open')) {
+            html.classList.remove('st-effect-right', 'st-menu-open');
+            return;
+        }
+        // Refresh cart data, then open sidebar
+        refreshCartUI(function() {
+            html.classList.add('st-effect-right', 'st-menu-open');
+        });
+    });
+    document.querySelectorAll('[data-close-st-cart]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            document.documentElement.classList.remove('st-effect-right', 'st-menu-open');
+        });
+    });
+    </script>
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",

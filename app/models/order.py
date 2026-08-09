@@ -122,7 +122,7 @@ class OrderProduct(Base, BaseEntityMixin):
 
     order_id: Mapped[uuid.UUID] = mapped_column("OrderId", UUID(as_uuid=True), ForeignKey("Orders.Id", ondelete="CASCADE"), nullable=False)
     product_id: Mapped[uuid.UUID] = mapped_column("ProductId", UUID(as_uuid=True), ForeignKey("Products.Id", ondelete="NO ACTION"), nullable=False)
-    variety_id: Mapped[uuid.UUID] = mapped_column("VarietyId", UUID(as_uuid=True), ForeignKey("Varieties.Id", ondelete="NO ACTION"), nullable=False)
+    variety_id: Mapped[Optional[uuid.UUID]] = mapped_column("VarietyId", UUID(as_uuid=True), ForeignKey("Varieties.Id", ondelete="NO ACTION"), nullable=True)
     count: Mapped[int] = mapped_column("Count", Integer, nullable=False, default=1)
     unit_price: Mapped[float] = mapped_column("UnitPrice", Numeric(14, 2), nullable=False)
     total_price: Mapped[float] = mapped_column("TotalPrice", Numeric(14, 2), nullable=False)

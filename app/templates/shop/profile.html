@@ -1,44 +1,162 @@
 {% extends "shop/base.html" %}
-{% block title %}پروفایل - آشا شاپ{% endblock %}
+{% block title %}اطلاعات شخصی شما - آشا شاپ{% endblock %}
+{% block body_id %}module-iverify-iverifyidentity{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page- tax-display-enabled customer-has-logged st-wrapper{% endblock %}
 {% block content %}
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-    <!-- Sidebar -->
-    <div class="bg-white rounded-lg shadow-sm border p-4">
-        <div class="text-center mb-4">
-            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                <i class="fas fa-user text-indigo-600 text-2xl"></i>
-            </div>
-            <p class="font-bold">{{ current_user.full_name or current_user.user_name }}</p>
-            <p class="text-xs text-gray-500">{{ current_user.phone_number }}</p>
-        </div>
-        <nav class="space-y-1">
-            <a href="/profile" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700"><i class="fas fa-user w-5"></i>پروفایل</a>
-            <a href="/orders" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-shopping-bag w-5"></i>سفارشات</a>
-            <a href="/profile/addresses" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-map-marker-alt w-5"></i>آدرس‌ها</a>
-            <a href="/profile/favorites" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-heart w-5"></i>علاقه‌مندی‌ها</a>
-            <a href="/profile/bank-info" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-credit-card w-5"></i>اطلاعات بانکی</a>
-            <a href="/wallet" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-wallet w-5"></i>کیف پول</a>
-            <a href="/tickets" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-ticket-alt w-5"></i>تیکت‌ها</a>
-            <a href="/auth/change-password" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50"><i class="fas fa-key w-5"></i>تغییر رمز عبور</a>
-        </nav>
+<nav class="breadcrumb-wrapper ">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="1" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+        </ol>
     </div>
-
-    <!-- Main Content -->
-    <div class="md:col-span-3">
-        {% block profile_content %}
-        <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-lg font-bold mb-4">اطلاعات حساب</h2>
-            <form method="POST" action="/profile/update" class="grid grid-cols-2 gap-4">
-                <div><label class="block text-sm mb-1">نام</label><input name="first_name" value="{{ current_user.first_name or '' }}" class="w-full border rounded-lg px-3 py-2"></div>
-                <div><label class="block text-sm mb-1">نام خانوادگی</label><input name="last_name" value="{{ current_user.last_name or '' }}" class="w-full border rounded-lg px-3 py-2"></div>
-                <div><label class="block text-sm mb-1">ایمیل</label><input name="email" type="email" value="{{ current_user.email or '' }}" class="w-full border rounded-lg px-3 py-2"></div>
-                <div><label class="block text-sm mb-1">شماره تماس</label><input value="{{ current_user.phone_number or '' }}" disabled class="w-full border rounded-lg px-3 py-2 bg-gray-50"></div>
-                <div class="col-span-2">
-                    <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">ذخیره تغییرات</button>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row ">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                اطلاعات شخصی شما
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <div id="identity" class="page-customer-account">
+                                {% if notification %}
+                                <div class="alert alert-success successinfo">{{ notification }}</div>
+                                {% endif %}
+                                {% if em_message %}
+                                <div class="alert alert-success successinfo">{{ em_message }}</div>
+                                {% elif em_message_er %}
+                                <div class="alert alert-danger">{{ em_message_er }}</div>
+                                {% endif %}
+                                {% if error %}
+                                <div class="alert alert-danger">{{ error }}</div>
+                                {% endif %}
+                                <div id="content" class="page-content">
+                                    <form method="post" action="/profile" id="customer-form" class="js-customer-form">
+                                        <div class="form-group row">
+                                            <label class="col-md-3 form-control-label">جنسیت</label>
+                                            <div class="col-md-6">
+                                                <select name="gender" class="form-control">
+                                                    <option value="Unknown" {% if form.gender == 'Unknown' %}selected{% endif %}>ناشناس</option>
+                                                    <option value="Male" {% if form.gender == 'Male' %}selected{% endif %}>مرد</option>
+                                                    <option value="Female" {% if form.gender == 'Female' %}selected{% endif %}>زن</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-md-3 form-control-label">نام</label>
+                                            <div class="col-md-6">
+                                                <input type="text" class="form-control" id="editidentityname" name="first_name" value="{{ form.first_name }}">
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-md-3 form-control-label">نام خانوادگی</label>
+                                            <div class="col-md-6">
+                                                <input type="text" class="form-control" id="editidentityfamily" name="last_name" value="{{ form.last_name }}">
+                                            </div>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-md-3 form-control-label">ایمیل</label>
+                                            <div class="col-md-6">
+                                                <div class="input-group js-parent-focus">
+                                                    <input type="text" class="form-control" id="Email" name="email" disabled="true" value="{{ form.email }}">
+                                                    <span class="input-group-btn">
+                                                        <button class="btn" type="button" id="EditEmail">
+                                                            <i class="fa fa-pencil-square" aria-hidden="true"></i>
+                                                        </button>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% if not current_user.email_confirmed and current_user.email %}
+                                        <div class="form-group row">
+                                            <div class="col-md-3"></div>
+                                            <div class="col-md-2">
+                                                <button id="ConfirmEmailBtn" class="btn btn-info">ارسال تاییدیه ایمیل</button>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        <div class="form-group clearfixx">
+                                            <button type="submit" name="editidentity" class="btn btn-primary">ذخیره</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="page-footer">
+                            <ul class="footer-account-links light-box-bg">
+                                <li class="back-to-account-link">
+                                    <a href="/profile">
+                                        <i class="material-icons">&#xE7FD;</i>
+                                        <span>بازگشت به حساب کاربری شما</span>
+                                    </a>
+                                </li>
+                                <li class="logout-link">
+                                    <a href="/auth/logout">
+                                        <i class="fa fa-sign-out" aria-hidden="true"></i>
+                                        <span>خروج از حساب</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
                 </div>
-            </form>
+            </div>
         </div>
-        {% endblock %}
     </div>
 </div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    document.getElementById('customer-form').addEventListener('submit', function (event) {
+        var emBtn = document.getElementById('Email');
+        emBtn.disabled = false;
+    });
+
+    {% if not current_user.email_confirmed and current_user.email %}
+    document.getElementById("ConfirmEmailBtn").addEventListener("click", function(event){
+        event.preventDefault();
+        event.target.disabled = true;
+        var btn = this;
+        fetch("/profile/send-confirm-email", {
+            method: 'GET',
+            headers: {'Accept': 'application/json'}
+        })
+        .then(function(resp){ return resp.json(); })
+        .then(function(jsonData){
+            event.target.disabled = false;
+            if (jsonData.isSucceded) {
+                event.target.remove();
+                alert(jsonData.message);
+            } else {
+                alert(jsonData.message);
+            }
+        })
+        .catch(function(){
+            alert("خطا در عملیات");
+        });
+    });
+    {% endif %}
+
+    document.getElementById("EditEmail").addEventListener("click", function(){
+        document.getElementById("Email").disabled = false;
+    });
+
+    document.getElementById("Email").addEventListener("keyup", function(){
+        var confirmBtn = document.getElementById("ConfirmEmailBtn");
+        if (confirmBtn) {
+            confirmBtn.disabled = (this.value !== "{{ current_user.email }}");
+        }
+    });
+</script>
 {% endblock %}

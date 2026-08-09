@@ -1,0 +1,133 @@
+{% extends "shop/base.html" %}
+{% block title %}تاریخچه سفارشات - آشا شاپ{% endblock %}
+{% block body_id %}history{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-history tax-display-enabled page-customer-account customer-has-logged st-wrapper{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/ThemeLayout/statusColor.css" type="text/css" media="all">
+{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper ">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="3" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری شما</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/orders/history">
+                    <span itemprop="name">تاریخچه سفارشات</span>
+                </a>
+                <meta itemprop="position" content="3">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row ">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                تاریخچه سفارشات
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <aside id="notifications">
+                                    <div class="container">
+                                    </div>
+                                </aside>
+                                <h5 class="sm-bottom" style="font-weight: normal">در زیر سفارشات خود را می‌توانید مشاهده کنید</h5>
+                                {% if orders %}
+                                <div class="d-none d-xl-block table-radius">
+                                    <table class="table table-bordered table-labeled">
+                                        <thead class="thead-default">
+                                            <tr>
+                                                <th>کد سفارش</th>
+                                                <th>تاریخ</th>
+                                                <th>قیمت کل</th>
+                                                <th>روش پرداخت</th>
+                                                <th>وضعیت</th>
+                                                <th>شماره پیگیری</th>
+                                                <th>عملیات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in orders %}
+                                            <tr>
+                                                <td><a href="/orders/{{ item.id }}">{{ item.reference_code or item.id[:8] }}</a></td>
+                                                <td>{{ item.date }}</td>
+                                                <td class="text-right"><span>{{ "%.0f"|format(item.payable or 0) }} ریال</span></td>
+                                                <td>{{ item.pay_method_name or '-' }}</td>
+                                                <td>
+                                                    <span data-color="{{ item.order_status }}" class="label label-pill bright">
+                                                        {{ item.order_status }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <p class="shipping_number_show"><a class="_blank" target="_blank" href="#">{{ item.tracking_number or '-' }}</a></p>
+                                                </td>
+                                                <td class="text-center order-actions">
+                                                    <a href="/orders/{{ item.id }}" data-link-action="view-order-details">
+                                                        جزئیات<i class="material-icons">chevron_left</i>
+                                                    </a>
+                                                    {% if item.has_invoice %}
+                                                    <a href="/checkout/proforma-invoice/{{ item.id }}">مشاهده صورتحساب<i class="material-icons pdf-icon">&#xE415;</i></a>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="orders d-block d-xl-none">
+                                    {% for item in orders %}
+                                    <div class="order history-box">
+                                        <a href="/orders/{{ item.id }}" data-link-action="view-order-details" title="جزئیات">
+                                            <div class="row">
+                                                <div class="col-10">
+                                                    <h5>{{ item.reference_code or item.id[:8] }}</h5>
+                                                    <div class="date" style="color: #5d5d5d">{{ item.date }}</div>
+                                                    <div class="total"><span class="price price-total">{{ "%.0f"|format(item.payable or 0) }} ریال</span></div>
+                                                    <div class="status">
+                                                        <span class="label label-pill bright" style="background-color:#8a2be2">
+                                                            {{ item.order_status }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <a href="#" title="سفارش مجدد" style="position: absolute;left: 10px;top: 10px">
+                                            <i class="material-icons" style="font-size: 1.5rem">&#xE863;</i>
+                                        </a>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <p class="text-center text-muted py-4">هیچ سفارشی یافت نشد</p>
+                                {% endif %}
+                            </section>
+                        </div>
+                        <div class="page-footer">
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

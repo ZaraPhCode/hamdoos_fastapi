@@ -1,82 +1,345 @@
 {% extends "shop/base.html" %}
-{% block title %}جزئیات سفارش - آشا شاپ{% endblock %}
+{% block title %}جزئیات سفارش {{ order.reference_code or order.id[:8] }} - آشا شاپ{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-order-detail tax-display-enabled customer-has-logged st-wrapper{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/ThemeLayout/statusColor.css" type="text/css" media="all">
+<style>
+    .show-status-table + .order-detail-table { display: none; }
+    .order-detail-table.show { display: table !important; }
+    #order-products tfoot tr td:last-child { color: #047e00; }
+    .carrier-table-box, .table-radius { border: 1px solid #e3e3e3; border-radius: 10px; overflow: hidden; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-xl font-bold">جزئیات سفارش #{{ order.reference_code or order.id[:8] }}</h1>
-        <span class="px-3 py-1 rounded text-sm
-            {% if order.order_status == 'Ordering' %}bg-yellow-100 text-yellow-800
-            {% elif order.order_status == 'Paid' %}bg-blue-100 text-blue-800
-            {% elif order.order_status == 'Posted' %}bg-green-100 text-green-800
-            {% elif order.order_status == 'Canceled' %}bg-red-100 text-red-800
-            {% else %}bg-gray-100 text-gray-800{% endif %}">
-            {{ order.order_status }}
-        </span>
+<nav class="breadcrumb-wrapper ">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="4" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/orders/history">
+                    <span itemprop="name">تاریخچه سفارشات</span>
+                </a>
+                <meta itemprop="position" content="3">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="#">
+                    <span itemprop="name">{{ order.reference_code or order.id[:8] }}</span>
+                </a>
+                <meta itemprop="position" content="4">
+            </li>
+        </ol>
     </div>
+</nav>
 
-    <!-- Products -->
-    <div class="bg-white rounded-lg shadow-sm border p-6 mb-6">
-        <h3 class="font-bold mb-4">محصولات</h3>
-        {% for op in order.order_products %}
-        <div class="flex items-center gap-4 py-3 border-b last:border-0">
-            <img src="{{ op.product_image or '/static/img/placeholder.png' }}" class="w-16 h-16 object-contain">
-            <div class="flex-1">
-                <p class="font-medium">{{ op.product_name }}</p>
-                {% if op.part_number %}<p class="text-xs text-gray-500">{{ op.part_number }}</p>{% endif %}
-                <p class="text-sm text-gray-500">تعداد: {{ op.count }}</p>
-            </div>
-            <div class="text-left">
-                <p class="font-bold">{{ "{:,.0f}".format(op.total_price or 0) }} تومان</p>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
+<div class="main-content">
+    <div class="container">
+<div class="row ">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                <div class="row">
+                                    <div class="col-lg-10 order-detail-title">
+                                        <i class="fa fa-angle-left title-icon"></i>
+                                        <span>جزئیات سفارش</span>
+                                        <span class="order-detail-reference">{{ order.reference_code or order.id[:8] }}</span>
+                                        <span class="order-detail-date">{{ order.date_str }}</span>
+                                    </div>
+                                    <div class="col-lg-2 reorder-box">
+                                        <a class="reorder-btn" href="/products">
+                                            <span class="btn-chevron">سفارش مجدد</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <aside id="notifications"><div class="container"></div></aside>
 
-    <!-- Summary -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h3 class="font-bold mb-4">آدرس تحویل</h3>
-            <p class="text-sm">{{ order.first_name }} {{ order.last_name }}</p>
-            <p class="text-sm text-gray-600">{{ order.address_description }}</p>
-            <p class="text-sm text-gray-500">{{ order.postal_code }}</p>
-            <p class="text-sm text-gray-500">{{ order.phone_number }}</p>
-        </div>
-        <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h3 class="font-bold mb-4">صورتحساب</h3>
-            <div class="space-y-2 text-sm">
-                <div class="flex justify-between"><span>جمع کل</span><span>{{ "{:,.0f}".format(order.total_price or 0) }}</span></div>
-                <div class="flex justify-between"><span>تخفیف</span><span class="text-red-600">{{ "{:,.0f}".format(order.total_discount_price or 0) }}</span></div>
-                <div class="flex justify-between"><span>هزینه ارسال</span><span>{{ "{:,.0f}".format(order.postage_fee or 0) }}</span></div>
-                <hr>
-                <div class="flex justify-between font-bold text-lg"><span>قابل پرداخت</span><span class="text-indigo-600">{{ "{:,.0f}".format(order.payable or 0) }} تومان</span></div>
-            </div>
-        </div>
-    </div>
+                                <div class="row order_infos">
+                                    <div class="col-xl-4 col-lg-6 xs-bottom">
+                                        <span class="font-weight-bold">آخرین تغییرات</span>
+                                        <button data-color="{{ order.order_status }}" style="display: flex;justify-content: space-between"
+                                                class="show-status-table btn btn-primary label label-pill bright">
+                                            {{ order.order_status_name }}
+                                            <i class="fa fa-caret-down"></i>
+                                        </button>
+                                    </div>
+                                    <div class="col-xl-4 col-lg-6 xs-bottom">
+                                        <div class="font-weight-bold">روش پرداخت</div>
+                                        <div class="">{{ order.pay_method_name or '—' }}</div>
+                                    </div>
+                                    <div class="col-xl-4 col-lg-6 xs-bottom">
+                                        <div class="font-weight-bold">حامل</div>
+                                        <div class="">{{ order.post_type_name or '—' }}</div>
+                                    </div>
 
-    <!-- Status History -->
-    <div class="bg-white rounded-lg shadow-sm border p-6 mt-6">
-        <h3 class="font-bold mb-4">تاریخچه وضعیت</h3>
-        <div class="space-y-3">
-            {% for sr in order.order_status_records %}
-            <div class="flex items-start gap-3 text-sm">
-                <div class="w-2 h-2 bg-indigo-500 rounded-full mt-1.5"></div>
-                <div>
-                    <p class="font-medium">{{ sr.status }}</p>
-                    {% if sr.comment %}<p class="text-gray-500">{{ sr.comment }}</p>{% endif %}
-                    <p class="text-xs text-gray-400">{{ sr.insert_date }}</p>
+                                    <table class="order-detail-table table table-bordered table-labeled d-none" style="margin: 15px">
+                                        <thead class="thead-default">
+                                            <tr>
+                                                <th>تاریخ</th>
+                                                <th>وضعیت</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in order.order_status_records %}
+                                            <tr>
+                                                <td>{{ item.insert_date_str }}</td>
+                                                <td>
+                                                    <span class="label label-pill bright" data-color="{{ item.status }}">
+                                                        {{ item.status_name }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {% if order.has_invoice %}
+                                <div class="row">
+                                    <h4 class="od-bottom col-6">صورت‌حساب</h4>
+                                    <div class="col-6" style="text-align: left">
+                                        <a href="#" target="_blank">
+                                            <i class="material-icons">&#xE415;</i> مشاهده صورت‌حساب
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if order.order_status in ['Sending', 'Posted'] and order.tracking_number %}
+                                <div>
+                                    <p>برای پیگیری سفارش روی لینک زیر کلیک کنید</p>
+                                    <a href="https://tracking.post.ir/search.aspx?id={{ order.tracking_number }}">https://tracking.post.ir/search.aspx?id={{ order.tracking_number }}</a>
+                                </div>
+                                {% endif %}
+
+                                <div class="d-none d-lg-block table-radius">
+                                    <table id="order-products" class="table table-bordered">
+                                        <thead class="thead-default">
+                                            <tr>
+                                                <th>نام محصول</th>
+                                                <th>تعداد</th>
+                                                <th>قیمت واحد</th>
+                                                <th>مالیات</th>
+                                                <th>قیمت کل</th>
+                                            </tr>
+                                        </thead>
+                                        {% for item in order.order_products %}
+                                        <tr>
+                                            <td>
+                                                <strong>
+                                                    <a href="/products/{{ item.part_number }}">
+                                                        {% if item.product_image %}
+                                                            <img style="width: 3rem;margin: 5px;" src="{{ item.product_image }}" alt="">
+                                                        {% else %}
+                                                            <img style="width: 3rem;margin: 5px;" src="https://placehold.co/42x42" alt="">
+                                                        {% endif %}
+                                                        {{ item.product_name }}
+                                                    </a>
+                                                </strong><br />
+                                                {% if item.variety_values and 'پیش فرض' not in item.variety_values %}
+                                                    {{ item.variety_values }}
+                                                    <br />
+                                                {% endif %}
+                                                کد کالا: <a href="/products/{{ item.part_number }}">{{ item.part_number }}</a><br />
+                                            </td>
+                                            <td>{{ item.count }}</td>
+                                            <td>
+                                                {% if item.discount == 0 %}
+                                                    {{ "{:,.0f}".format(item.price_after_discount or 0) }} ریال
+                                                {% else %}
+                                                    <span class="regular-price">{{ "{:,.0f}".format(item.unit_price or 0) }} ریال</span>
+                                                    <br>
+                                                    {{ "{:,.0f}".format(item.price_after_discount or 0) }} ریال
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {{ "{:,.0f}".format((item.vat_rate or 0) * (item.price_after_discount or 0) / 100) }} ریال
+                                            </td>
+                                            <td class="price-total">
+                                                {% if item.discount == 0 %}
+                                                    {{ "{:,.0f}".format((item.total_price or 0) + (item.vat_rate or 0) * (item.price_after_discount or 0) / 100 * (item.count or 0)) }} ریال
+                                                {% else %}
+                                                    <span class="regular-price">{{ "{:,.0f}".format((item.total_price or 0) + (item.vat_rate or 0) * (item.price_after_discount or 0) / 100 * (item.count or 0)) }} ریال</span>
+                                                    <br>
+                                                    {{ "{:,.0f}".format((item.total_price_after_discount or 0) + (item.vat_rate or 0) * (item.price_after_discount or 0) / 100 * (item.count or 0)) }} ریال
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        <tfoot>
+                                            <tr class="line-shipping">
+                                                <td colspan="2"><strong>هزینه ارسال</strong></td>
+                                                <td>{{ "{:,.0f}".format(order.postage_fee or 0) }} ریال</td>
+                                                <td>{{ "{:,.0f}".format(order.post_vat or 0) }} ریال</td>
+                                                <td>{{ "{:,.0f}".format((order.postage_fee or 0) + (order.post_vat or 0)) }} ریال</td>
+                                            </tr>
+                                            <tr class="line-shipping">
+                                                <td colspan="2"><strong>هزینه بسته‌بندی</strong></td>
+                                                <td>{{ "{:,.0f}".format(order.packaging_cost or 0) }} ریال</td>
+                                                <td>{{ "{:,.0f}".format(order.packaging_vat or 0) }} ریال</td>
+                                                <td>{{ "{:,.0f}".format((order.packaging_cost or 0) + (order.packaging_vat or 0)) }} ریال</td>
+                                            </tr>
+                                            <tr class="line-total">
+                                                <td colspan="2"><strong>مجموع</strong></td>
+                                                <td class="price price-total">{{ "{:,.0f}".format(order.products_total + (order.postage_fee or 0) + (order.packaging_cost or 0)) }} ریال</td>
+                                                <td class="price price-total">{{ "{:,.0f}".format(order.products_vat + (order.post_vat or 0) + (order.packaging_vat or 0)) }} ریال</td>
+                                                <td class="price price-total">{{ "{:,.0f}".format(order.payable_total or 0) }} ریال</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+                                <h4 class="od-bottom">جزئیات حامل</h4>
+                                <div class="sm-bottom d-lg-block carrier-table-box">
+                                    <table class="table table-bordered">
+                                        <thead class="thead-default">
+                                            <tr>
+                                                <th>تاریخ</th>
+                                                <th>حامل</th>
+                                                <th>وزن</th>
+                                                <th>هزینه ارسال</th>
+                                                <th>شماره پیگیری</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>{{ order.postage_date_str or '—' }}</td>
+                                                <td>{{ order.post_type_name or '—' }}</td>
+                                                <td>{{ order.weight or '---' }}</td>
+                                                <td>{{ "{:,.0f}".format(order.postage_fee or 0) }}</td>
+                                                <td>
+                                                    {% if order.tracking_number %}
+                                                    <a href="https://tracking.post.ir/search.aspx?id={{ order.tracking_number }}" target="_blank">{{ order.tracking_number }}</a>
+                                                    {% else %}—{% endif %}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <h4 class="od-bottom">جزئیات پرداخت‌ها</h4>
+                                <div class="sm-bottom d-none d-lg-block carrier-table-box">
+                                    <table class="table table-bordered">
+                                        <thead class="thead-default">
+                                            <tr>
+                                                <th>تاریخ</th>
+                                                <th>وضعیت</th>
+                                                <th>روش پرداخت</th>
+                                                <th>شماره تراکنش</th>
+                                                <th>مبلغ</th>
+                                                <th>عملیات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in order.payment_requests %}
+                                            <tr>
+                                                <td>{{ item.pay_date_str or '—' }}</td>
+                                                <td>{{ item.status_name }}</td>
+                                                <td>{{ order.pay_method_name or 'زرین‌پال' }}</td>
+                                                <td>{{ item.ref_id or item.authority or '—' }}</td>
+                                                <td>{{ "{:,.0f}".format(item.amount or 0) }} ریال</td>
+                                                <td>
+                                                    {% if item.status == 'Paying' %}
+                                                    <a class="btn btn-primary" href="https://zarinpal.com/pg/StartPay/{{ item.authority }}" target="_blank">پرداخت</a>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                            {% for item in order.receipts %}
+                                            <tr>
+                                                <td>{{ item.deposit_date_str or '—' }}</td>
+                                                <td>{{ item.status_name }}</td>
+                                                <td>رسید بانکی</td>
+                                                <td>{{ item.reference_code or '—' }}</td>
+                                                <td>{{ "{:,.0f}".format(item.price or 0) }} ریال</td>
+                                                <td>
+                                                    <a class="btn btn-warning" href="#" onclick="alert('جزئیات رسید به‌زودی')">جزئیات</a>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                            {% if not order.payment_requests and not order.receipts %}
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">هنوز پرداختی ثبت نشده است</td>
+                                            </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {% if order.order_status == 'AwaitingPayment' %}
+                                <a class="btn btn-primary" href="/payment/request/{{ order.id }}">پرداخت آنلاین</a>
+                                {% endif %}
+
+                                <h4 class="od-bottom">تحویل به آدرس</h4>
+                                <article id="address" class="address address-box-bg">
+                                    <div class="address-body">
+                                        <div class="address-header ">
+                                            <div style="display: flex">
+                                                <h5>{{ order.alias or order.full_name }}</h5>
+                                                <span class="fullname-address" style="padding: 0 0.5rem;">{{ order.first_name }} {{ order.last_name }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="address-content">
+                                            <i class="fa fa-map-marker" aria-hidden="true"></i>
+                                            <address>{{ order.province }}{% if order.province %}, {% endif %}{{ order.city }}{% if order.city %}, {% endif %}{{ order.address_description }}</address>
+                                        </div>
+                                        <div class="address-footer">
+                                            <div class="post-code">
+                                                <span>{{ order.postal_code or '—' }}</span>
+                                                <i class="fa fa-envelope" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="mobile">
+                                                <span>{{ order.phone_number or '—' }}</span>
+                                                <i class="fa fa-mobile" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="phone">
+                                                <span>{{ order.telephone or '—' }}</span>
+                                                <i class="fa fa-phone" aria-hidden="true"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </article>
+                            </section>
+                        </div>
+                        <div class="page-footer"></div>
+                    </section>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-    </div>
+        </div><!-- /row -->
+    </div><!-- /container -->
+</div><!-- /main-content -->
+{% endblock %}
 
-    <!-- Payment -->
-    {% if order.payable and order.order_status in ['Ordering', 'AwaitingPayment'] %}
-    <div class="text-center mt-6">
-        <a href="/payment/request/{{ order.id }}" class="inline-block bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-medium">
-            <i class="fas fa-credit-card ml-2"></i>پرداخت {{ "{:,.0f}".format(order.payable) }} تومان
-        </a>
-    </div>
-    {% endif %}
-</div>
+{% block extra_scripts %}
+<script>
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.show-status-table');
+        if (!btn) return;
+        e.preventDefault();
+        var table = btn.parentElement.querySelector('.order-detail-table');
+        if (!table) table = btn.closest('.order_infos').querySelector('.order-detail-table');
+        if (table) table.classList.toggle('show');
+    });
+</script>
 {% endblock %}

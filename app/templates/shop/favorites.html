@@ -1,29 +1,338 @@
 {% extends "shop/base.html" %}
-{% block title %}علاقه‌مندی‌ها - آشا شاپ{% endblock %}
+{% block title %}علاقه‌مندی‌ها{% endblock %}
+{% block extra_head %}
+<style>
+.wishlist-modal.fade:not(.show) { display: none !important; }
+.wishlist-modal.show { display: block !important; }
+.wishlist-modal { position: fixed; top: 0; right: 0; left: 0; bottom: 0; background: rgba(0,0,0,0.3); overflow-y: scroll; z-index: 1060; }
+.wishlist-modal .modal-dialog { margin: 2rem auto; max-width: 500px; }
+.wishlist-modal .modal-content { background: #fff; border-radius: 20px; }
+.wishlist-modal .modal-header { background: #f7f7f7; height: 40px; border: none; border-radius: 20px 20px 0 0; display: flex; justify-content: center; align-items: center; position: relative; }
+.wishlist-modal .modal-header .close { position: absolute; right: 0; height: 100%; width: 40px; border: none; background: none; font-size: 1.5rem; cursor: pointer; }
+.wishlist-modal .modal-header .close:hover { background-color: #e70036; color: #fff; border-radius: 0 20px 0 0; }
+.wishlist-modal .modal-body { padding: 1rem; }
+.wishlist-modal .modal-footer { padding: 1rem; display: flex; justify-content: center; gap: 0.5rem; }
+.modal-backdrop.fade { display: none; }
+.modal-backdrop.fade.in { display: block; }
+.wishlist-footer-links { margin-top: 1rem; text-align: center; }
+.wishlist-footer-links a { margin: 0 1rem; color: #2fb5d2; }
+.wishlist-toast { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: none; }
+.wishlist-toast.show { display: block; }
+.wishlist-toast .toast-body { background: #333; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; }
+.wishlist-list { list-style: none; padding: 0; }
+.wishlist-list li { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; gap: 12px; }
+.wishlist-list li .wishlist-name { flex: 1; font-size: 16px; }
+.wishlist-list li .wishlist-count { color: #999; font-size: 14px; margin-left: 8px; }
+.wishlist-list li .wishlist-actions { display: flex; gap: 8px; }
+.wishlist-list li .wishlist-actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 18px; padding: 4px 8px; }
+.wishlist-list li .wishlist-actions button:hover { color: #2fb5d2; }
+.wishlist-add-to-new { cursor: pointer; color: #2fb5d2; display: flex; align-items: center; gap: 8px; justify-content: center; }
+.wishlist-add-to-new i { font-size: 20px; }
+.wishlist-empty { text-align: center; padding: 60px 20px; color: #999; }
+.wishlist-empty i { font-size: 48px; margin-bottom: 16px; color: #ddd; }
+</style>
+{% endblock %}
 {% block content %}
-<h1 class="text-xl font-bold mb-6">علاقه‌مندی‌ها</h1>
-{% if favorite_lists %}
-    {% for fav_list in favorite_lists %}
-    <div class="bg-white rounded-lg shadow-sm border p-4 mb-4">
-        <h3 class="font-semibold mb-3">{{ fav_list.name or 'لیست پیش‌فرض' }} ({{ fav_list.count or fav_list.favorite_list_items|length }})</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {% for item in fav_list.favorite_list_items or [] %}
-            <div class="border rounded-lg p-2 text-center">
-                <a href="/products/{{ item.product.slug or item.product.id }}">
-                    <img src="{{ item.product.medium_image_url or '/static/img/placeholder.png' }}" class="w-full h-24 object-contain mb-2">
-                    <p class="text-xs line-clamp-2">{{ item.product.name[:40] }}</p>
-                    <p class="text-indigo-600 font-bold text-xs mt-1">{{ "{:,.0f}".format(item.product.price_after_discount or item.product.price or 0) }} تومان</p>
+<script>
+var body = $("body");
+body.attr("id", "module-blockwishlist-lists");
+body.addClass("lang-fa lang-rtl country-ir currency-irr layout-full-width page- tax-display-enabled customer-has-logged st-wrapper");
+</script>
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="3" itemscope="" itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <img src="/static/ThemeLayout/iconSVG/icons8-home.svg" />
+                    <span itemprop="name">خانه</span>
                 </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile/favorites">
+                    <span itemprop="name">علاقه‌مندی‌ها</span>
+                </a>
+                <meta itemprop="position" content="3">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="body">
+                            <div class="wishlist-container" data-url="/profile/favorites/lists" data-title="علاقه‌مندی‌ها" data-empty-text="لیستی پیدا نشد" data-rename-text="تغییر نام لیست" data-share-text="اشتراک‌گذاری" data-add-text="ایجاد لیست جدید">
+                                <div id="wishlist-list-container">
+                                    <div class="wishlist-empty" id="wishlist-loading">
+                                        <i class="fa fa-heart"></i>
+                                        <p>در حال بارگذاری...</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="wishlist-share" data-url="/api/v1/favorites/list/url" data-title="اشتراک‌گذاری لیست" data-copied-text="لینک کپی شد" data-label="لینک اشتراک‌گذاری" data-cancel-text="لغو" data-copy-text="کپی">
+                                <div class="wishlist-modal modal fade" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog modal-dialog-centered" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">اشتراک‌گذاری لیست</h5>
+                                                <button type="button" class="close" onclick="closeModal('wishlist-share')" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="form-group form-group-lg">
+                                                    <label class="form-control-label">لینک اشتراک‌گذاری</label>
+                                                    <input type="text" class="form-control form-control-lg" id="share-url-input" readonly />
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="modal-cancel btn btn-secondary" onclick="closeModal('wishlist-share')">لغو</button>
+                                                <button type="button" class="btn btn-primary" onclick="copyShareLink()">کپی</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-backdrop fade"></div>
+                            </div>
+                            <div class="wishlist-rename" data-url="/api/v1/favorites/list/rename" data-title="تغییر نام لیست" data-label="نام لیست" data-placeholder="نام لیست" data-cancel-text="لغو" data-rename-text="تغییر نام">
+                                <div class="wishlist-modal modal fade" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog modal-dialog-centered" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">تغییر نام لیست</h5>
+                                                <button type="button" class="close" onclick="closeModal('wishlist-rename')" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="form-group form-group-lg">
+                                                    <label class="form-control-label">نام لیست</label>
+                                                    <input type="text" class="form-control form-control-lg" id="rename-input" placeholder="نام لیست" />
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="modal-cancel btn btn-secondary" onclick="closeModal('wishlist-rename')">لغو</button>
+                                                <button type="button" class="btn btn-primary" onclick="renameWishlist()">تغییر نام</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-backdrop fade"></div>
+                            </div>
+                            <div class="wishlist-create" data-url="/api/v1/favorites/list/create" data-title="ایجاد لیست" data-label="نام لیست" data-placeholder="اضافه کردن نام" data-cancel-text="لغو" data-create-text="ایجاد لیست" data-length-text="نام لیست کوتاه است">
+                                <div class="wishlist-modal modal fade" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog modal-dialog-centered" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">ایجاد لیست</h5>
+                                                <button type="button" class="close" onclick="closeModal('wishlist-create')" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="form-group form-group-lg">
+                                                    <label class="form-control-label">نام لیست</label>
+                                                    <input type="text" class="form-control form-control-lg" id="create-input" placeholder="اضافه کردن نام" />
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="modal-cancel btn btn-secondary" onclick="closeModal('wishlist-create')">لغو</button>
+                                                <button type="button" class="btn btn-primary" onclick="createWishlist()">ایجاد لیست</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-backdrop fade"></div>
+                            </div>
+                            <div class="wishlist-delete" data-delete-list-url="#" data-delete-product-url="#" data-title="حذف کالا از علاقه‌مندی ها" data-title-list="حذف لیست" data-placeholder='محصول از %nameofthewishlist% حذف خواهد شد' data-cancel-text="لغو" data-delete-text="حذف" data-delete-text-list="حذف">
+                                <div class="wishlist-modal modal fade" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog modal-dialog-centered" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="delete-modal-title">حذف</h5>
+                                                <button type="button" class="close" onclick="closeModal('wishlist-delete')" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="modal-text" id="delete-modal-text"></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="modal-cancel btn btn-secondary" onclick="closeModal('wishlist-delete')">لغو</button>
+                                                <button type="button" class="btn btn-primary" onclick="confirmDelete()">حذف</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-backdrop fade"></div>
+                            </div>
+                        </div>
+                        <div class="wishlist-footer-links">
+                            <a href="/profile"><i class="material-icons">chevron_left</i>بازگشت به حساب کاربری</a>
+                            <a href="/"><i class="material-icons">home</i>خانه</a>
+                        </div>
+                    </section>
+                </div>
             </div>
-            {% endfor %}
         </div>
     </div>
-    {% endfor %}
-{% else %}
-<div class="text-center py-16 text-gray-400">
-    <i class="fas fa-heart text-5xl mb-4"></i>
-    <p>لیست علاقه‌مندی‌ها خالی است</p>
-    <a href="/products" class="inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-lg mt-4">مشاهده محصولات</a>
 </div>
-{% endif %}
+<div class="wishlist-toast" id="wishlist-toast">
+    <div class="toast-body" id="toast-message"></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+var currentRenameId = null;
+var currentDeleteId = null;
+var currentDeleteType = null;
+var currentShareUrl = null;
+var currentProductId = null;
+var currentProductAttrId = null;
+var currentQuantity = 1;
+
+function showToast(message) {
+    var t = document.getElementById('wishlist-toast');
+    document.getElementById('toast-message').textContent = message;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+function openModal(cls) {
+    var el = document.querySelector('.' + cls);
+    if (el) {
+        el.querySelector('.wishlist-modal').classList.add('show');
+        el.querySelector('.wishlist-modal').classList.remove('fade');
+        var backdrop = el.querySelector('.modal-backdrop');
+        if (backdrop) backdrop.classList.add('in');
+    }
+}
+
+function closeModal(cls) {
+    var el = document.querySelector('.' + cls);
+    if (el) {
+        el.querySelector('.wishlist-modal').classList.remove('show');
+        el.querySelector('.wishlist-modal').classList.add('fade');
+        var backdrop = el.querySelector('.modal-backdrop');
+        if (backdrop) backdrop.classList.remove('in');
+    }
+}
+
+function loadWishlists() {
+    var container = document.getElementById('wishlist-list-container');
+    container.innerHTML = '<div class="wishlist-empty"><i class="fa fa-heart"></i><p>در حال بارگذاری...</p></div>';
+    fetch('/profile/favorites/lists')
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if (!data.wishlists || data.wishlists.length === 0) {
+                container.innerHTML = '<div class="wishlist-empty"><i class="fa fa-heart-o"></i><p>لیستی پیدا نشد</p><button class="btn btn-primary mt-3" onclick="openModal(\'wishlist-create\')">ایجاد لیست جدید</button></div>';
+                return;
+            }
+            var html = '<ul class="wishlist-list">';
+            for (var i = 0; i < data.wishlists.length; i++) {
+                var w = data.wishlists[i];
+                html += '<li>';
+                html += '<span class="wishlist-name"><a href="' + w.listUrl + '">' + w.name + '</a></span>';
+                html += '<span class="wishlist-count">' + w.nbProducts + '</span>';
+                html += '<span class="wishlist-actions">';
+                html += '<button title="اشتراک‌گذاری" onclick="showShare(\'' + w.shareUrl.replace(/'/g, "\\'") + '\')"><i class="fa fa-share-alt"></i></button>';
+                html += '<button title="تغییر نام" onclick="showRename(\'' + w.id_wishlist + '\',\'' + w.name.replace(/'/g, "\\'") + '\')"><i class="fa fa-pencil"></i></button>';
+                html += '<button title="حذف" onclick="showDeleteList(\'' + w.id_wishlist + '\',\'' + w.name.replace(/'/g, "\\'") + '\')"><i class="fa fa-trash"></i></button>';
+                html += '</span>';
+                html += '</li>';
+            }
+            html += '</ul>';
+            html += '<div class="text-center mt-3"><button class="btn btn-primary" onclick="openModal(\'wishlist-create\')"><i class="fa fa-plus"></i> ایجاد لیست جدید</button></div>';
+            container.innerHTML = html;
+        })
+        .catch(function(){
+            container.innerHTML = '<div class="wishlist-empty"><i class="fa fa-exclamation-triangle"></i><p>خطا در بارگذاری</p></div>';
+        });
+}
+
+function showShare(url) {
+    currentShareUrl = url;
+    document.getElementById('share-url-input').value = url;
+    openModal('wishlist-share');
+}
+
+function copyShareLink() {
+    var inp = document.getElementById('share-url-input');
+    inp.select();
+    document.execCommand('copy');
+    showToast('لینک اشتراک‌گذاری کپی شد');
+    closeModal('wishlist-share');
+}
+
+function showRename(id, name) {
+    currentRenameId = id;
+    document.getElementById('rename-input').value = name;
+    openModal('wishlist-rename');
+}
+
+function renameWishlist() {
+    var name = document.getElementById('rename-input').value.trim();
+    if (!name) { showToast('نام نمی تواند خالی باشد'); return; }
+    var formData = new FormData();
+    formData.append('params[name]', name);
+    formData.append('params[idWishList]', currentRenameId);
+    fetch('/api/v1/favorites/list/rename', { method: 'POST', body: formData })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if (data.success) { showToast(data.message); closeModal('wishlist-rename'); loadWishlists(); }
+            else { showToast(data.message); }
+        })
+        .catch(function(){ showToast('خطا در عملیات'); });
+}
+
+function createWishlist() {
+    var name = document.getElementById('create-input').value.trim();
+    if (!name) { showToast('نام نمی تواند خالی باشد'); return; }
+    var formData = new FormData();
+    formData.append('params[name]', name);
+    fetch('/api/v1/favorites/list/create', { method: 'POST', body: formData })
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if (data.success) { showToast(data.message); closeModal('wishlist-create'); document.getElementById('create-input').value = ''; loadWishlists(); }
+            else { showToast(data.message); }
+        })
+        .catch(function(){ showToast('خطا در عملیات'); });
+}
+
+function showDeleteList(id, name) {
+    currentDeleteId = id;
+    currentDeleteType = 'list';
+    document.getElementById('delete-modal-title').textContent = 'حذف لیست';
+    document.getElementById('delete-modal-text').textContent = 'آیا از حذف لیست "' + name + '" اطمینان دارید؟';
+    openModal('wishlist-delete');
+}
+
+function showDeleteProduct(id, productName) {
+    currentDeleteId = id;
+    currentDeleteType = 'product';
+    document.getElementById('delete-modal-title').textContent = 'حذف کالا از علاقه‌مندی ها';
+    document.getElementById('delete-modal-text').textContent = 'محصول "' + productName + '" از لیست حذف خواهد شد';
+    openModal('wishlist-delete');
+}
+
+function confirmDelete() {
+    if (currentDeleteType === 'list') {
+        var formData = new FormData();
+        formData.append('params[idWishList]', currentDeleteId);
+        fetch('/api/v1/favorites/list/delete', { method: 'POST', body: formData })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if (data.success) { showToast(data.message); closeModal('wishlist-delete'); loadWishlists(); }
+                else { showToast(data.message); }
+            })
+            .catch(function(){ showToast('خطا در عملیات'); });
+    }
+}
+
+loadWishlists();
+</script>
 {% endblock %}

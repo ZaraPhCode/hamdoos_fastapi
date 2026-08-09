@@ -1,0 +1,155 @@
+{% extends "shop/base.html" %}
+{% block title %}شماره‌های شما - آشا شاپ{% endblock %}
+{% block body_id %}module-iverify-authentication{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page- tax-display-enabled customer-has-logged st-wrapper{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="1" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+        </ol>
+    </div>
+</nav>
+
+<aside id="notifications">
+    <div class="container">
+    </div>
+</aside>
+
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div id="center-column" class="center-column col-12">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title"></div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                {% if notification %}
+                                <aside id="notifications">
+                                    <div class="container">
+                                        <article class="alert alert-success" role="alert" data-alert="success">
+                                            <ul><li>{{ notification }}</li></ul>
+                                        </article>
+                                    </div>
+                                </aside>
+                                {% endif %}
+                                <div class="row">
+                                    <p></p>
+                                    <div class="col-xs-12 col-sm-6 col-md-5" id="number">
+                                        <div class="alert alert-danger" id="number_error" style="display:none"></div>
+                                        <p>شما می بایست تمام شماره هایی که در آدرس های شما وجود دارد را تایید نمایید. لطفا بخش آدرس ها را برای ویرایش ببینید.</p>
+                                        <h3 class="page-subheading">شماره‌های تایید شده شما</h3>
+                                        <div class="form_content clearfix">
+                                            <h4>
+                                                <span class="btn btn-info" style="direction: ltr !important;">
+                                                    <i class="material-icons left">call</i>
+                                                    <span class="phone">{{ current_user.phone_number }}</span>
+                                                </span>
+                                                <span class="btn btn-success" style="cursor: pointer;">
+                                                    <i class="material-icons rtl-no-flip">check</i> تایید شده
+                                                </span>
+                                            </h4>
+                                            {% for item in confirmed_addresses %}
+                                            <h4>
+                                                <span class="btn btn-info" style="direction: ltr !important;">
+                                                    <i class="material-icons left">call</i>
+                                                    <span class="phone">{{ item.phone_number }}</span>
+                                                </span>
+                                                <span class="btn btn-success" style="cursor: pointer;">
+                                                    <i class="material-icons rtl-no-flip">check</i> تایید شده
+                                                </span>
+                                            </h4>
+                                            {% endfor %}
+                                        </div>
+                                        <p><br></p>
+                                        <h3 class="page-subheading">شماره‌هایی که در انتظار تایید هستند</h3>
+                                        <div class="form_content clearfix">
+                                            {% for item in unconfirmed_addresses %}
+                                            <h4>
+                                                <span class="btn btn-warning" style="direction: ltr !important;">
+                                                    <i class="material-icons left">call</i>
+                                                    <span class="phone">{{ item.phone_number }}</span>
+                                                </span>
+                                                <span data-address-id="{{ item.id }}" class="btn btn-success verify" style="cursor: pointer;" onclick="verifyPhone('{{ item.phone_number }}', '{{ item.id }}')">
+                                                    <i class="material-icons rtl-no-flip">check</i> تائید
+                                                </span>
+                                                <a href="/profile/addresses/edit/{{ item.id }}">
+                                                    <span class="btn btn-primary" style="cursor: pointer;">
+                                                        <i class="material-icons left">sync</i> تغییر
+                                                    </span>
+                                                </a>
+                                            </h4>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-12 col-sm-6 col-md-5" id="create">
+                                        <div class="alert alert-danger" id="create_error" style="display:none"></div>
+                                        <form action="" method="post" id="create-account_form" class="box ajax-form">
+                                            <h3 class="page-subheading">تایید شماره موبایل</h3>
+                                            <div class="form_content clearfix">
+                                                <div class="form-group">
+                                                    <input type="text" class="is_required validate account_input form-control" id="phone_mobile" name="phone_mobile" data-validate="isPhoneNumber" value="" placeholder="شماره موبایل / آدرس ایمیل">
+                                                </div>
+                                                <input type="hidden" id="account_type" name="account_type" value="individual">
+                                                <div class="submit">
+                                                    <input type="hidden" class="hidden" name="back" value="">
+                                                    <button class="btn btn-info" type="submit" id="SubmitCreate" name="SubmitCreate">
+                                                        <span>ادامه <i class="icon-angle-right right"></i></span>
+                                                    </button>
+                                                    <input type="hidden" class="hidden" name="SubmitCheck" value="ایجاد حساب کاربری">
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="page-footer">
+                            <ul class="footer-account-links light-box-bg">
+                                <li class="back-to-account-link">
+                                    <a href="/profile">
+                                        <i class="material-icons">&#xe7df;</i>
+                                        <span>بازگشت به حساب کاربری شما</span>
+                                    </a>
+                                </li>
+                                <li class="logout-link">
+                                    <a href="/auth/logout">
+                                        <i class="fa fa-sign-out" aria-hidden="true"></i>
+                                        <span>خروج از حساب کاربری</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function verifyPhone(phoneNumber, addressId) {
+    var formData = new FormData();
+    formData.append('phone_number', phoneNumber);
+    formData.append('address_id', addressId);
+    fetch('/profile/phone-numbers/verify', { method: 'POST', body: formData })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.hasError) {
+                alert(data.error || 'خطا در عملیات');
+            } else if (data.redirect && data.redirectURL) {
+                window.location.href = data.redirectURL;
+            }
+        })
+        .catch(function() { alert('خطا در ارتباط با سرور'); });
+}
+</script>
+{% endblock %}

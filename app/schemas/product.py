@@ -162,6 +162,7 @@ class TechnicalFeatureResponse(BaseModel):
 
 class ProductListResponse(BaseModel):
     id: UUID
+    int_id: int = 0
     name: str
     en_name: Optional[str] = None
     slug: Optional[str] = None

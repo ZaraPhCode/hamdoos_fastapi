@@ -18,6 +18,19 @@ PERSIAN_DIGITS = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
 ENGLISH_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
 
 EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+def normalize_image_url(url: Optional[str]) -> Optional[str]:
+    """Convert stored path like \\Media\\laser\\file.jpg to /media/laser/file.jpg.
+    Leaves absolute URLs, full URLs, and None unchanged."""
+    if not url:
+        return url
+    if url.startswith(("http://", "https://", "//", "/static/", "/media/")):
+        return url
+    normalized = url.replace("\\", "/").lstrip("/")
+    if normalized.lower().startswith("media/"):
+        normalized = normalized[len("media/"):]
+    return "/media/" + normalized
+
+
 PHONE_REGEX = re.compile(r"^09\d{9}$")
 
 

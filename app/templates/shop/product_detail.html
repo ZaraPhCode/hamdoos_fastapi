@@ -41,6 +41,16 @@
     .stock-notification-div { background-color: #ffc107; }
     .wishlist-button-add { font-size: 20px; box-shadow: none; height: 20px; }
     .wishlist-button-add i { color: #e70036 !important; }
+    .fav-modal-open { overflow: hidden; }
+    .fav-empty { text-align: center; padding: 28px 12px; color: #888; }
+    .fav-empty-icon { display: block; font-size: 40px; color: #ddd; margin-bottom: 12px; }
+    .fav-list-row { cursor: pointer; padding: 13px 16px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; transition: background-color 0.15s ease, border-color 0.15s ease; }
+    .fav-list-row:hover { background-color: #f7f7f7; border-color: #00a693; }
+    .fav-list-row .fav-list-name { font-size: 15px; color: #333; }
+    .fav-list-row .fav-list-name i { color: #e70036; margin-left: 6px; }
+    .fav-list-row .fav-list-count { color: #999; font-size: 13px; }
+    .fav-toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: none; background: #333; color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+    .fav-toast.show { display: block; }
 </style>
 {% endblock %}
 {% block content %}
@@ -174,7 +184,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="favorite-button">
-                                                    <div class="wishlist-button" data-url="#" data-product-id="{{ product.id }}" data-product-attribute-id="0" data-is-logged="1" data-list-id="1" data-checked="true" data-is-product="true"></div>
+                                                    <div class="js-add-favorite" data-product-int-id="{{ product.int_id }}" title="افزودن به علاقه‌مندی" style="cursor:pointer;display:inline-block;min-width:30px;min-height:30px;text-align:center;line-height:30px;"><i class="fa fa-heart-o" style="color:#999;font-size:24px;vertical-align:middle;"></i></div>
                                                 </div>
                                                 <div class="product-availability-top js-product-availability-destination"></div>
                                                 <div class="product-out-of-stock"></div>
@@ -188,24 +198,25 @@
                                             {% endif %}
                                             <section class="product-discounts"></section>
                                             <div class="product-information light-box-bg">
-                                                {% if product.variety_values %}
-                                                {% set counter = 0 %}
-                                                {% for vv in product.variety_values %}
-                                                <div class="row">
-                                                    <div class="col inline">
-                                                        <label>{{ vv.category_name }}</label>
-                                                    </div>&nbsp;&nbsp;
-                                                    {% for val in vv.values %}
-                                                    <div data-index="{{ loop.index0 }}" class="col btn filter">{{ val }}</div>
+{% if product.variety_values %}
+                                                    {% set counter = 0 %}
+                                                    {% for vv in product.variety_values %}
+                                                    <div class="row">
+                                                        <div class="col inline">
+                                                            <label>{{ vv.category_name }}</label>
+                                                        </div>&nbsp;&nbsp;
+                                                        {% for val in vv.values %}
+                                                        <div data-index="{{ loop.index0 }}" data-category-name="{{ vv.category_name }}" class="col btn filter js-variety-filter">{{ val }}</div>
+                                                        {% endfor %}
+                                                        &nbsp;&nbsp;&nbsp;&nbsp;
+                                                    </div>
+                                                    <br />
                                                     {% endfor %}
-                                                    &nbsp;&nbsp;&nbsp;&nbsp;
-                                                </div>
-                                                <br />
-                                                {% endfor %}
-                                                {% endif %}
+                                                    <input type="hidden" name="variety_id" id="selected-variety-id" value="">
+                                                    {% endif %}
                                                 <br />
                                                 <div class="product-actions">
-                                                    <form id="add-to-cart-or-refresh" method="post">
+                                                    <form id="add-to-cart-or-refresh" onsubmit="return false;">
                                                         <input type="hidden" name="product_id" value="{{ product.id }}" />
                                                         <div class="product-information-items row">
                                                             <div class="col-lg-6">
@@ -238,7 +249,7 @@
                                                                 <div class="product-add-to-cart haveInventory">
                                                                     <div class="product-quantity">
                                                                         <div class="product-add-to-cart-button mb-2">
-                                                                            <button class="btn add-to-cart add-btn" data-button-action="add-to-cart" type="submit">
+                                                                            <button class="btn add-to-cart add-btn js-ajax-add-to-cart" data-button-action="add-to-cart" type="button" data-id-product="{{ product.id }}">
                                                                                 <span class="shopping-icon"><i class="material-icons shopping-cart">shopping_cart</i></span>
                                                                                 <span class="shopping-text">افزودن به سبد خرید</span>
                                                                                 <span class="js-waitting-add-to-cart page-loading-overlay add-to-cart-loading">
@@ -538,5 +549,295 @@
         navigator.clipboard.writeText(copiedLink);
         $("#copy-link-button span").html("کپی شد");
     }
+
+    // ── Variety Selection ──
+    var varieties = {{ product.varieties | tojson | safe }};
+    if (varieties && varieties.length) {
+        // Only one group? Then auto-select the only variety
+        var catNames = [];
+        document.querySelectorAll('.js-variety-filter').forEach(function(el) {
+            var cn = el.getAttribute('data-category-name');
+            if (cn && catNames.indexOf(cn) === -1) catNames.push(cn);
+        });
+        if (catNames.length === 1 && varieties.length === 1) {
+            document.getElementById('selected-variety-id').value = varieties[0].id;
+        }
+
+        document.querySelectorAll('.js-variety-filter').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var catName = this.getAttribute('data-category-name');
+                // Deselect siblings in same category
+                document.querySelectorAll('.js-variety-filter[data-category-name="' + catName + '"]').forEach(function(sib) {
+                    sib.classList.remove('selected');
+                });
+                this.classList.add('selected');
+                // Find matching variety
+                var selected = {};
+                document.querySelectorAll('.js-variety-filter.selected').forEach(function(el) {
+                    selected[el.getAttribute('data-category-name')] = el.textContent.trim();
+                });
+                var catCount = Object.keys(selected).length;
+                if (catCount === catNames.length) {
+                    // All categories selected — find matching variety
+                    var found = null;
+                    varieties.forEach(function(v) {
+                        if (!v.product_varieties) return;
+                        var match = true;
+                        v.product_varieties.forEach(function(pv) {
+                            if (selected[pv.category_option_name] !== pv.value) {
+                                match = false;
+                            }
+                        });
+                        if (match && v.product_varieties.length === catCount) {
+                            found = v;
+                        }
+                    });
+                    if (found) {
+                        document.getElementById('selected-variety-id').value = found.id;
+                    }
+                }
+            });
+        });
+    }
 </script>
+
+<script>
+var wishlistProductId = {{ product.int_id }};
+var isLoggedIn = {{ 'true' if current_user else 'false' }};
+var favIsChecked = false;
+
+function favToast(message) {
+    var t = document.getElementById('fav-toast');
+    if (!t) return;
+    t.textContent = message;
+    t.classList.add('show');
+    clearTimeout(favToast._timer);
+    favToast._timer = setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+
+function favOpenModal() {
+    document.getElementById('fav-modal').style.display = 'block';
+    document.body.classList.add('fav-modal-open');
+    favShowChooseView();
+    favLoadLists();
+}
+
+function favCloseModal() {
+    document.getElementById('fav-modal').style.display = 'none';
+    document.body.classList.remove('fav-modal-open');
+}
+
+function favShowChooseView() {
+    document.getElementById('fav-choose-view').style.display = 'block';
+    document.getElementById('fav-create-view').style.display = 'none';
+}
+
+function favShowCreateView() {
+    document.getElementById('fav-choose-view').style.display = 'none';
+    document.getElementById('fav-create-view').style.display = 'block';
+    var input = document.getElementById('fav-list-name');
+    if (input) {
+        input.value = '';
+        setTimeout(function(){ input.focus(); }, 50);
+    }
+}
+
+function favMarkFilled() {
+    favIsChecked = true;
+    var btn = document.querySelector('.js-add-favorite');
+    if (btn) btn.innerHTML = '<i class="fa fa-heart" style="color:#e70036;font-size:24px;vertical-align:middle;"></i>';
+}
+
+function favMarkEmpty() {
+    favIsChecked = false;
+    var btn = document.querySelector('.js-add-favorite');
+    if (btn) btn.innerHTML = '<i class="fa fa-heart-o" style="color:#999;font-size:24px;vertical-align:middle;"></i>';
+}
+
+function escHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function favLoadLists() {
+    var container = document.getElementById('fav-list-choices');
+    container.innerHTML = '<div class="fav-empty"><span class="fav-empty-icon"><i class="fa fa-heart"></i></span>در حال بارگذاری...</div>';
+    fetch('/profile/favorites/lists')
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            var lists = (data && data.wishlists) || [];
+            var html = '';
+            if (lists.length === 0) {
+                html += '<div class="fav-empty"><span class="fav-empty-icon"><i class="fa fa-heart-o"></i></span>شما هنوز هیچ لیستی برای علاقه\u200cمندی ایجاد نکرده\u200cاید</div>';
+            } else {
+                for (var i = 0; i < lists.length; i++) {
+                    var w = lists[i];
+                    var name = escHtml(w.name || '');
+                    html += '<div class="fav-list-row" data-list-id="' + escHtml(w.id_wishlist) + '" data-list-name="' + name + '">' +
+                            '<span class="fav-list-name"><i class="fa fa-heart"></i>' + name + '</span>' +
+                            '<span class="fav-list-count">' + escHtml(w.nbProducts) + ' کالا</span>' +
+                            '</div>';
+                }
+            }
+            container.innerHTML = html;
+        })
+        .catch(function(){
+            container.innerHTML = '<div class="fav-empty"><span class="fav-empty-icon"><i class="fa fa-exclamation-triangle"></i></span>خطا در بارگذاری لیست\u200cها</div>';
+        });
+}
+
+function favAddToList(listId, listName, done) {
+    var fd = new FormData();
+    fd.append('params[idWishList]', listId);
+    fd.append('params[id_product]', wishlistProductId);
+    fd.append('params[quantity]', '1');
+    fetch('/api/v1/favorites/item/add', { method: 'POST', body: fd })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (d && d.success) {
+                favMarkFilled();
+                favCloseModal();
+                favToast('محصول به لیست «' + (listName || '') + '» اضافه شد');
+                if (done) done(true);
+            } else {
+                favToast((d && d.message) || 'خطا در افزودن محصول به لیست');
+                if (done) done(false);
+            }
+        })
+        .catch(function(){
+            favToast('خطا در ارتباط با سرور');
+            if (done) done(false);
+        });
+}
+
+function favCreateListAndAdd() {
+    var input = document.getElementById('fav-list-name');
+    var name = input.value.trim();
+    if (!name) {
+        favToast('نام لیست را وارد کنید');
+        input.focus();
+        return;
+    }
+    var fd = new FormData();
+    fd.append('params[name]', name);
+    fetch('/api/v1/favorites/list/create', { method: 'POST', body: fd })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (d && d.success) {
+                favShowChooseView();
+                favLoadLists();
+                favToast('لیست «' + name + '» با موفقیت ایجاد شد');
+            } else {
+                favToast((d && d.message) || 'خطا در ایجاد لیست');
+            }
+        })
+        .catch(function(){
+            favToast('خطا در ارتباط با سرور');
+        });
+}
+
+function favRemoveFromAll() {
+    var fd = new FormData();
+    fd.append('params[id_product]', wishlistProductId);
+    fetch('/api/v1/favorites/item/remove-all', { method: 'POST', body: fd })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (d && d.success) {
+                favMarkEmpty();
+                favToast(d.message || 'محصول از علاقه\u200cمندی\u200cها حذف شد');
+            } else {
+                favToast((d && d.message) || 'خطا در حذف محصول');
+            }
+        })
+        .catch(function(){
+            favToast('خطا در ارتباط با سرور');
+        });
+}
+
+document.addEventListener('click', function(e) {
+    var trigger = e.target.closest('.js-add-favorite');
+    if (trigger) {
+        e.preventDefault();
+        if (!isLoggedIn) {
+            window.location.href = '/login?returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+            return;
+        }
+        if (favIsChecked) {
+            favRemoveFromAll();
+        } else {
+            favOpenModal();
+        }
+        return;
+    }
+    if (e.target.closest('[data-fav-close]')) {
+        favCloseModal();
+        return;
+    }
+    if (e.target.closest('[data-fav-create-open]')) {
+        favShowCreateView();
+        return;
+    }
+    if (e.target.closest('[data-fav-create-cancel]')) {
+        favShowChooseView();
+        return;
+    }
+    if (e.target.closest('[data-fav-create-do]')) {
+        favCreateListAndAdd();
+        return;
+    }
+    var row = e.target.closest('.fav-list-row');
+    if (row) {
+        favAddToList(row.getAttribute('data-list-id'), row.getAttribute('data-list-name'));
+        return;
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        var modal = document.getElementById('fav-modal');
+        if (modal && modal.style.display === 'block') favCloseModal();
+    }
+});
+
+// Check initial favorite state
+(function() {
+    var btn = document.querySelector('.js-add-favorite');
+    if (!btn || !isLoggedIn) return;
+    fetch('/api/v1/favorites/check/' + wishlistProductId)
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (d && d.checked) favMarkFilled();
+        })
+        .catch(function(){});
+})();
+</script>
+<div id="fav-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:1100;">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:16px;width:420px;max-width:92%;max-height:85vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.25);">
+        <div style="background:#f7f7f7;border-radius:16px 16px 0 0;padding:12px 20px;text-align:center;position:relative;border-bottom:1px solid #eee;">
+            <h5 style="margin:0;font-size:1.15rem;font-weight:bold;">اضافه کردن به علاقه\u200cمندی</h5>
+            <button data-fav-close type="button" aria-label="بستن" style="position:absolute;left:0;top:0;height:100%;width:40px;border:none;background:none;cursor:pointer;font-size:1.6rem;color:#666;">&times;</button>
+        </div>
+        <div style="padding:16px 20px;min-height:130px;">
+            <div id="fav-choose-view">
+                <div id="fav-list-choices"></div>
+                <button type="button" data-fav-create-open class="btn btn-primary" style="width:100%;margin-top:14px;background-color:#00a693;border-color:#00a693;">
+                    <i class="fa fa-plus" style="margin-right:6px;"></i> ایجاد لیست جدید
+                </button>
+            </div>
+            <div id="fav-create-view" style="display:none;">
+                <label style="display:block;font-weight:bold;margin-bottom:8px;">نام لیست</label>
+                <input type="text" id="fav-list-name" class="form-control" placeholder="نام لیست جدید" maxlength="255" style="border-radius:8px;">
+                <div style="text-align:center;display:flex;gap:8px;justify-content:center;margin-top:16px;">
+                    <button type="button" data-fav-create-cancel class="btn btn-secondary" style="min-width:100px;">لغو</button>
+                    <button type="button" data-fav-create-do class="btn btn-primary" style="min-width:140px;background-color:#00a693;border-color:#00a693;">ایجاد لیست</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="fav-toast" class="fav-toast" role="status" aria-live="polite"></div>
 {% endblock %}

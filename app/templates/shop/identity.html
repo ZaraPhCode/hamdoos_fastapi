@@ -1,43 +1,151 @@
 {% extends "shop/base.html" %}
 {% block title %}اطلاعات هویتی - آشا شاپ{% endblock %}
+{% block body_id %}IdentityInformation{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-IdentityInformation tax-display-enabled page-customer-account customer-has-logged st-wrapper{% endblock %}
+{% block extra_head %}
+<link href="/static/Common/Confirm/jquery-confirm.min.css" rel="stylesheet" />
+{% endblock %}
 {% block content %}
-<h1 class="text-xl font-bold mb-6">اطلاعات هویتی (فاکتور رسمی)</h1>
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 space-y-4">
-        {% for info in identities %}
-        <div class="bg-white rounded-lg shadow-sm border p-4">
-            <div class="flex justify-between">
-                <div>
-                    <p class="font-medium">{{ info.name }}</p>
-                    <p class="text-sm text-gray-500">کد ملی/شناسه: {{ info.national_code_or_id or '-' }}</p>
-                    <p class="text-sm text-gray-500">کد اقتصادی: {{ info.economic_code or '-' }}</p>
-                    <p class="text-sm text-gray-500">نوع: {% if info.type == 'Legal' %}حقوقی{% else %}حقیقی{% endif %}</p>
+<nav class="breadcrumb-wrapper ">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="3" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری شما</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile/identity">
+                    <span itemprop="name">اطلاعات هویتی</span>
+                </a>
+                <meta itemprop="position" content="3">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row ">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                اطلاعات هویتی
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                {% if identity_notif %}
+                                <aside id="notifications">
+                                    <div class="container">
+                                        <article class="alert alert-success" role="alert" data-alert="success">
+                                            <ul>
+                                                <li>{{ identity_notif }}</li>
+                                            </ul>
+                                        </article>
+                                    </div>
+                                </aside>
+                                {% endif %}
+                                <div class="row">
+                                    {% for item in identities %}
+                                    <div class="col-12 col-md-12">
+                                        <article id="identity-{{ item.id }}" class="address address-box-bg" data-id-address="{{ item.id }}">
+                                            <div class="address-body">
+                                                <div class="address-header">
+                                                    <div style="display: flex">
+                                                        <h5>{{ item.name }}</h5> &nbsp;&nbsp;
+                                                        کد ملی/شناسه
+                                                        <span class="fullname-address" style="padding: 0 0.5rem;">{{ item.national_code_or_id }}</span>
+                                                    </div>
+                                                    <div style="display: flex">
+                                                        {% if item.status != 'PendingDeletion' %}
+                                                        <a href="/profile/identity/edit/{{ item.id }}" data-link-action="edit-address" style="border-left: 1px solid #6666;padding: 0 0.5rem;color: #00a8ff;">
+                                                            <i class="d-none material-icons">&#xE254;</i>
+                                                            <span class="edit-address">ویرایش</span>
+                                                        </a>
+                                                        <a style="padding: 0 0.5rem;" href="#" id="{{ item.id }}" class="delete-identity">
+                                                            <i class="d-none material-icons">&#xE872;</i>
+                                                            <span class="delete-address">حذف</span>
+                                                        </a>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="address-footer">
+                                                    <div class="post-code">
+                                                        کد پستی
+                                                        <span>{{ item.postal_code }}</span>
+                                                    </div>
+                                                    <div class="post-code">
+                                                        کد اقتصادی
+                                                        <span>{{ item.economic_code or '-' }}</span>
+                                                    </div>
+                                                    <div class="post-code">
+                                                        وضعیت
+                                                        <span>{% if item.status == 'Confirmed' %}تایید شده{% elif item.status == 'AwaitingConfirmation' %}در انتظار تایید{% else %}{{ item.status }}{% endif %}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </div>
+                                    {% else %}
+                                    <div class="col-12 text-center py-4">
+                                        <p class="text-muted">اطلاعات هویتی ثبت نشده است</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="clearfix"></div>
+                                <div class="addresses-footer">
+                                    <a href="/identity-information/create" data-link-action="add-address" class="btn add-address-btn add-btn">
+                                        <span>ثبت اطلاعات هویتی</span>
+                                    </a>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="page-footer">
+                        </div>
+                    </section>
                 </div>
-                <span class="px-2 py-0.5 rounded text-xs {% if info.status == 'Confirmed' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
-                    {{ info.status or 'در انتظار تایید' }}
-                </span>
             </div>
         </div>
-        {% else %}
-        <p class="text-gray-400 text-center py-8">اطلاعاتی ثبت نشده است</p>
-        {% endfor %}
-    </div>
-    <div class="bg-white rounded-lg shadow-sm border p-4">
-        <h3 class="font-bold mb-4">افزودن اطلاعات هویتی</h3>
-        <form method="POST" action="/profile/identity/add" class="space-y-3">
-            <div><input name="name" placeholder="نام شرکت / نام و نام خانوادگی" required class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><input name="national_code_or_id" placeholder="کد ملی / شناسه ملی" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><input name="economic_code" placeholder="کد اقتصادی" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><input name="postal_code" placeholder="کد پستی" class="w-full border rounded-lg px-3 py-2 text-sm"></div>
-            <div><textarea name="address" placeholder="آدرس" rows="3" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea></div>
-            <div>
-                <select name="identity_type" class="w-full border rounded-lg px-3 py-2 text-sm">
-                    <option value="Real">حقیقی</option>
-                    <option value="Legal">حقوقی</option>
-                </select>
-            </div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700">ثبت اطلاعات</button>
-        </form>
     </div>
 </div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/Common/Confirm/jquery-confirm.min.js"></script>
+<script>
+    document.querySelectorAll(".delete-identity").forEach(function(el){
+        el.addEventListener("click", function(e){
+            e.preventDefault();
+            var id = this.id;
+            $.confirm({
+                title: 'تایید',
+                content: 'آیا مطمئن هستید؟',
+                buttons: {
+                    confirm: {
+                        text: "بله",
+                        action: function() {
+                            window.location.href = "/profile/identity/delete/" + id;
+                        }
+                    },
+                    cancel: {
+                        text: "خیر",
+                        action: function() {}
+                    }
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

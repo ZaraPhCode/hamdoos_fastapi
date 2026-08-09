@@ -1,0 +1,228 @@
+{% extends "shop/base.html" %}
+{% block title %}ویرایش اطلاعات هویتی - آشا شاپ{% endblock %}
+{% block body_id %}address{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-address tax-display-enabled page-customer-account customer-has-logged st-wrapper{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper ">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="4" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile">
+                    <span itemprop="name">حساب کاربری شما</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile/identity">
+                    <span itemprop="name">اطلاعات هویتی</span>
+                </a>
+                <meta itemprop="position" content="3">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="#">
+                    <span itemprop="name">ویرایش اطلاعات هویتی</span>
+                </a>
+                <meta itemprop="position" content="4">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row ">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                ویرایش اطلاعات هویتی
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <aside id="notifications">
+                                    <div class="container">
+                                        {% if error %}
+                                        <article class="alert alert-danger" role="alert" data-alert="danger">
+                                            <i class="material-icons">error_outline</i> {{ error }}
+                                        </article>
+                                        {% endif %}
+                                    </div>
+                                </aside>
+                                <section class="contact-form">
+                                    <div class="block">
+                                        <div class="block_content">
+                                            <div class="row">
+                                                <div class="col-md-6 col-md-offset-2 col-sm-12">
+                                                    <form class="form-horizontal" method="post" action="/profile/identity/edit/{{ info.id }}">
+                                                        <div class="form-group row" style="margin-top: 10px !important;">
+                                                            <label class="control-label col-sm-4">نام <span class="text-danger">*</span></label>
+                                                            <div class="col-sm-8">
+                                                                <input name="name" type="text" class="form-control" required="required" value="{{ info.name }}">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">نوع اطلاعات هویتی</label>
+                                                            <div class="col-sm-8">
+                                                                <select name="identity_type" id="Type" class="form-control">
+                                                                    <option value="Real" {% if info.type == 'Real' %}selected{% endif %}>حقیقی</option>
+                                                                    <option value="Legal" {% if info.type == 'Legal' %}selected{% endif %}>حقوقی</option>
+                                                                    <option value="CivicParticipation" {% if info.type == 'CivicParticipation' %}selected{% endif %}>مشارکت مدنی</option>
+                                                                    <option value="Non_IranianNationals" {% if info.type == 'Non_IranianNationals' %}selected{% endif %}>اتباع غیر ایرانی</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row" style="margin-top: 10px !important;">
+                                                            <label class="control-label col-sm-4">کد ملی / شناسه ملی <span class="text-danger">*</span></label>
+                                                            <div class="col-sm-8">
+                                                                <input name="national_code_or_id" type="text" class="form-control" required="required" value="{{ info.national_code_or_id }}">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">کد اقتصادی</label>
+                                                            <div class="col-sm-8">
+                                                                <input name="economic_code" id="EconomicCode" type="text" class="form-control" value="{{ info.economic_code or '' }}">
+                                                                <span>برای اشخاص حقوقی کد اقتصادی جدید همان شناسه ملی می‌باشد.</span>
+                                                            </div>
+                                                        </div>
+                                                        <div id="final" class="form-group row" {% if info.type != 'Real' %}style="display:none"{% endif %}>
+                                                            <label class="control-label col-sm-4">مصرف‌کننده نهایی هستم</label>
+                                                            <div class="col-sm-2">
+                                                                <input name="final_consumer" id="FinalConsumer" type="checkbox" class="form-control" {% if info.final_consumer %}checked{% endif %}>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">کد پستی <span class="text-danger">*</span></label>
+                                                            <div class="col-sm-8">
+                                                                <input name="postal_code" type="text" class="form-control" required="required" value="{{ info.postal_code }}">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">تلفن همراه <span class="text-danger">*</span></label>
+                                                            <div class="col-sm-8">
+                                                                <input name="phone_number" type="text" class="form-control" required="required" value="{{ info.phone_number }}">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">کشور <span class="text-danger">*</span></label>
+                                                            <div class="col-sm-8">
+                                                                <input name="country" type="text" class="form-control" value="{{ info.country or 'Iran' }}" required="required">
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">استان <span class="text-danger">*</span></label>
+                                                            <div class="col-sm-8">
+                                                                <select name="province" id="identity-province" class="form-control" required="required" onchange="filterIdentityCities()">
+                                                                    <option value="">استان را انتخاب کنید</option>
+                                                                    {% for p in provinces %}
+                                                                    <option value="{{ p.id }}" {% if selected_province_id == p.id|string %}selected{% endif %}>{{ p.name }}</option>
+                                                                    {% endfor %}
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">شهر <span class="text-danger">*</span></label>
+                                                            <div class="col-sm-8">
+                                                                <select name="city" id="identity-city" class="form-control" required="required">
+                                                                    <option value="">شهر را انتخاب کنید</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <label class="control-label col-sm-4">نشانی <span class="text-danger">*</span></label>
+                                                            <div class="col-sm-8">
+                                                                <textarea name="address" rows="3" class="form-control" required="required" placeholder="نشانی کامل">{{ info.address }}</textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group row">
+                                                            <div class="col-sm-4"></div>
+                                                            <div class="col-sm-8">
+                                                                <button type="submit" class="btn btn-primary" name="submit_bank_info">
+                                                                    ویرایش مشخصات حساب
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </section>
+                        </div>
+                        <div class="page-footer"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+var allIdentityCities = {
+{% for p in provinces %}
+    "{{ p.id }}": [{% for c in cities %}{% if c.province_id == p.int_id %}{"id":"{{ c.id }}","name":"{{ c.name }}"},{% endif %}{% endfor %}],
+{% endfor %}
+};
+function filterIdentityCities() {
+    var sel = document.getElementById('identity-province');
+    var citySel = document.getElementById('identity-city');
+    citySel.innerHTML = '<option value="">شهر را انتخاب کنید</option>';
+    (allIdentityCities[sel.value] || []).forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c.id; opt.text = c.name;
+        citySel.appendChild(opt);
+    });
+    // Pre-select city
+    {% if selected_city_id %}
+    var selectedCity = "{{ selected_city_id }}";
+    for (var i = 0; i < citySel.options.length; i++) {
+        if (citySel.options[i].value === selectedCity) {
+            citySel.selectedIndex = i;
+            break;
+        }
+    }
+    {% endif %}
+}
+$(document).ready(function(){
+    filterIdentityCities();
+    if ($("#Type").val() === "Real") {
+        if (document.getElementById('FinalConsumer').checked) {
+            document.getElementById("EconomicCode").disabled = true;
+        }
+    } else {
+        $("#final").hide();
+        document.getElementById("EconomicCode").disabled = false;
+        document.getElementById("FinalConsumer").checked = false;
+    }
+});
+$("#FinalConsumer").change(function(){
+    if (this.checked) {
+        document.getElementById("EconomicCode").disabled = true;
+    } else {
+        document.getElementById("EconomicCode").disabled = false;
+    }
+});
+$("#Type").change(function(){
+    if (this.value === "Real") {
+        $("#final").show();
+    } else {
+        $("#final").hide();
+        document.getElementById("EconomicCode").disabled = false;
+        document.getElementById("FinalConsumer").checked = false;
+    }
+});
+</script>
+{% endblock %}

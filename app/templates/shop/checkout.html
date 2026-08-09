@@ -1,101 +1,407 @@
 {% extends "shop/base.html" %}
 {% block title %}تسویه حساب - آشا شاپ{% endblock %}
+{% block body_id %}checkout{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page-order tax-display-enabled customer-has-logged st-wrapper{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+<style>
+.select2-container--default .select2-selection--single {
+    height: 38px; border: 1px solid #ced4da; border-radius: 4px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 38px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+</style>
+{% endblock %}
 {% block content %}
-<h1 class="text-xl font-bold mb-6">تسویه حساب</h1>
-
-{% if not cart or not cart.items %}
-<div class="text-center py-16 text-gray-400">
-    <i class="fas fa-shopping-cart text-5xl mb-4"></i>
-    <p>سبد خرید شما خالی است</p>
-    <a href="/products" class="inline-block bg-indigo-600 text-white px-6 py-2.5 rounded-lg mt-4">مشاهده محصولات</a>
+<aside id="notifications"><div class="container">{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}</div></aside>
+<div class="main-content">
+    <div class="container">
+        <div class="row ">
+            <div id="center-column" class="center-column col-12">
+                <div class="center-wrapper">
+                    <section id="main">
+                        <div class="cart-grid mb-3 row">
+                            <div class="cart-grid-body col-12 col-lg-8 mb-4">
+                                <div class="checkout-step-order box-bg js-checkoutStepOrderBox"></div>
+                                {% include "shop/_checkout_step_parts.html" %}
+                                <div class="checkout-step-display">
+                                    {# ─── STEP 1: IDENTITY ─── #}
+                                    <div id="checkout-personal-information-step" class="{{ steps.identity }}">
+                                        <div class="content">
+                                            <div class="light-box-bg mb-4">
+                                                <h5 class="identity">فاکتور به نام چه کسی صادر شود؟</h5>
+                                                <br />
+                                                <form method="get" action="/checkout">
+                                                    <div class="col-md-4">
+                                                        {% if identities %}
+                                                        <select id="IdentityId" name="identityId" class="form-control select2">
+                                                            <option value="">انتخاب کنید</option>
+                                                            {% for it in identities %}
+                                                            <option value="{{ it.id }}" {% if selected_identity_id == it.id|string %}selected{% endif %}>{{ it.name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                        {% else %}
+                                                        <p>لازم است اطلاعات هویتی خود را وارد نمایید.</p>
+                                                        {% endif %}
+                                                    </div>
+                                                    <br />
+                                                    <h5 class="identity">متصل شده به عنوان <a href="/profile">{{ current_user.display_name or current_user.first_name or current_user.email }}</a>.</h5>
+                                                    <p class="mb-0">شما نیستید؟ <a href="/logout">خروج</a></p>
+                                                    <div class="step-button-continue text-left">
+                                                        <button id="submitIdentity" disabled class="continue btn btn-primary" type="submit">ادامه</button>
+                                                        <p class="add-address mb-3" dir="rtl" style="display:inline">
+                                                            <a class="btn add-new-address" href="/identity-information/create?redirect=true">ایجاد اطلاعات هویتی جدید</a>
+                                                        </p>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {# ─── STEP 2: ADDRESSES ─── #}
+                                    <div id="checkout-addresses-step" class="{{ steps.addresses }}">
+                                        <div class="content">
+                                            <form method="post" action="/checkout">
+                                                <section class="shipping-address mb-4 light-box-bg">
+                                                    <h5 class="page-subheading">آدرس حمل و نقل</h5>
+                                                    <div id="delivery-addresses" class="address-selector js-address-selector">
+                                                        <div class="row">
+                                                            {% set ns = namespace(first=true) %}
+                                                            {% for a in addresses %}
+                                                            <div class="col-12 col-md-12">
+                                                                <article class="address-item {% if ns.first %}selected{% endif %}" data-id-address="{{ a.id }}" id="id-address-delivery-address-{{ a.id }}" style="width:100%">
+                                                                    <label class="custom-radio" style="width:100%">
+                                                                        <span class="check-wrap">
+                                                                            <input type="radio" name="address_id" value="{{ a.id }}" {% if ns.first or selected_address_id == a.id|string %}checked{% endif %}>
+                                                                            <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                                        </span>
+                                                                        <div class="address-body address-box-bg" style="width:100%">
+                                                                            <div class="address-header">
+                                                                                <div style="display:flex">
+                                                                                    <h5>{{ a.alias or a.first_name }} {{ a.last_name }}</h5>
+                                                                                    <span class="fullname-address" style="padding:0 0.5rem">{{ a.first_name }} {{ a.last_name }}</span>
+                                                                                </div>
+                                                                                <div style="display:flex">
+                                                                                    <a class="edit-address-link" href="/profile/addresses/edit/{{ a.id }}" data-link-action="edit-address">
+                                                                                        <i class="d-none material-icons">&#xE254;</i>
+                                                                                        <span class="edit-address">ویرایش</span>
+                                                                                    </a>
+                                                                                    <a class="delete-address-link" href="/profile/addresses/delete/{{ a.id }}" data-link-action="delete-address" onclick="return confirm('آدرس حذف شود؟')">
+                                                                                        <i class="d-none material-icons">&#xE872;</i>
+                                                                                        <span class="delete-address">حذف</span>
+                                                                                    </a>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="address-content">
+                                                                                <i class="fa fa-map-marker" aria-hidden="true" style="color:#e70036"></i>
+                                                                                <address>{{ a.country }} , {% if a.province_city %}{{ a.province_city.name }}{% endif %}{% if a.province %}{{ a.province }}{% endif %}</address>
+                                                                            </div>
+                                                                            <div class="address-footer">
+                                                                                <div class="post-code">
+                                                                                    <span>{{ a.postal_code }}</span>
+                                                                                    <i class="fa fa-envelope" aria-hidden="true"></i>
+                                                                                </div>
+                                                                                <div class="mobile">
+                                                                                    <span>{{ a.phone_number }}</span>
+                                                                                    <i class="fa fa-mobile" aria-hidden="true"></i>
+                                                                                </div>
+                                                                                <div class="phone">
+                                                                                    <span>{{ a.telephone or '--------' }}</span>
+                                                                                    <i class="fa fa-phone" aria-hidden="true"></i>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </label>
+                                                                </article>
+                                                            </div>
+                                                            {% set ns.first = false %}
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                    <p class="add-address mb-3" style="display:inline">
+                                                        <a class="btn add-new-address" href="/profile/addresses/create?back_to_order=true">ایجاد آدرس جدید</a>
+                                                    </p>
+                                                    <div class="step-button-continue text-right" style="display:inline">
+                                                        <button style="float:left" type="submit" class="btn btn-primary continue" name="confirm-addresses" value="1">ادامه</button>
+                                                    </div>
+                                                </section>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {# ─── STEP 3: POST TYPES ─── #}
+                                    <div id="checkout-delivery-step" class="{{ steps.delivery }}">
+                                        <div class="content">
+                                            <div class="light-box-bg">
+                                                <div class="row">
+                                                    <div class="col-6"><h5 class="page-subheading">روش ارسال</h5></div>
+                                                    <div class="col-6"><h5 class="page-subheading">{% if site_settings and site_settings.free_delivery %}{{ site_settings.free_delivery }}{% endif %}</h5></div>
+                                                </div>
+                                                <div id="hook-display-before-carrier"></div>
+                                                <form class="clearfix" id="js-delivery" method="post" action="/checkout">
+                                                    <div class="delivery-options-list pt-2">
+                                                        <div class="form-fields">
+                                                            <div class="delivery-options grid-small-padding">
+                                                                {% for pt in post_types %}
+                                                                <div class="delivery-option row">
+                                                                    <div class="custom-radio">
+                                                                        <span class="check-wrap">
+                                                                            {% if selected_post_type_id == pt.id|string %}
+                                                                            <input type="radio" name="PostTypeId" id="delivery_option_{{ loop.index0 }}" checked value="{{ pt.id }}">
+                                                                            {% elif selected_post_type_id is none and pt.name == "پست پیشتاز" %}
+                                                                            <input type="radio" name="PostTypeId" id="delivery_option_{{ loop.index0 }}" checked value="{{ pt.id }}">
+                                                                            {% else %}
+                                                                            <input type="radio" name="PostTypeId" id="delivery_option_{{ loop.index0 }}" value="{{ pt.id }}">
+                                                                            {% endif %}
+                                                                            <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                                        </span>
+                                                                    </div>
+                                                                    <label for="delivery_option_{{ loop.index0 }}" class="delivery-option-{{ loop.index0 }}">
+                                                                        <div class="d-flex align-items-center carrier-box-bg">
+                                                                            <div class="carrier-logo">
+                                                                                {% if pt.image_url %}
+                                                                                <img src="{{ pt.image_url }}" alt="{{ pt.name }}" width="80" height="80" />
+                                                                                {% else %}
+                                                                                <img src="https://placehold.co/80x80" width="80" height="80" />
+                                                                                {% endif %}
+                                                                            </div>
+                                                                            <div class="w-100 d-flex flex-md-nowrap flex-wrap justify-content-between">
+                                                                                <span class="col-md-4 col-12 carrier-name">{{ pt.name }}</span>
+                                                                                <span class="col-md-5 col-12 text-justify carrier-delay">{{ pt.description or '' }}</span>
+                                                                                {% if pt.price == 0 %}
+                                                                                <span class="col-md-3 col-12 carrier-price text-md-center">---</span>
+                                                                                {% elif site_settings and site_settings.free_postage and order.total_price_after_discount|default(0) > site_settings.free_postage_limit|default(0) %}
+                                                                                <span class="col-md-3 col-12 carrier-price text-md-center">0 <br /><s>{{ "{:,.0f}".format(pt.price or 0) }}</s></span>
+                                                                                {% else %}
+                                                                                <span class="col-md-3 col-12 carrier-price text-md-center">{{ "{:,.0f}".format(pt.price or 0) }}</span>
+                                                                                {% endif %}
+                                                                            </div>
+                                                                        </div>
+                                                                    </label>
+                                                                </div>
+                                                                {% if loop.last %}
+                                                                <div class="carrier-extra-content row"></div>
+                                                                {% else %}
+                                                                <div class="carrier-extra-content row" style="display:none;"></div>
+                                                                {% endif %}
+                                                                {% endfor %}
+                                                            </div>
+                                                            <div class="order-options">
+                                                                <div id="delivery" class="mb-3">
+                                                                    <label for="delivery_message" class="text-left">اگر توضیح خاصی دارید بنویسید</label>
+                                                                    <textarea rows="2" cols="120" id="delivery_message" class="form-control" name="note">{{ note or '' }}</textarea>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="step-button-continue text-right">
+                                                        <button type="submit" class="continue btn btn-primary" name="confirmDeliveryOption" value="1">ادامه</button>
+                                                    </div>
+                                                </form>
+                                                <div id="hook-display-after-carrier"></div>
+                                                <div id="extra_carrier"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {# ─── STEP 4: PAYMENT ─── #}
+                                    <div id="checkout-payment-step" class="{{ steps.pay }}">
+                                        <div class="content">
+                                            <div class="light-box-bg">
+                                                <h5 class="page-subheading">پرداخت</h5>
+                                                <div id="invoice_option_area" style="margin-top:3rem;margin-bottom:2rem;">
+                                                    <div class="checkbox">
+                                                        <label for="invoice-required" style="text-align:right;">
+                                                            <input id="invoice-required" type="checkbox" class="checkbox-inline" name="paperInvoice" {% if order.paper_invoice %}checked{% endif %}>
+                                                            <span style="font-size:1.1rem;">مایل به دریافت فاکتور کاغذی هستم</span><br>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div style="display:none" class="js-cart-payment-step-refresh"></div>
+                                                <div class="payment-options">
+                                                    {% for pm in pay_methods %}
+                                                    <div class="payment-line">
+                                                        <div id="payment-option-{{ loop.index }}-container" class="payment-option clearfix">
+                                                            <div class="custom-radio">
+                                                                <span class="check-wrap">
+                                                                    <input class="ps-shown-by-js" id="payment-option-{{ loop.index }}" data-module-name="ps_wirepayment" name="payment-option" type="radio" value="{{ pm.id }}" required>
+                                                                    <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                                </span>
+                                                                <label for="payment-option-{{ loop.index }}">
+                                                                    <span class="option-text">{{ pm.name }}</span>
+                                                                </label>
+                                                            </div>
+                                                            <form method="GET" class="ps-hidden-by-js">
+                                                                <button class="ps-hidden-by-js" type="submit" name="select_payment_option" value="payment-option-{{ loop.index }}">گزینش</button>
+                                                            </form>
+                                                        </div>
+                                                        <div id="payment-option-{{ loop.index }}-additional-information" class="js-additional-information definition-list additional-information ps-hidden">
+                                                            <section><p>{{ pm.description or '' }}</p></section>
+                                                        </div>
+                                                        <div id="pay-with-payment-option-{{ loop.index }}-form" class="js-payment-option-form ps-hidden">
+                                                            <form id="payment-form" method="POST" action="/checkout/payment">
+                                                                <input type="hidden" name="pay_method_id" value="{{ pm.id }}">
+                                                                <button style="display:none" id="pay-with-payment-option-{{ loop.index }}" type="submit"></button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="payment-final">
+                                                    <form id="conditions-to-approve" method="GET" class="mb-3">
+                                                        <ul>
+                                                            <li>
+                                                                <label class="custom-checkbox">
+                                                                    <span class="check-wrap">
+                                                                        <input id="conditions_to_approve[terms-and-conditions]" name="conditions_to_approve[terms-and-conditions]" required type="checkbox" value="1" class="ps-shown-by-js">
+                                                                        <span class="check-shape"><i class="material-icons check-icon">check</i></span>
+                                                                    </span>
+                                                                    <span class="js-terms">من با <a href="/page/terms" id="cta-terms-and-conditions-0">شرایط خدمات</a> موافقم و بی قید و شرط به آن‌ها پایبندم.</span>
+                                                                </label>
+                                                            </li>
+                                                        </ul>
+                                                    </form>
+                                                    <div id="payment-confirmation">
+                                                        <div class="ps-shown-by-js text-center">
+                                                            <button type="submit" disabled class="btn btn-primary btn-large btn-wrap" id="cta-payment-and-order">پرداخت و سفارش</button>
+                                                        </div>
+                                                        <div class="ps-hidden-by-js"></div>
+                                                        <br />
+                                                    </div>
+                                                    <a href="/checkout/proforma-invoice/{{ order.id }}" target="_blank" class="btn btn-primary btn-small">مشاهده پیش فاکتور</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {# ─── RIGHT SIDEBAR: CART SUMMARY ─── #}
+                            <div class="cart-grid-right col-12 col-lg-4 mb-4">
+                                <div class="cart-items light-box-bg cart-summary" style="position:sticky;top:60px">
+                                    <section id="js-checkout-summary" class="cart-detailed-totals">
+                                        <div class="cart-products-count alert-info">
+                                            <div class="cart-summary-products cart-items">
+                                                <div class="cart-summary-line">
+                                                    <label>{{ order.count }} کالا</label>
+                                                    <span class="value">
+                                                        <a href="#" data-toggle="modal" data-target="#cart-summary-product-list" class="show-details">مشاهده جزییات <i class="fa fa-info-circle" aria-hidden="true"></i></a>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% with items=summary_items, subtotal=subtotal, postage_fee=postage_fee, payable=payable, order=order %}
+                                        <div class="cart-summary-line cart-subtotal">
+                                            <span class="label">جمع کالاها</span>
+                                            <span class="value">{{ "{:,.0f}".format(subtotal) }} ریال</span>
+                                        </div>
+                                        <div class="cart-summary-line cart-subtotal">
+                                            <span class="label">هزینه ارسال</span>
+                                            <span class="value">{% if postage_fee > 0 %}{{ "{:,.0f}".format(postage_fee) }} ریال{% else %}---{% endif %}</span>
+                                        </div>
+                                        {% if order.packaging_cost > 0 %}
+                                        <div class="cart-summary-line cart-subtotal">
+                                            <span class="label">هزینه بسته‌بندی</span>
+                                            <span class="value">{{ "{:,.0f}".format(order.packaging_cost) }} ریال</span>
+                                        </div>
+                                        {% endif %}
+                                        <div class="cart-summary-line cart-total">
+                                            <span class="label">مبلغ قابل پرداخت</span>
+                                            <span class="value">{{ "{:,.0f}".format(payable) }} ریال</span>
+                                        </div>
+                                        {% endwith %}
+                                    </section>
+                                    <div class="js-cart-update-voucher page-loading-overlay cart-overview-loading">
+                                        <div class="page-loading-backdrop d-flex align-items-center justify-content-center">
+                                            <span class="uil-spin-css"><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span><span><span></span></span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-{% else %}
-<form method="POST" action="/checkout" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 space-y-6">
-        <!-- Address -->
-        <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h3 class="font-bold mb-4">آدرس تحویل</h3>
-            <div class="grid grid-cols-2 gap-4">
-                <div><label class="block text-sm mb-1">نام</label><input name="first_name" required class="w-full border rounded-lg px-3 py-2"></div>
-                <div><label class="block text-sm mb-1">نام خانوادگی</label><input name="last_name" required class="w-full border rounded-lg px-3 py-2"></div>
-                <div><label class="block text-sm mb-1">شماره تماس</label><input name="phone_number" required class="w-full border rounded-lg px-3 py-2" pattern="09\d{9}"></div>
-                <div><label class="block text-sm mb-1">تلفن ثابت</label><input name="telephone" class="w-full border rounded-lg px-3 py-2"></div>
-                <div class="col-span-2"><label class="block text-sm mb-1">آدرس</label><textarea name="address_description" required class="w-full border rounded-lg px-3 py-2" rows="3"></textarea></div>
-                <div><label class="block text-sm mb-1">کد پستی</label><input name="postal_code" required class="w-full border rounded-lg px-3 py-2"></div>
-                <div><label class="block text-sm mb-1">استان</label><input name="province" class="w-full border rounded-lg px-3 py-2"></div>
-                <div><label class="block text-sm mb-1">شهر</label><input name="city" class="w-full border rounded-lg px-3 py-2"></div>
+{# ─── PRODUCT LIST MODAL ─── #}
+<div class="modal fade" id="cart-summary-product-list" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h5 class="modal-title">سبد خرید</h5>
             </div>
-        </div>
-
-        <!-- Payment Method -->
-        <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h3 class="font-bold mb-4">روش پرداخت</h3>
-            {% for pm in pay_methods %}
-            <label class="flex items-center gap-3 p-3 border rounded-lg mb-2 cursor-pointer hover:bg-gray-50">
-                <input type="radio" name="pay_method_id" value="{{ pm.id }}" {% if loop.first %}checked{% endif %}>
-                <span>{{ pm.name }}</span>
-            </label>
-            {% endfor %}
-        </div>
-
-        <!-- Shipping Method -->
-        <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h3 class="font-bold mb-4">روش ارسال</h3>
-            {% for pt in post_types %}
-            <label class="flex items-center gap-3 p-3 border rounded-lg mb-2 cursor-pointer hover:bg-gray-50">
-                <input type="radio" name="post_type_id" value="{{ pt.id }}" {% if loop.first %}checked{% endif %}>
-                <span>{{ pt.name }}</span>
-                <span class="mr-auto text-indigo-600 font-bold">{{ "{:,.0f}".format(pt.price or 0) }} تومان</span>
-            </label>
-            {% endfor %}
-        </div>
-
-        <!-- Discount Code -->
-        <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h3 class="font-bold mb-4">کد تخفیف</h3>
-            <div class="flex gap-2">
-                <input name="discount_code" class="flex-1 border rounded-lg px-3 py-2" placeholder="کد تخفیف را وارد کنید">
-                <button type="button" onclick="applyDiscount()" class="bg-gray-200 px-4 rounded-lg hover:bg-gray-300">اعمال</button>
+            <div class="modal-body">
+                <div class="cart-items cart-items-review">
+                    {% for item in summary_items %}
+                    <div class="cart-item">
+                        <div class="product-line-grid">
+                            <div class="product-line-grid-left">
+                                <div class="product-image">
+                                    {% if item.image %}<img src="{{ item.image }}" alt="{{ item.name }}" class="img-fluid">{% else %}<img src="https://placehold.co/225x225" class="img-fluid">{% endif %}
+                                </div>
+                                <div class="product-line-grid-body">
+                                    <a href="/products/{{ item.slug or '' }}" target="_blank">
+                                        <span class="product-name">{{ item.name }}</span><br />
+                                        {% if item.variety_values and item.variety_values[:7] != 'پیش فرض' %}{{ item.variety_values }}{% endif %}
+                                    </a>
+                                    <div class="product-prices">
+                                        <span class="price">{{ "{:,.0f}".format(item.price_after_discount) }} ریال</span>
+                                        <span class="qty px-1">x</span>
+                                        <span class="qty">{{ item.count }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="product-line-grid-right">
+                                <div class="price-col">
+                                    <span class="price product-price">{{ "{:,.0f}".format(item.total) }} ریال</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            <div id="discount-result" class="mt-2 text-sm"></div>
         </div>
     </div>
-
-    <!-- Order Summary -->
-    <div class="bg-white rounded-lg shadow-sm border p-6 h-fit sticky top-24">
-        <h3 class="font-bold mb-4">خلاصه سفارش</h3>
-        <div class="space-y-3 text-sm">
-            {% for item in cart.items %}
-            <div class="flex justify-between">
-                <span class="text-gray-600">{{ item.product_name[:30] }}{% if item.product_name|length > 30 %}...{% endif %} (×{{ item.quantity }})</span>
-                <span>{{ "{:,.0f}".format(item.total_price) }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        <hr class="my-4">
-        <div class="flex justify-between font-bold"><span>جمع کل</span><span>{{ "{:,.0f}".format(cart.total_price) }} تومان</span></div>
-        <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg mt-4 hover:bg-indigo-700 font-medium">
-            <i class="fas fa-check ml-2"></i>ثبت سفارش
-        </button>
-    </div>
-</form>
-{% endif %}
-
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-function applyDiscount() {
-    const code = document.querySelector('input[name="discount_code"]').value;
-    fetch('/api/v1/cart/validate-discount', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({code: code})
-    }).then(r => r.json()).then(data => {
-        const div = document.getElementById('discount-result');
-        if (data.is_valid) {
-            div.innerHTML = '<span class="text-green-600">' + data.description + ' - مبلغ تخفیف: ' + data.discount_value.toLocaleString() + ' تومان</span>';
-        } else {
-            div.innerHTML = '<span class="text-red-600">کد تخفیف معتبر نیست</span>';
+$(function(){
+    $("#IdentityId").change(function(){
+        $("#submitIdentity").prop('disabled', this.value == "");
+    });
+    $(".select2").select2({ dir: "rtl", width: "100%" });
+    if($("#IdentityId").val() != ""){ $("#submitIdentity").prop('disabled', false); }
+    // Terms checkbox gates payment button
+    $("#conditions_to_approve[terms-and-conditions]").on("change", function(){
+        $("#cta-payment-and-order").prop('disabled', !this.checked);
+    });
+    // Payment method selection triggers hidden form
+    $("input[name='payment-option']").on("change", function(){
+        var idx = $(this).val();
+        $("#payment-form input[name='pay_method_id']").val(idx);
+        if($("#conditions_to_approve\\[terms-and-conditions\\]").is(":checked")){
+            $("#cta-payment-and-order").prop('disabled', false);
         }
     });
-}
+    // Paper invoice toggle
+    $("#invoice-required").on("change", function(){
+        $.post("/checkout/paper-invoice", { invoice_required: this.checked ? "true" : "false" });
+    });
+    // Payment confirmation button triggers hidden form for selected method
+    $("#cta-payment-and-order").on("click", function(e){
+        e.preventDefault();
+        var pmId = $("input[name='payment-option']:checked").val();
+        if(pmId){
+            $("input[name='pay_method_id']", "#payment-form").val(pmId);
+            $("#payment-form").submit();
+        }
+    });
+});
 </script>
 {% endblock %}

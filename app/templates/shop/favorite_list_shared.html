@@ -1,0 +1,110 @@
+{% extends "shop/base.html" %}
+{% block title %}{{ favorite_list.name }} - لیست علاقه‌مندی‌ها{% endblock %}
+{% block extra_head %}
+<style>
+.wishlist-product { max-width: 15.625rem; width: 100%; position: relative; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+.wishlist-product-title { margin-top: 0.625rem; margin-bottom: 0.315rem; color: #737373; font-size: 0.875rem; letter-spacing: 0; line-height: 1.875rem; }
+.wishlist-product-price { color: #232323; font-size: 1rem; font-weight: bold; letter-spacing: 0; line-height: 1.375rem; }
+.wishlist-product-image { width: 100%; height: 192px; overflow: hidden; }
+.wishlist-product-image img { width: 100%; height: 100%; object-fit: contain; }
+.out-of-stock { color: #ff6f6f; font-weight: bold; }
+</style>
+{% endblock %}
+{% block content %}
+<script>
+var body = $("body");
+body.attr("id", "view");
+body.addClass("lang-fa lang-rtl country-ir currency-irr layout-full-width page- tax-display-enabled st-wrapper");
+</script>
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="2" itemscope="" itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <img src="/static/ThemeLayout/iconSVG/icons8-home.svg" />
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="#">
+                    <span itemprop="name">لیست علاقه‌مندی‌ها</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            <div id="center-column" class="center-column col-12">
+                <div class="center-wrapper">
+                    <section id="main" class="">
+                        <div class="body">
+                            <section id="content" class="page-content">
+                                <div class="dashboard-latest-orders box-bg-title-body">
+                                    <div class="title">
+                                        <i class="fa fa-history" style="color: #59f273"></i>
+                                        {{ favorite_list.name }}
+                                    </div>
+                                    <div class="body">
+                                        <div class="order-item">
+                                            <div class="order-item-header"></div>
+                                            <div class="order-item-products" style="display: flex; flex-wrap: wrap;">
+                                                {% for item in favorite_list.favorite_list_items or [] %}
+                                                <div class="wishlist-product" style="margin: 1rem;">
+                                                    <a target="_blank" href="/products/{{ item.product.slug or item.product.id }}" class="wishlist-product-link">
+                                                        <div class="wishlist-product-image">
+                                                            {% if item.product.feature_image_url %}
+                                                            <img src="{{ item.product.feature_image_url }}" alt="{{ item.product.name }}">
+                                                            {% else %}
+                                                            <img src="https://placehold.co/192x192" alt="">
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="wishlist-product-right" style="height:76.1562px">
+                                                            <p class="wishlist-product-title">{{ item.product.name }}</p>
+                                                            <p class="wishlist-product-price">{{ "{:,.0f}".format(item.product.price_after_discount or item.product.price or 0) }} ریال</p>
+                                                            <div class="wishlist-product-combinations">
+                                                                <p class="wishlist-product-combinations-text"></p>
+                                                            </div>
+                                                        </div>
+                                                    </a>
+                                                    {% if item.product.varieties and item.product.varieties|selectattr("stock_quantity", "gt", 0)|list %}
+                                                    {% if item.product.number_of_variations == 1 %}
+                                                    <button class="btn wishlist-product-addtocart btn-primary js-ajax-add-to-cart" data-id-product="{{ item.product_id }}">
+                                                        <i class="material-icons shopping-cart">shopping_cart</i>
+                                                        افزودن به سبد خرید
+                                                    </button>
+                                                    {% else %}
+                                                    <a class="btn wishlist-product-addtocart btn-primary" href="/products/{{ item.product.slug or item.product.id }}">
+                                                        <i class="material-icons shopping-cart">shopping_cart</i>
+                                                        افزودن به سبد خرید
+                                                    </a>
+                                                    {% endif %}
+                                                    {% else %}
+                                                    <div class="third-block-left">
+                                                        <span class="out-of-stock">ناموجود</span>
+                                                    </div>
+                                                    {% endif %}
+                                                    &nbsp;
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        <a href="/" class="col-lg-12 btn btn-primary btn-large p-3">
+                                            بازگشت به خانه
+                                        </a>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                        <div class="page-footer"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

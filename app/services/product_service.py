@@ -194,6 +194,7 @@ def _normalize_media_url(url):
 def _build_product_list_response(product: Product) -> ProductListResponse:
     return ProductListResponse(
         id=product.id,
+        int_id=product.int_id if hasattr(product, 'int_id') and product.int_id else 0,
         name=product.name,
         en_name=product.en_name,
         slug=product.slug,

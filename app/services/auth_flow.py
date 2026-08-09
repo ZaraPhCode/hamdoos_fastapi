@@ -116,6 +116,11 @@ async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]
 
 # ── SMS code management (mirrors SmsExtention) ──
 
+async def check_sms_status(db: AsyncSession, phone_number: str, user_id: uuid.UUID):
+    """Public wrapper: check SMS status and return timer."""
+    return await _check_sms(db, phone_number, user_id)
+
+
 async def _check_sms(db: AsyncSession, phone_number: str, user_id: uuid.UUID):
     result = await db.execute(
         select(SmsCode)
