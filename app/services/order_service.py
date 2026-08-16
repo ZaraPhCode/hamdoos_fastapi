@@ -674,6 +674,7 @@ async def get_user_orders(
         .options(
             selectinload(Order.order_products).selectinload(OrderProduct.product),
             selectinload(Order.order_status_records),
+            selectinload(Order.pay_method),
         )
         .where(Order.user_id == user_id, Order.is_removed == False)
         .order_by(Order.insert_date.desc())
@@ -743,6 +744,7 @@ def build_order_response(order: Order) -> dict:
         "city": order.city,
         "user_id": order.user_id,
         "pay_method_id": order.pay_method_id,
+        "pay_method_type": (order.pay_method.type if hasattr(order, "pay_method") and order.pay_method else None),
         "post_type_id": order.post_type_id,
         "insert_date": order.insert_date,
         "order_products": [

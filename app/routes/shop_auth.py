@@ -23,8 +23,9 @@ from app.models.identity import User, Role, UserRole
 from app.models.common import SiteSetting, Captcha
 from app.services import auth_flow
 from app.services.auth_service import create_token_response
+from app.config.site_config import register_template_globals
 
-templates = Jinja2Templates(directory="app/templates")
+templates = register_template_globals(Jinja2Templates(directory="app/templates"))
 router = APIRouter(tags=["Shop Auth Pages"])
 
 PHONE_RE = re.compile(r"^09\d{9}$")
@@ -362,16 +363,19 @@ async def shop_sms_confirmation(
     needConfirmPhone: bool = True,
     phoneNumber: Optional[str] = None,
     email: Optional[str] = None,
+    emailOrPhone: Optional[str] = None,
     handler: Optional[str] = None,
     code: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
 ):
     user = None
-    email_or_phone = phoneNumber or email or ""
+    email_or_phone = phoneNumber or email or emailOrPhone or ""
     if phoneNumber:
         user = await auth_flow.find_user_by_phone(db, phoneNumber)
     elif email:
         user = await auth_flow.find_user_by_email(db, email)
+    elif emailOrPhone:
+        user = await auth_flow.find_user_via(db, emailOrPhone)
     if user is None:
         return HTMLResponse("Not found", status_code=404)
 

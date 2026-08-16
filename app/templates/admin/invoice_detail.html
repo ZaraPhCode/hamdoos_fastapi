@@ -66,7 +66,7 @@
                 <div class="mt-4 pt-4 border-t border-gray-100 flex items-center gap-3">
                     <span class="text-gray-500 text-xs">سفارش مرتبط:</span>
                     <a href="/administration/Orders/Details/{{ invoice.order_id }}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
-                        <i class="fas fa-external-link-alt ml-1"></i>مشاهده سفارش #{{ invoice.order_id[:8] if invoice.order_id else invoice.order_id }}
+                        <i class="fas fa-external-link-alt ml-1"></i>مشاهده سفارش #{{ (invoice.order_id|string)[:8] }}
                     </a>
                     <a href="/administration/invoices/{{ invoice.id }}/update-order" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors">
                         <i class="fas fa-sync ml-1"></i>بروزرسانی سفارش

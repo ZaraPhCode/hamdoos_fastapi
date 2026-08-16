@@ -20,6 +20,7 @@ from app.models.identity import User, Role, UserRole, RoleClaim, Claim
 from app.models.common import SiteSetting, AdminParameter
 from app.models.enums import OperationType
 from app.models.product import CategoryOption
+from app.config.site_config import SEED_USERS
 
 
 # ── Static Data (mirrors SD.cs) ──
@@ -45,10 +46,7 @@ class SD:
         WAREHOUSE_KEEPER: "مدیر انبار",
     }
 
-    SEED_USERS = {
-        ADMIN: {"first_name": "کاربر", "last_name": "مدیر", "username": "a.dastan@ashabeam.com", "phone": "09930003120", "password": "@Aa123456"},
-        SYSTEM: {"first_name": "یوزر", "last_name": "سیستم", "username": "hamdoos@outlook.com", "phone": "00000000000", "password": "@Aa123456"},
-    }
+    SEED_USERS = SEED_USERS
 
 
 # ── Permission Policy (mirrors OperationAR.cs) ──

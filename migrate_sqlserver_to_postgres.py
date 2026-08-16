@@ -57,17 +57,14 @@ SOURCE_DSN = (
 )
 SOURCE_SCHEMA = _env("MIG_SRC_SCHEMA", "asha_admin313")
 
+# Target (PostgreSQL): MIG_TARGET_* take precedence, then fall back to the
+# .env-driven POSTGRES_* values / DATABASE_URL used by the app itself.
 TARGET_DSN = dict(
-    host=_env("MIG_TARGET_HOST", "localhost"),
-    port=int(_env("MIG_TARGET_PORT", "5433")),
-    dbname=_env("MIG_TARGET_DBNAME", "ashadb"),
-    user=_env("MIG_TARGET_USER", "ashauser"),
-    password=_env("MIG_TARGET_PASSWORD", "ashapass"),
-)
-SOURCE_SCHEMA = "asha_admin313"
-
-TARGET_DSN = dict(
-    host="localhost", port=5433, dbname="ashadb", user="ashauser", password="ashapass",
+    host=_env("MIG_TARGET_HOST", _env("POSTGRES_HOST", "localhost")),
+    port=int(_env("MIG_TARGET_PORT", _env("POSTGRES_PORT", "5433"))),
+    dbname=_env("MIG_TARGET_DBNAME", _env("POSTGRES_DB", "ashadb")),
+    user=_env("MIG_TARGET_USER", _env("POSTGRES_USER", "ashauser")),
+    password=_env("MIG_TARGET_PASSWORD", _env("POSTGRES_PASSWORD", "ashapass")),
 )
 
 # Tables whose target PK (uuid) does not come from source: Id must be generated.

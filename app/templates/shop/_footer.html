@@ -13,13 +13,27 @@
     #hamdoosfooter li span:hover { color: #00a693 !important; }
     @media (max-width: 1200px) { #hamdoosfooter li { flex-direction: column; border: none; } #hamdoosfooter li span { margin-top: 8px; white-space: normal; } }
     @media (max-width: 768px) { #hamdoosfooter li { flex: 0 0 50%; } #hamdoosfooter li span { font-size: 13px; } }
-    @media (max-width: 567px) {
+    @media (max-width: 568px) {
         #hamdoosfooter li { flex: 0 0 100%; padding: 1em 0; font-size: 16px; text-align: right !important; justify-content: flex-start; flex-direction: row; border: none; }
         #hamdoosfooter li img.feature-img { width: 40px; height: 40px; flex-basis: 40px; }
         #hamdoosfooter li span { white-space: normal; }
         #hamdoosfooter li a { padding-right: 1em; }
     }
 </style>
+{% set s = request.state.site_settings %}
+{% set fi = site_info.footer %}
+{% set fsi = site_info.footer_info %}
+{% set how_to_buy = (s.how_to_buy or fi.how_to_buy) if s else fi.how_to_buy %}
+{% set bank_name = (s.bank_name or fi.bank_name) if s else fi.bank_name %}
+{% set account_number = (s.account_number or fi.account_number) if s else fi.account_number %}
+{% set card_number = (s.card_number or fi.card_number) if s else fi.card_number %}
+{% set sheba_number = (s.sheba_number or fi.sheba_number) if s else fi.sheba_number %}
+{% set account_owner = (s.account_owner or fi.account_owner) if s else fi.account_owner %}
+{% set free_delivery = (s.free_delivery or fi.free_delivery) if s else fi.free_delivery %}
+{% set technical_support = (s.technical_support or fi.technical_support) if s else fi.technical_support %}
+{% set site_phone = (s.telephone or fsi.telephone) if s else fsi.telephone %}
+{% set site_email = (s.email or fi.contact_email) if s else fi.contact_email %}
+{% set site_address = (s.address or fsi.address) if s else fsi.address %}
 <footer id="footer">
     <div class="footer-top clearfix">
         <div class="container">
@@ -57,7 +71,7 @@
                                     <h4 class="modal-title" id="myModal0Label">نحوه خرید از فروشگاه</h4>
                                 </div>
                                 <div class="modal-body">
-                                    <p>ابتدا یک حساب کاربری ایجاد و اطلاعات خواسته شده را وارد کنید. بعد از آن کالاهای موردنظر را انتخاب و به سبد خرید خود اضافه کنید. در مراحل بعدی به ترتیب می‌بایست آدرس و نحوه ارسال، انتخاب گردد و در نهایت نیز هزینه پرداخت شود.</p>
+                                    <p>{{ how_to_buy }}</p>
                                 </div>
                             </div>
                         </div>
@@ -70,8 +84,8 @@
                                     <h4 class="modal-title" id="myModal1Label">شماره حساب‌ها</h4>
                                 </div>
                                 <div class="modal-body">
-                                    <p style="color:#d0121a;font-weight:bold;">قرض الحسنه مهر ایران</p>
-                                    <p dir="rtl" style="line-height:2;">شماره حساب: 3013.710.19913662.1<br>شماره کارت: 6063737005358039<br>شماره شبا: IR170600301371019913662001<br>صاحب حساب: شرکت نمایه پرتو آشا</p>
+                                    <p style="color:#d0121a;font-weight:bold;">{{ bank_name }}</p>
+                                    <p dir="rtl" style="line-height:2;">شماره حساب: {{ account_number }}<br>شماره کارت: {{ card_number }}<br>شماره شبا: {{ sheba_number }}<br>صاحب حساب: {{ account_owner }}</p>
                                 </div>
                             </div>
                         </div>
@@ -84,7 +98,7 @@
                                     <h4 class="modal-title" id="myModal2Label">ارسال رایگان</h4>
                                 </div>
                                 <div class="modal-body">
-                                    <p>در صورتی که خرید شما بیشتر از 5 میلیون تومان باشد ارسال رایگان خواهد بود.</p>
+                                    <p>{{ free_delivery }}</p>
                                 </div>
                             </div>
                         </div>
@@ -97,11 +111,14 @@
                                     <h4 class="modal-title" id="myModal3Label">تماس با ما</h4>
                                 </div>
                                 <div class="modal-body">
+                                    {% if s and s.contact_us %}
+                                    <p>{{ s.contact_us }}</p>
+                                    {% else %}
                                     <p>تماس با دفتر مرکزی فروشگاه (تهران)</p>
-                                    <p>تلفن: 09018401833 (تماس تلفنی + تلگرام / بله)</p>
-                                    <p>ایمیل: <span id="footer-email" data-email="ashabeam@gmail.com" style="color:#00a693;cursor:pointer;font-weight:bold;" title="برای کپی کلیک کنید">ashabeam@gmail.com</span></p>
-                                    <p>تهران، میدان انقلاب اسلامی، ابتدای خیابان کارگر شمالی، بن‌بست امین، پلاک 16، طبقه چهارم (واحد اپتیک و لیزر)</p>
-                                    <p>برای تماس با ما می‌توانید با شماره 09018401833 تماس بگیرید.</p>
+                                    <p>تلفن: {{ fi.contact_phone }}</p>
+                                    <p>ایمیل: <span id="footer-email" data-email="{{ fi.contact_email }}" style="color:var(--c-primary);cursor:pointer;font-weight:bold;" title="برای کپی کلیک کنید">{{ fi.contact_email }}</span></p>
+                                    <p>{{ fi.contact_address }}</p>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -114,7 +131,7 @@
                                     <h4 class="modal-title" id="myModal4Label">پشتیبانی و مشاوره فنی</h4>
                                 </div>
                                 <div class="modal-body">
-                                    <p>تیم پشتیبانی ما با تخصص و تعهد در تلاش است تا به تمامی سوالات و مشکلات فنی شما پاسخ دهد و راه‌حل‌های مناسب را ارائه دهد. برای مشاوره شماره (09018401833) برای تماس و همچنین در پیام‌رسان‌های "بله" و "تلگرام" پاسخگوی سوالات شما عزیزان است!</p>
+                                    <p>{{ technical_support }}</p>
                                 </div>
                             </div>
                         </div>
@@ -130,15 +147,9 @@
                     <div class="footer-about-us md-bottom">
                         <div class="typo">
                             <p class="h4">اطلاعات</p>
-                            {% if site_settings %}
-                            <p class="py-1">تلفن: {{ site_settings.telephone }}</p>
-                            <p class="py-1 mt-2">ایمیل: {{ site_settings.email }}</p>
-                            <p>آدرس: <br>{{ site_settings.address }}</p>
-                            {% else %}
-                            <p class="py-1">تلفن: ۰۲۱-۸۸۲۱۴۶۴۱</p>
-                            <p class="py-1 mt-2">ایمیل: info@ashabeam.com</p>
-                            <p>آدرس: <br>تهران، خیابان یوسف‌آباد</p>
-                            {% endif %}
+                            <p class="py-1">تلفن: {{ site_phone }}</p>
+                            <p class="py-1 mt-2">ایمیل: {{ site_email }}</p>
+                            <p>آدرس: <br>{{ site_address }}</p>
                         </div>
                     </div>
                     <div class="block-social md-bottom">
@@ -183,7 +194,7 @@
             <div class="copyright-payment">
                 <div class="typo">
                     <div style="text-align: center;">
-                        {%- if site_settings -%}{{ site_settings.copy_right }}{%- else -%}تمامی حقوق برای فروشگاه همدوس محفوظ است.{%- endif -%}
+                        {%- if s and s.copy_right -%}{{ s.copy_right }}{%- else -%}تمامی حقوق برای فروشگاه همدوس محفوظ است.{%- endif -%}
                     </div>
                 </div>
             </div>

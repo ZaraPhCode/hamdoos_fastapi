@@ -69,7 +69,7 @@
                                         <tbody>
                                             {% for item in orders %}
                                             <tr>
-                                                <td><a href="/orders/{{ item.id }}">{{ item.reference_code or item.id[:8] }}</a></td>
+                                                <td><a href="/orders/{{ item.id }}">{{ item.reference_code or (item.id|short_id) }}</a></td>
                                                 <td>{{ item.date }}</td>
                                                 <td class="text-right"><span>{{ "%.0f"|format(item.payable or 0) }} ریال</span></td>
                                                 <td>{{ item.pay_method_name or '-' }}</td>
@@ -100,7 +100,7 @@
                                         <a href="/orders/{{ item.id }}" data-link-action="view-order-details" title="جزئیات">
                                             <div class="row">
                                                 <div class="col-10">
-                                                    <h5>{{ item.reference_code or item.id[:8] }}</h5>
+                                                    <h5>{{ item.reference_code or (item.id|short_id) }}</h5>
                                                     <div class="date" style="color: #5d5d5d">{{ item.date }}</div>
                                                     <div class="total"><span class="price price-total">{{ "%.0f"|format(item.payable or 0) }} ریال</span></div>
                                                     <div class="status">

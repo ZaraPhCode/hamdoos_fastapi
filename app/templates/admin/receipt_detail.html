@@ -23,7 +23,7 @@
         </div>
         <div class="p-6">
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-                <div><dt class="text-xs text-gray-500 mb-1">کاربر</dt><dd class="text-sm font-medium">{% if receipt.user_id %}<a href="/administration/users/{{ receipt.user_id }}" class="text-indigo-600 hover:underline">{{ receipt.user_full_name or receipt.user_id[:8] }}</a>{% else %}—{% endif %}</dd></div>
+                <div><dt class="text-xs text-gray-500 mb-1">کاربر</dt><dd class="text-sm font-medium">{% if receipt.user_id %}<a href="/administration/users/{{ receipt.user_id }}" class="text-indigo-600 hover:underline">{{ receipt.user_full_name or (receipt.user_id|short_id) }}</a>{% else %}—{% endif %}</dd></div>
                 <div><dt class="text-xs text-gray-500 mb-1">کد پیگیری</dt><dd class="text-sm font-medium ltr-input">{{ receipt.reference_code or '—' }}</dd></div>
                 <div><dt class="text-xs text-gray-500 mb-1">قیمت</dt><dd class="text-sm font-bold">{{ "{:,}".format(receipt.price or 0) }}</dd></div>
                 <div><dt class="text-xs text-gray-500 mb-1">وضعیت</dt><dd class="text-sm font-medium">

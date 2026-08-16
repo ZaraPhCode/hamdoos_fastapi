@@ -122,7 +122,7 @@
     <div class="container">
         <div class="row">
             <div id="left-column" class="sidebar-column col-12 col-md-4 col-lg-3">
-                <div class="column-wrapper md-bottom fixed" style="top: -320px;">
+                <div class="column-wrapper md-bottom">
                     {% include "shop/_left_categories.html" %}
 
                     <div class="column-block md-bottom d-none d-md-block">
@@ -207,10 +207,10 @@
                             <div class="static-html typo">
                                 <div class="block_content">
                                     <div dir="rtl" align="justify">
-                                        <div style="margin-bottom:10px;"><img src="/static/ThemeLayout/img/support.png" style="margin-left:8px;" width="38px"><span style="color:#333;font-size:1.1rem;">شماره‌های تماس</span></div>
-                                        <div>دفتر مرکزی و امور مشتریان: {% if site_settings %}{{ site_settings.telephone }}{% else %}۰۲۱-۸۸۲۱۴۶۴۱{% endif %}</div>
-                                        <div style="font-size:12px;color:#868686;">زمان پاسخگویی: شنبه تا چهارشنبه از ساعت ۹ الی ۱۷، پنجشنبه‌ها از ساعت ۹ الی ۱۴</div>
-                                        <div style="font-size:12px;color:#868686;">پیگیری تمامی موارد مربوط به فروش وبسایت از دفتر مرکزی تهران مقدور می‌باشد.</div>
+                                        <div style="margin-bottom:10px;"><img src="/static/ThemeLayout/img/support.png" style="margin-left:8px;" width="38px"><span style="color:#333;font-size:1.1rem;">{{ site_info.sidebar.office_title }}</span></div>
+                                        <div>{{ site_info.sidebar.office_label }}: {% if site_settings %}{{ site_settings.telephone }}{% else %}{{ site_info.sidebar.office_phone }}{% endif %}</div>
+                                        <div style="font-size:12px;color:#868686;">{{ site_info.sidebar.support_hours }}</div>
+                                        <div style="font-size:12px;color:#868686;">{{ site_info.sidebar.follow_up }}</div>
                                         <div style="margin-top:5px;"></div>
                                     </div>
                                 </div>

@@ -1,5 +1,5 @@
 {% extends "admin/base.html" %}
-{% block title %}جزئیات سفارش #{{ order.reference_code or order.id[:8] }}{% endblock %}
+{% block title %}جزئیات سفارش #{{ order.reference_code or (order.id|short_id) }}{% endblock %}
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
     <!-- Header -->
@@ -8,7 +8,7 @@
             <div class="flex items-center gap-4">
                 <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-blue-200"><i class="fas fa-shopping-cart"></i></div>
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-800">جزئیات سفارش #{{ order.reference_code or order.id[:8] }}</h1>
+                    <h1 class="text-2xl font-bold text-gray-800">جزئیات سفارش #{{ order.reference_code or (order.id|short_id) }}</h1>
                     <p class="text-sm text-gray-500 mt-0.5 flex items-center gap-2">
                         <span class="badge
                             {%- if order.order_status == 'Ordering' %} bg-yellow-100 text-yellow-800
@@ -44,7 +44,7 @@
             </div>
             <div class="p-6">
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-                    <div><dt class="text-xs text-gray-500 mb-1">کاربر</dt><dd class="text-sm font-medium">{% if order.user_id %}<a href="/administration/users/{{ order.user_id }}" class="text-indigo-600 hover:underline">{{ order.user_full_name or order.user_id[:8] }}</a>{% else %}—{% endif %}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">کاربر</dt><dd class="text-sm font-medium">{% if order.user_id %}<a href="/administration/users/{{ order.user_id }}" class="text-indigo-600 hover:underline">{{ order.user_full_name or (order.user_id|short_id) }}</a>{% else %}—{% endif %}</dd></div>
                     <div><dt class="text-xs text-gray-500 mb-1">کد سفارش</dt><dd class="text-sm font-medium">{{ order.reference_code or order.id }}</dd></div>
                     <div><dt class="text-xs text-gray-500 mb-1">شماره پیگیری پستی</dt><dd class="text-sm font-medium">{% if order.tracking_number %}<a href="https://tracking.post.ir/search.aspx?id={{ order.tracking_number }}" target="_blank" class="text-indigo-600 hover:underline ltr-input">{{ order.tracking_number }}</a>{% else %}—{% endif %}</dd></div>
                     <div><dt class="text-xs text-gray-500 mb-1">تاریخ سفارش</dt><dd class="text-sm font-medium">{{ order.date_str or order.insert_date_str or '—' }}</dd></div>
@@ -52,7 +52,7 @@
                     <div><dt class="text-xs text-gray-500 mb-1">تاریخ پست</dt><dd class="text-sm font-medium">{{ order.postage_date_str or '—' }}</dd></div>
                     <div><dt class="text-xs text-gray-500 mb-1">نوع ارسال</dt><dd class="text-sm font-medium">{{ order.post_type_name or '—' }}</dd></div>
                     <div><dt class="text-xs text-gray-500 mb-1">روش پرداخت</dt><dd class="text-sm font-medium">{{ order.pay_method_name or '—' }}</dd></div>
-                    <div><dt class="text-xs text-gray-500 mb-1">اطلاعات هویتی</dt><dd class="text-sm font-medium">{% if order.identity_information_id %}<a href="/administration/identity-informations/{{ order.identity_information_id }}" class="text-indigo-600 hover:underline">{{ order.identity_information_name or order.identity_information_id[:8] }}</a>{% else %}—{% endif %}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">اطلاعات هویتی</dt><dd class="text-sm font-medium">{% if order.identity_information_id %}<a href="/administration/identity-informations/{{ order.identity_information_id }}" class="text-indigo-600 hover:underline">{{ order.identity_information_name or (order.identity_information_id|short_id) }}</a>{% else %}—{% endif %}</dd></div>
                     <div><dt class="text-xs text-gray-500 mb-1">فاکتور کاغذی</dt><dd class="text-sm font-medium">{{ 'بله' if order.paper_invoice else 'خیر' }}{% if invoice %} <a href="/administration/invoices/{{ invoice.id }}" class="text-indigo-600 hover:underline text-sm">(فاکتور)</a>{% endif %}</dd></div>
                     <div class="md:col-span-2"><dt class="text-xs text-gray-500 mb-1">آدرس</dt><dd class="text-sm">{{ order.address_description or '—' }}</dd></div>
                     <div><dt class="text-xs text-gray-500 mb-1">کد پستی</dt><dd class="text-sm font-medium ltr-input">{{ order.postal_code or '—' }}</dd></div>

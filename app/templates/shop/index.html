@@ -55,7 +55,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
                                      id="aSlickTab1"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:2500,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in special_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -71,7 +71,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
                                      id="aSlickTab3"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:2500,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in new_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -87,7 +87,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-6 columns-slick js-home-block-slider"
                                      id="aSlickTab4"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:6,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:2500,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in restocked_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -123,10 +123,10 @@
                             <div class="static-html typo">
                                 <div class="block_content">
                                     <div dir="rtl" align="justify">
-                                        <div style="margin-bottom:10px;"><img src="/static/ThemeLayout/img/support.png" style="margin-left:8px;" width="38px"><span style="color:#333;font-size:1.1rem;">شماره‌های تماس</span></div>
-                                        <div>دفتر مرکزی و امور مشتریان: {% if site_settings %}{{ site_settings.telephone }}{% else %}۰۲۱-۸۸۲۱۴۶۴۱{% endif %}</div>
-                                        <div style="font-size:12px;color:#868686;">زمان پاسخگویی: شنبه تا چهارشنبه از ساعت ۹ الی ۱۷، پنجشنبه‌ها از ساعت ۹ الی ۱۴</div>
-                                        <div style="font-size:12px;color:#868686;">پیگیری تمامی موارد مربوط به فروش وبسایت از دفتر مرکزی تهران مقدور می‌باشد.</div>
+                                        <div style="margin-bottom:10px;"><img src="/static/ThemeLayout/img/support.png" style="margin-left:8px;" width="38px"><span style="color:#333;font-size:1.1rem;">{{ site_info.sidebar.office_title }}</span></div>
+                                        <div>{{ site_info.sidebar.office_label }}: {% if site_settings %}{{ site_settings.telephone }}{% else %}{{ site_info.sidebar.office_phone }}{% endif %}</div>
+                                        <div style="font-size:12px;color:#868686;">{{ site_info.sidebar.support_hours }}</div>
+                                        <div style="font-size:12px;color:#868686;">{{ site_info.sidebar.follow_up }}</div>
                                         <div style="margin-top:5px;"></div>
                                     </div>
                                 </div>
@@ -169,7 +169,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
                                      id="aSlick10"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:3000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in new_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -208,7 +208,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
                                      id="aSlick1"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:3000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in top_category_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -256,7 +256,7 @@
                             <div class="product-list">
 <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
                                       id="aSlick13"
-                                      data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                      data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:3000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in middle_category_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}
@@ -310,7 +310,7 @@
                             <div class="product-list">
                                 <div class="product-list-wrapper clearfix grid columns-5 columns-slick js-home-block-slider"
                                      id="aSlick14"
-                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:1000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
+                                     data-slickoptions="{&quot;slidesToShow&quot;:5,&quot;slidesToShow_1220&quot;:4,&quot;slidesToShow_992&quot;:3,&quot;slidesToShow_768&quot;:2,&quot;speed&quot;:800,&quot;autoplay&quot;:true,&quot;autoplaySpeed&quot;:3000,&quot;dots&quot;:false,&quot;arrows&quot;:true,&quot;draggable&quot;:false,&quot;rtl&quot;:true}">
                                     {% for product in bottom_category_products %}
                                     {% include "shop/_product_card.html" %}
                                     {% endfor %}

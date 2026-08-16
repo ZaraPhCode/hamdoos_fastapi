@@ -45,7 +45,7 @@
                                         {% for item in orders %}
                                         <div class="order-item">
                                             <div class="order-item-header">
-                                                <span style="font-weight: bolder;">کد سفارش : {{ item.reference_code or item.id[:8] }}</span>
+                                                <span style="font-weight: bolder;">کد سفارش : {{ item.reference_code or (item.id|short_id) }}</span>
                                                 <span style="font-size: 0.8rem; color: #a6a6a6;">{{ item.date }}</span>
                                             </div>
                                             <div class="order-item-products">
@@ -69,6 +69,14 @@
                                                     <span style="color: #a6a6a6">مبلغ فاکتور : </span>
                                                     <span style="color: #00b33f">{{ "%.0f"|format(item.payable or 0) }} ریال</span>
                                                 </span>
+                                                {% if item.pay_method_type == 'BankReceipt' %}
+                                                <a target="_blank" href="/profile/register-receipt?id={{ item.id }}" class="btn-chevron" title="ثبت فیش">
+                                                    ثبت فیش
+                                                    <svg style="width: 1rem;" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
+                                                    </svg>
+                                                </a>
+                                                {% endif %}
                                                 <a target="_blank" href="/orders/{{ item.id }}" class="btn-chevron">
                                                     مشاهده
                                                     <svg style="width: 1rem;" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

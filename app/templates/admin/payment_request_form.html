@@ -20,7 +20,7 @@
                 {% if order %}
                 <div>
                     <label class="form-label">سفارش</label>
-                    <input type="text" value="سفارش #{{ order.reference_code or order.id[:8] }}" class="form-input" disabled>
+                    <input type="text" value="سفارش #{{ order.reference_code or (order.id|short_id) }}" class="form-input" disabled>
                 </div>
                 {% endif %}
                 <div>

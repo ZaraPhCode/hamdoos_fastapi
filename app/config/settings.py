@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -15,8 +16,25 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://ashauser:ashapass@db:5432/ashadb"
+    # Database — fetched from the .env file. Either set DATABASE_URL directly,
+    # or the individual POSTGRES_* components; DATABASE_URL takes precedence
+    # and is otherwise assembled from the components (matching the postgres
+    # container env in docker-compose).
+    POSTGRES_USER: str = "ashauser"
+    POSTGRES_PASSWORD: str = "ashapass"
+    POSTGRES_DB: str = "ashadb"
+    POSTGRES_HOST: str = "db"
+    POSTGRES_PORT: int = 5432
+    DATABASE_URL: str = ""
+
+    @model_validator(mode="after")
+    def _build_database_url(self):
+        if not self.DATABASE_URL:
+            self.DATABASE_URL = (
+                f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+                f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            )
+        return self
 
     # Media: the migration stores relative paths like "Media/laser/...". The app
     # serves them from /media (bundled copy or mounted .NET wwwroot/Media). For

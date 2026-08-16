@@ -12,7 +12,7 @@
         </tr></thead>
         <tbody>{% for inv in invoices %}
             <tr class="border-t hover:bg-gray-50">
-                <td class="px-4 py-3">{{ inv.reference_code or inv.id[:8] }}</td>
+                <td class="px-4 py-3">{{ inv.reference_code or (inv.id|short_id) }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ inv.date[:10] if inv.date else inv.insert_date[:10] if inv.insert_date else '-' }}</td>
                 <td class="px-4 py-3">{{ inv.type }}</td>
                 <td class="px-4 py-3 text-left font-bold">{{ "{:,.0f}".format(inv.payable or 0) }}</td>

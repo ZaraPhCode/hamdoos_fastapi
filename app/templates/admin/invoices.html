@@ -56,8 +56,8 @@
                 {% for inv in invoices %}
                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td class="text-center py-3 px-2 text-gray-400 text-xs">{{ loop.index + (page-1)*page_size }}</td>
-                    <td class="py-3 px-2 font-medium text-gray-800">{{ inv.reference_code or inv.id[:8] }}</td>
-                    <td class="py-3 px-2 text-gray-500 text-xs">{{ inv.date[:10] if inv.date else '-' }}</td>
+                    <td class="py-3 px-2 font-medium text-gray-800">{{ inv.reference_code or (inv.id|string)[:8] }}</td>
+                    <td class="py-3 px-2 text-gray-500 text-xs">{{ inv.date.strftime('%Y-%m-%d') if inv.date else '-' }}</td>
                     <td class="py-3 px-2 text-gray-700">{{ inv.identity_name or '-' }}</td>
                     <td class="py-3 px-2 text-left font-medium text-gray-800">{{ "{:,.0f}".format(inv.total_price or 0) }}</td>
                     <td class="py-3 px-2 text-center">

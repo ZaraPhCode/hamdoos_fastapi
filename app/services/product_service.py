@@ -215,6 +215,8 @@ def _build_product_list_response(product: Product) -> ProductListResponse:
         status=product.status,
         category_id=product.category_id,
         brand_id=product.brand_id,
+        number_of_variations=product.number_of_variations or 0,
+        minimum_purchase=product.minimum_purchase or 1,
         medium_image_url=_normalize_media_url(product.medium_image_url),
         large_image_url=_normalize_media_url(product.large_image_url),
         feature_image_url=_normalize_media_url(product.feature_image_url),
@@ -688,7 +690,7 @@ async def get_featured_products(db: AsyncSession, limit: int = 10) -> list[Produ
     return list(result.unique().scalars().all())
 
 
-async def get_new_products(db: AsyncSession, limit: int = 10) -> list[Product]:
+async def get_new_products(db: AsyncSession, limit: Optional[int] = None) -> list[Product]:
     stmt = (
         select(Product)
         .options(selectinload(Product.category), selectinload(Product.brand))
@@ -698,13 +700,14 @@ async def get_new_products(db: AsyncSession, limit: int = 10) -> list[Product]:
             Product.no_display == False,
         )
         .order_by(Product.insert_date.desc())
-        .limit(limit)
     )
+    if limit is not None:
+        stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     return list(result.unique().scalars().all())
 
 
-async def get_special_products(db: AsyncSession, limit: int = 12) -> list[Product]:
+async def get_special_products(db: AsyncSession, limit: Optional[int] = None) -> list[Product]:
     """Specials for the homepage tabs — mirrors .NET IsSpecial && stock > 0."""
     stmt = (
         select(Product)
@@ -716,13 +719,14 @@ async def get_special_products(db: AsyncSession, limit: int = 12) -> list[Produc
             Product.no_display == False,
         )
         .order_by(Product.insert_date.desc())
-        .limit(limit)
     )
+    if limit is not None:
+        stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     return list(result.unique().scalars().all())
 
 
-async def get_restocked_products(db: AsyncSession, limit: int = 12) -> list[Product]:
+async def get_restocked_products(db: AsyncSession, limit: Optional[int] = None) -> list[Product]:
     """Restocked products for the homepage tabs — mirrors .NET Restocked && stock > 0."""
     stmt = (
         select(Product)
@@ -734,13 +738,14 @@ async def get_restocked_products(db: AsyncSession, limit: int = 12) -> list[Prod
             Product.no_display == False,
         )
         .order_by(Product.insert_date.desc())
-        .limit(limit)
     )
+    if limit is not None:
+        stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     return list(result.unique().scalars().all())
 
 
-async def get_suggested_products(db: AsyncSession, limit: int = 12) -> list[Product]:
+async def get_suggested_products(db: AsyncSession, limit: Optional[int] = None) -> list[Product]:
     """Suggested products for the homepage — mirrors .NET Suggested && stock > 0."""
     stmt = (
         select(Product)
@@ -752,8 +757,9 @@ async def get_suggested_products(db: AsyncSession, limit: int = 12) -> list[Prod
             Product.no_display == False,
         )
         .order_by(Product.insert_date.desc())
-        .limit(limit)
     )
+    if limit is not None:
+        stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     return list(result.unique().scalars().all())
 

@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ashauser -d ashadb"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -33,6 +33,8 @@ services:
     environment:
       - ENVIRONMENT=production
       - DEBUG=false
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
     volumes:
       - ./app/static/uploads:/app/app/static/uploads
     command: >

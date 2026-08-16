@@ -38,13 +38,25 @@ def to_farsi(date: Optional[datetime.datetime]) -> str:
     """Convert Gregorian datetime to Persian date string (yyyy/MM/dd)."""
     if not date:
         return ""
-    j = jdatetime.datetime.fromgregorian(datetime=date)
+    # Guard against unset / sentinel dates (e.g. year 1) that are invalid
+    # for Gregorian→Jalali conversion.
+    if date.year < 1000 or date.year > 9999:
+        return ""
+    try:
+        j = jdatetime.datetime.fromgregorian(datetime=date)
+    except ValueError:
+        return ""
     return f"{j.year}/{j.month:02d}/{j.day:02d}"
 
 
 def to_farsi_full(date: datetime.datetime) -> str:
     """Convert to full Persian datetime string."""
-    j = jdatetime.datetime.fromgregorian(datetime=date)
+    if not date or date.year < 1000 or date.year > 9999:
+        return ""
+    try:
+        j = jdatetime.datetime.fromgregorian(datetime=date)
+    except ValueError:
+        return ""
     return f"{j.year}/{j.month:02d}/{j.day:02d} {date.hour:02d}:{date.minute:02d}:{date.second:02d}"
 
 

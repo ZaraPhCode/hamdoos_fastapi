@@ -31,8 +31,9 @@ from app.services.cart_cookie_service import (
 )
 from app.schemas.product import ProductSearchParams
 from app.utils.persian_tools import normalize_image_url
+from app.config.site_config import register_template_globals
 
-templates = Jinja2Templates(directory="app/templates")
+templates = register_template_globals(Jinja2Templates(directory="app/templates"))
 router = APIRouter(tags=["Shop Pages"])
 
 
@@ -331,10 +332,10 @@ async def home_page(
     top_category_poster = mid_left_poster = mid_right_poster = middle_category_poster = bottom_category_poster = None
 
     try:
-        special_products = await product_service.get_special_products(db, 12)
-        new_products = await product_service.get_new_products(db, 12)
-        restocked_products = await product_service.get_restocked_products(db, 12)
-        suggested_products = await product_service.get_suggested_products(db, 12)
+        special_products = await product_service.get_special_products(db)
+        new_products = await product_service.get_new_products(db)
+        restocked_products = await product_service.get_restocked_products(db)
+        suggested_products = await product_service.get_suggested_products(db)
         categories = await product_service.get_category_tree(db)
         stmt = select(SiteSetting).where(SiteSetting.is_removed == False)
         result = await db.execute(stmt)
@@ -833,6 +834,11 @@ async def checkout_payment_submit(
         ctx = await _checkout_context(request, db, current_user, order, error=str(e))
         # Can't return template from RedirectResponse route; fallback redirect with error in session
         return RedirectResponse(url="/checkout?error=" + str(e), status_code=303)
+    # Bank-receipt payments land on the "unpaid orders" page where the user can
+    # upload their cash-receipt (mirrors .NET Shop/Profile/UnpaidOrders).
+    pay_method = await db.get(PayMethod, uuid.UUID(pay_method_id))
+    if pay_method and pay_method.type == "BankReceipt":
+        return RedirectResponse(url="/orders/unpaid", status_code=303)
     return RedirectResponse(url=f"/orders/{order.id}", status_code=303)
 
 
@@ -2898,7 +2904,7 @@ def _build_technical_tables(product):
             [v for v in ttp.technical_feature_values if v.technical_feature and v.technical_feature.columns == table.columns],
             key=lambda v: (v.technical_feature.priority, v.technical_feature.name),
         ):
-            vh = [h for h in (value.technical_feature.display_format or "").split(";") if h.strip()]
+            vh = (value.technical_feature.display_format or "").split(";")
             hc = len(vh)
             if hc < table.columns:
                 vh += [" "] * (table.columns - hc)

@@ -105,8 +105,47 @@ class LocalizationMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class SiteSettingsMiddleware(BaseHTTPMiddleware):
+    """Load the site settings / theme once per request so templates (footer,
+    footer modals, sidebar) read from the DB instead of hard-coded text.
+
+    ``request.state.site_settings`` is the admin-editable ``SiteSetting`` row
+    (``None`` if the DB has none yet); ``request.state.site_config`` exposes the
+    reusable theme/default info from ``app/config/site_config.py``.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        from sqlalchemy import select
+
+        from app.config.site_config import SITE_INFO, THEME
+        from app.database import async_session_factory
+        from app.models.common import SiteSetting
+
+        path = request.url.path
+        needs_settings = not any(
+            path.startswith(prefix)
+            for prefix in ("/static", "/media", "/api", "/docs", "/redoc", "/health")
+        )
+        site_settings = None
+        if needs_settings:
+            try:
+                async with async_session_factory() as db:
+                    result = await db.execute(
+                        select(SiteSetting).where(SiteSetting.is_removed == False).limit(1)
+                    )
+                    site_settings = result.scalar_one_or_none()
+            except Exception:
+                site_settings = None
+
+        request.state.site_settings = site_settings
+        request.state.site_config = {"THEME": THEME, "SITE_INFO": SITE_INFO}
+        response = await call_next(request)
+        return response
+
+
 def register_middleware(app: FastAPI):
     """Register all middleware in the correct order."""
+    app.add_middleware(SiteSettingsMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(LocalizationMiddleware)
     app.add_middleware(RequestLoggingMiddleware)

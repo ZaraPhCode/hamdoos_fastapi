@@ -11,6 +11,19 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Read the database URL from the .env-driven app settings rather than the
+# hard-coded sqlalchemy.url in alembic.ini.
+#
+# Alembic runs migrations through a *synchronous* connection, so the async
+# asyncpg driver must be swapped for the sync psycopg2 driver.
+from app.config.settings import settings as app_settings
+
+_db_url = app_settings.DATABASE_URL
+if _db_url.startswith("postgresql+asyncpg://"):
+    _db_url = "postgresql+psycopg2://" + _db_url.split("://", 1)[1]
+
+config.set_main_option("sqlalchemy.url", _db_url)
+
 target_metadata = Base.metadata
 
 

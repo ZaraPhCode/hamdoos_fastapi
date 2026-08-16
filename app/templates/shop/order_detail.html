@@ -1,5 +1,5 @@
 {% extends "shop/base.html" %}
-{% block title %}جزئیات سفارش {{ order.reference_code or order.id[:8] }} - آشا شاپ{% endblock %}
+{% block title %}جزئیات سفارش {{ order.reference_code or (order.id|short_id) }} - آشا شاپ{% endblock %}
 {% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-order-detail tax-display-enabled customer-has-logged st-wrapper{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="/static/ThemeLayout/statusColor.css" type="text/css" media="all">
@@ -39,7 +39,7 @@
             <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
                 <span class="separator material-icons">chevron_right</span>
                 <a itemprop="item" href="#">
-                    <span itemprop="name">{{ order.reference_code or order.id[:8] }}</span>
+                    <span itemprop="name">{{ order.reference_code or (order.id|short_id) }}</span>
                 </a>
                 <meta itemprop="position" content="4">
             </li>
@@ -60,7 +60,7 @@
                                     <div class="col-lg-10 order-detail-title">
                                         <i class="fa fa-angle-left title-icon"></i>
                                         <span>جزئیات سفارش</span>
-                                        <span class="order-detail-reference">{{ order.reference_code or order.id[:8] }}</span>
+                                        <span class="order-detail-reference">{{ order.reference_code or (order.id|short_id) }}</span>
                                         <span class="order-detail-date">{{ order.date_str }}</span>
                                     </div>
                                     <div class="col-lg-2 reorder-box">

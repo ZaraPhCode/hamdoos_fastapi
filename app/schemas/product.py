@@ -183,6 +183,8 @@ class ProductListResponse(BaseModel):
     status: Optional[str] = None
     category_id: Optional[UUID] = None
     brand_id: Optional[UUID] = None
+    number_of_variations: int = 0
+    minimum_purchase: int = 1
     medium_image_url: Optional[str] = None
     large_image_url: Optional[str] = None
     feature_image_url: Optional[str] = None

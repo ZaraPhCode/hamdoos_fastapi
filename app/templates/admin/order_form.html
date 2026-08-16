@@ -9,7 +9,7 @@
                 <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-blue-200"><i class="fas fa-shopping-cart"></i></div>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش سفارش" if order else "ایجاد سفارش" }}</h1>
-                    <p class="text-sm text-gray-500 mt-0.5">{% if order %}کد سفارش: {{ order.reference_code or order.id[:8] }}{% else %}ثبت سفارش جدید مشتری{% endif %}</p>
+                    <p class="text-sm text-gray-500 mt-0.5">{% if order %}کد سفارش: {{ order.reference_code or (order.id|short_id) }}{% else %}ثبت سفارش جدید مشتری{% endif %}</p>
                 </div>
             </div>
             <a href="{{ '/administration/orders/' ~ order.id if order else '/administration/orders' }}" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت</a>

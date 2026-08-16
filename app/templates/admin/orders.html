@@ -48,9 +48,9 @@
                 {% for o in orders %}
                 <tr class="border-b hover:bg-gray-50">
                     <td class="py-3 px-2 font-medium">
-                        <a href="/administration/orders/{{ o.id }}" class="text-indigo-600 hover:underline">{{ o.reference_code or o.id[:8] }}</a>
+                        <a href="/administration/orders/{{ o.id }}" class="text-indigo-600 hover:underline">{{ o.reference_code or (o.id|short_id) }}</a>
                     </td>
-                    <td class="py-3 px-2">{{ o.full_name or o.first_name or o.last_name or (o.user_id[:8] if o.user_id else '-') }}</td>
+                    <td class="py-3 px-2">{{ o.full_name or o.first_name or o.last_name or (o.user_id|short_id if o.user_id else '-') }}</td>
                     <td class="py-3 px-2 text-gray-500">{{ o.insert_date_str or '-' }}</td>
                     <td class="py-3 px-2 text-left">{{ "{:,.0f}".format(o.payable or 0) }} تومان</td>
                     <td class="py-3 px-2 text-center">{{ o.count or 0 }}</td>

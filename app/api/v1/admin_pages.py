@@ -36,8 +36,9 @@ from app.schemas.product import CategoryCreate, CategoryUpdate
 from app.utils.common_works import generate_slug
 from app.utils.persian_tools import to_farsi, to_farsi_full, from_farsi_date, is_phone_number, is_email
 from app.services import admin_service, product_service, order_service, invoice_service, warehouse_service, finance_service, support_service, identity_service
+from app.config.site_config import register_template_globals
 
-templates = Jinja2Templates(directory="app/templates")
+templates = register_template_globals(Jinja2Templates(directory="app/templates"))
 router = APIRouter(prefix="/administration", tags=["Admin Pages"])
 
 
@@ -427,7 +428,7 @@ async def admin_product_details(
         for value in table_product.technical_feature_values:
             fmt_headers = []
             if value.technical_feature and value.technical_feature.display_format:
-                fmt_headers = [h for h in value.technical_feature.display_format.split(";") if h.strip()]
+                fmt_headers = value.technical_feature.display_format.split(";")
             if column_count and len(fmt_headers) < column_count:
                 fmt_headers.extend([""] * (column_count - len(fmt_headers)))
             elif column_count and len(fmt_headers) > column_count:
@@ -3040,14 +3041,16 @@ async def admin_invoices(
     request: Request,
     page: int = Query(1),
     type_filter: str = Query(None),
+    page_size: int = Query(20, ge=1, le=100),
     current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
     db: AsyncSession = Depends(get_db),
 ):
-    invoices, total = await invoice_service.get_all_invoices(db, page, 20, type_filter)
+    invoices, total = await invoice_service.get_all_invoices(db, page, page_size, type_filter)
     return templates.TemplateResponse("admin/invoices.html", {
         "request": request, "current_user": current_user,
         "invoices": [invoice_service.build_invoice_response(inv) for inv in invoices],
-        "total": total, "page": page, "total_pages": (total + 19) // 20,
+        "total": total, "page": page, "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
         "type_filter": type_filter,
     })
 
