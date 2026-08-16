@@ -68,6 +68,14 @@ SITE_INFO = {
         "office_phone": "۰۲۱-۸۸۲۱۴۶۴۱",
         "support_hours": "زمان پاسخگویی: شنبه تا چهارشنبه از ساعت ۹ الی ۱۷، پنجشنبه‌ها از ساعت ۹ الی ۱۴",
         "follow_up": "پیگیری تمامی موارد مربوط به فروش وبسایت از دفتر مرکزی تهران مقدور می‌باشد.",
+        # Homepage/category sidebar banner image — like the main banners this is
+        # just a source address; drop a new file at the configured path (or set
+        # a /media/... or /static/uploads/... address) to change it with no
+        # template/code edits. An admin-editable SiteSetting column named
+        # SideBarImageUrl would override this default automatically.
+        "support_image": "/static/ThemeLayout/img/customer-support.jpg",
+        "support_image_alt": "پشتیبانی",
+        "support_image_link": "#",
     },
     # Footer modal content — used only as a fallback when the matching
     # SiteSetting column (how_to_buy, bank_*, free_delivery, contact_us,
