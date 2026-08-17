@@ -247,7 +247,7 @@ def _cart_preview_html(cart: Cart) -> str:
                     </div>
                     <div class="cart-action">
                         <div class="text-center">
-                            <a href="/checkout" class="btn btn-primary">مشاهده و پرداخت &nbsp;<i class="caret-right"></i></a>
+                            <a href="/cart" class="btn btn-primary">مشاهده و پرداخت &nbsp;<i class="caret-right"></i></a>
                         </div>
                     </div>
                 </div>"""
@@ -766,15 +766,9 @@ async def checkout_ordering_step(
     if order.identity_information_id is None:
         identities = await order_service.get_user_identities(db, current_user.id)
         if not identities:
-            resp = RedirectResponse(url="/identity-information/create?redirect=true", status_code=303)
-            if consumed:
-                save_cart_response(Cart(), resp)
-            return resp
+            return RedirectResponse(url="/identity-information/create?redirect=true", status_code=303)
     ctx = await _checkout_context(request, db, current_user, order, site_settings=site_settings)
-    resp = templates.TemplateResponse("shop/checkout.html", ctx)
-    if consumed:
-        save_cart_response(Cart(), resp)
-    return resp
+    return templates.TemplateResponse("shop/checkout.html", ctx)
 
 
 @router.post("/checkout", response_class=HTMLResponse)
@@ -810,10 +804,7 @@ async def checkout_ordering_submit(
         if not error:
             return RedirectResponse(url="/checkout", status_code=303)
     ctx = await _checkout_context(request, db, current_user, order, error=error)
-    resp = templates.TemplateResponse("shop/checkout.html", ctx)
-    if consumed:
-        save_cart_response(Cart(), resp)
-    return resp
+    return templates.TemplateResponse("shop/checkout.html", ctx)
 
 
 @router.post("/checkout/payment", response_class=RedirectResponse)
@@ -838,8 +829,11 @@ async def checkout_payment_submit(
     # upload their cash-receipt (mirrors .NET Shop/Profile/UnpaidOrders).
     pay_method = await db.get(PayMethod, uuid.UUID(pay_method_id))
     if pay_method and pay_method.type == "BankReceipt":
-        return RedirectResponse(url="/orders/unpaid", status_code=303)
-    return RedirectResponse(url=f"/orders/{order.id}", status_code=303)
+        resp = RedirectResponse(url="/orders/unpaid", status_code=303)
+    else:
+        resp = RedirectResponse(url=f"/orders/{order.id}", status_code=303)
+    save_cart_response(Cart(), resp)
+    return resp
 
 
 @router.post("/checkout/paper-invoice")

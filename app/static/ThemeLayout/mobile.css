@@ -1,0 +1,368 @@
+/*
+ * Asha Shop — responsive mobile layout.
+ *
+ * Every rule in this file is scoped inside @media (max-width: 991.98px) so the
+ * desktop view is never affected. All colors come from the theme tokens injected
+ * in base.html (:root { --c-* }) which are derived from app/config/site_config.py
+ * THEME — recolor the whole shop by editing that one file.
+ *
+ * Structure added:
+ *   #header .mobile-header-version   – sticky top header (logo + ورود/پروفایل + search)
+ *   #mobile-bottom-nav                – floating "pill" bottom navigation
+ *   #mobile-search-panel              – search bar that expands under the header
+ *   #mobile-categories-drawer         – category tree drawer
+ */
+
+/* Mobile-only UI is hidden on desktop. */
+#header .mobile-header-version,
+#mobile-bottom-nav,
+#mobile-search-panel,
+#mobile-categories-drawer,
+#mobile-categories-overlay { display: none; }
+
+@media (max-width: 991.98px) {
+
+  /* ═══════════════ 1. Sticky top header ═══════════════ */
+  #header .desktop-header-version { display: none !important; }
+  #header .mobile-header-version { display: block; }
+
+  #header .mobile-header-version {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    width: 100%;
+    background: var(--c-slider-bg, #00a693);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  }
+
+  .mobile-header-version .mobile-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 16px;
+    min-height: 56px;
+  }
+
+  /* Left side (RTL: right) — logo */
+  .mobile-header-version .mobile-logo { flex: 1 1 auto; min-width: 0; }
+  .mobile-header-version .mobile-logo a { display: inline-block; }
+  .mobile-header-version .mobile-logo img {
+    max-height: 42px;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+  }
+
+  /* Right side (RTL: left) — account text link + search icon */
+  .mobile-header-version .mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: none;
+  }
+
+  .mobile-header-version .mobile-account-link {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .mobile-header-version .mobile-account-link:hover {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+  }
+
+  /* profile button — avatar + name like the desktop account link */
+  .mobile-header-version .mobile-profile-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 150px;
+    padding: 5px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    cursor: pointer;
+    font-family: IranSANS, sans-serif !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .mobile-header-version .mobile-profile-btn img {
+    width: 22px;
+    height: 22px;
+    flex: none;
+  }
+  .mobile-header-version .mobile-profile-btn span {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-header-version .mobile-search-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--c-text, #333);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+  .mobile-header-version .mobile-search-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--c-primary, #00a693);
+  }
+  .mobile-header-version .mobile-search-btn i { font-size: 18px; line-height: 1; }
+
+  /* ─ search panel expanding under the header ─ */
+  #mobile-search-panel {
+    display: none;
+    background: var(--c-slider-bg, #00a693);
+    padding: 0 16px 12px;
+  }
+  #mobile-search-panel.open { display: block; }
+  #mobile-search-panel form {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  #mobile-search-panel input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 42px;
+    border: 1px solid var(--c-border, #e2e2e2);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--c-text, #333);
+    padding: 0 42px 0 14px;
+    font-size: 14px;
+    font-family: IranSANS, sans-serif !important;
+    outline: none;
+  }
+  #mobile-search-panel button[type="submit"] {
+    position: absolute;
+    inset-inline-start: 4px;
+    top: 4px;
+    bottom: 4px;
+    width: 34px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--c-primary, #00a693);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  #mobile-search-panel button[type="submit"] i { font-size: 15px; }
+
+  /* ═══════════════ 1b. Hide the desktop sidebar on mobile ═══════════════
+     The sidebar (category menu, support image, contact info) is desktop-only;
+     on mobile the categories live in the bottom-nav drawer. The center column
+     takes the full width instead. */
+  #left-column.sidebar-column { display: none !important; }
+  #center-column { flex: 0 0 100%; max-width: 100%; }
+
+  /* Homepage tabs (کالای ویژه / کالای جدید / کالای تازه موجود) fit in one row */
+  .aone-tabs .nav.nav-tabs {
+    flex-wrap: nowrap;
+    justify-content: center;
+  }
+  .aone-tabs .nav.nav-tabs .nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0 2px;
+  }
+  .aone-tabs .nav.nav-tabs .nav-item .nav-link {
+    padding: 6px 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .aone-tabs .nav.nav-tabs .nav-item .nav-link span {
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  /* ═══════════════ 2. Floating bottom navigation footer ═══════════════ */
+  body {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  #mobile-bottom-nav {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 1050;
+    display: flex;
+    background: #ffffff;
+    border-radius: 40px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    padding: 8px 10px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+  }
+
+  #mobile-bottom-nav .mbn-item {
+    position: relative;
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 3px;
+    padding: 4px 0 5px;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+    text-decoration: none;
+    color: var(--c-muted, #868686);
+    cursor: pointer;
+    transition: color 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #mobile-bottom-nav .mbn-item:hover { color: var(--c-primary, #00a693); }
+  #mobile-bottom-nav .mbn-item.active { color: var(--c-primary, #00a693); }
+
+  /* icon is a fixed 40px box so the active circle always centers exactly on it */
+  #mobile-bottom-nav .mbn-icon {
+    position: relative;
+    z-index: 2;
+    width: 40px;
+    height: 40px;
+    font-size: 21px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #mobile-bottom-nav .mbn-icon img { width: 22px; height: 22px; object-fit: contain; }
+  #mobile-bottom-nav .mbn-label { font-size: 11.5px; font-weight: 600; }
+
+  /* sliding circle indicator (soft #00a693 circle, light animation while moving) */
+  #mobile-bottom-nav .mbn-indicator {
+    display: none !important;
+    position: absolute;
+    top: 4px;
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    background: rgba(0, 166, 147, 0.15);
+    background: color-mix(in srgb, var(--c-primary, #00a693) 15%, transparent);
+    transition: inset-inline-start 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.25s ease;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+  #mobile-bottom-nav[data-ready] .mbn-indicator { opacity: 1; }
+
+  /* cart count badge on the basket item */
+  #mobile-bottom-nav .mbn-cart-badge {
+    position: absolute;
+    top: -6px;
+    inset-inline-end: -14px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: var(--c-accent-hover, #23883c);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 17px;
+    text-align: center;
+    font-family: IranSANS, sans-serif !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  /* resting scroll-to-top above the floating nav */
+  #scrollTopButton { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 1040; }
+
+  /* ═══════════════ 3. Categories drawer ═══════════════ */
+  #mobile-categories-drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: auto;
+    width: min(86vw, 360px);
+    max-width: 92vw;
+    z-index: 1060;
+    background: #fff;
+    box-shadow: -6px 0 24px rgba(0, 0, 0, 0.16);
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    visibility: hidden;
+  }
+  #mobile-categories-drawer.open {
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .mcd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--c-primary, #00a693);
+    color: #fff;
+  }
+  .mcd-header .mcd-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .mcd-close {
+    border: 0;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .mcd-close i { font-size: 16px; }
+
+  .mcd-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 12px 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mcd-body .category-tree > ul > li > a { font-weight: 700; }
+
+  #mobile-categories-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1055;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  #mobile-categories-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+}

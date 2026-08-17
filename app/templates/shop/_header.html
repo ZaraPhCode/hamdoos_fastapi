@@ -1,4 +1,32 @@
 <header id="header">
+    <div class="mobile-header-version">
+        <div class="mobile-header-row">
+            <div class="mobile-logo">
+                <a href="/" title="فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس">
+                    <img class="logo" src="/static/ThemeLayout/img/logo.jpg" alt="فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس">
+                </a>
+            </div>
+            <div class="mobile-actions">
+                <button type="button" class="mobile-search-btn" data-mobile-search-trigger title="جستجو" aria-label="جستجو">
+                    <i class="fa fa-search" aria-hidden="true"></i>
+                </button>
+                {% if current_user and current_user.is_authenticated %}
+                <button type="button" class="mobile-profile-btn" data-profile-left-nav-trigger title="حساب کاربری من">
+                    <img src="/static/ThemeLayout/iconSVG/user.svg" alt="user">
+                    <span>{{ current_user.full_name or current_user.phone_number or 'کاربر' }}</span>
+                </button>
+                {% else %}
+                <a href="/login" class="mobile-account-link" title="ورود">ورود</a>
+                {% endif %}
+            </div>
+        </div>
+        <div id="mobile-search-panel">
+            <form method="get" action="/search" role="search">
+                <input class="form-control" type="text" name="q" value="" placeholder="جستجوی محصول مورد نظر ..." aria-label="جستجو" autocomplete="off">
+                <button type="submit"><i class="fa fa-search" aria-hidden="true"></i></button>
+            </form>
+        </div>
+    </div>
     <div class="desktop-header-version">
         <div class="header-banner clearfix"></div>
         <div class="header-nav clearfix">

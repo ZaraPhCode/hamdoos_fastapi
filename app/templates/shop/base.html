@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="/static/ThemeLayout/jquery.fancybox.min.css" type="text/css" media="all">
     <link rel="stylesheet" href="/static/ThemeLayout/custom_rtl.min.css" type="text/css" media="all">
     <link rel="stylesheet" href="/static/ThemeLayout/vazirmatn.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/mobile.css?v=7" type="text/css" media="all">
     <script src="/static/lib/jquery/dist/jquery.min.js"></script>
     <script src="/static/lib/slick-carousel/slick.min.js"></script>
     <script src="/static/ThemeLayout/js/js.js"></script>
@@ -101,7 +102,37 @@
         {% include "shop/_category_sidebar.html" %}
     </div>
     <div class="st-menu profile-effect-left" data-profile-menu>
-        <div class="block-myaccount-infos column-block"></div>
+        <div class="block-myaccount-infos column-block">
+            <div class="column-title row">
+                <div class="col-xl-4 col-lg-12 col-md-12 col-sm-4 col-xs-4 text-center">
+                    <i class="fa fa-user-circle-o fa-3x text-muted"></i>
+                </div>
+                <div class="col-xl-8 col-lg-12 col-md-12 col-sm-8 col-xs-8">
+                    <span class="fullname">{{ current_user.full_name or current_user.phone_number if current_user else 'کاربر' }}</span>
+                    <a href="/profile" rel="nofollow">
+                        <i style="margin: 3px" class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                        <span class="edit-info">ویرایش اطلاعات</span>
+                    </a>
+                </div>
+            </div>
+            <div class="account-list">
+                <ul class="linklist">
+                    <li><a href="/profile" title="داشبورد" rel="nofollow"><i class="fa fa-th-large"></i><span>داشبورد</span></a></li>
+                    <li><a href="/orders/unpaid" title="سفارش‌های پرداخت نشده" rel="nofollow"><i class="fa fa-hourglass-start"></i><span>سفارش‌های پرداخت نشده</span></a></li>
+                    <li><a href="/orders/history" title="تاریخچه سفارشات" rel="nofollow"><i class="fa fa-history"></i><span>تاریخچه سفارشات</span></a></li>
+                    <li><a href="/profile/identity" title="اطلاعات هویتی" rel="nofollow"><i class="fa fa-credit-card"></i><span>اطلاعات هویتی</span></a></li>
+                    <li><a href="/profile/favorites" title="علاقه‌مندی‌ها" rel="nofollow"><i class="fa fa-heart"></i><span>علاقه‌مندی‌ها</span></a></li>
+                    <li><a href="/profile/addresses" title="آدرس‌ها" rel="nofollow"><i class="fa fa-map-marker"></i><span>آدرس‌ها</span></a></li>
+                    <li><a href="/profile/register-receipt" title="ثبت فیش" rel="nofollow"><i class="fa fa-file-text-o"></i><span>ثبت فیش</span></a></li>
+                    <li><a href="/profile/bank-info" title="اطلاعات حساب بانکی" rel="nofollow"><i class="fa fa-university"></i><span>اطلاعات حساب بانکی</span></a></li>
+                    <li><a href="/profile/change-password" title="عملیات رمز عبور" rel="nofollow"><i class="fa fa-key"></i><span>عملیات رمز عبور</span></a></li>
+                    <li><a href="/profile/phone-numbers" title="شماره‌های شما" rel="nofollow"><i class="fa fa-address-card"></i><span>شماره‌های شما</span></a></li>
+                </ul>
+            </div>
+            <div class="footer">
+                <a class="logout" href="/auth/logout" rel="nofollow"><i class="fa fa-sign-out"></i><span>خروج</span></a>
+            </div>
+        </div>
     </div>
     <main id="page" class="st-pusher">
         {% include "shop/_header.html" %}
@@ -114,6 +145,34 @@
     <div id="scrollTopButton" data-scroll-to-top>
         <a class="scroll-button" href="#" title="بازگشت به بالا" data-toggle="tooltip" data-placement="top"><i class="fa fa-angle-double-up"></i></a>
     </div>
+    <nav id="mobile-bottom-nav">
+        <span class="mbn-indicator"></span>
+        <a href="/" class="mbn-item mbn-home" data-mbn-index="0" title="خانه">
+            <span class="mbn-icon"><i class="fa fa-home" aria-hidden="true"></i></span>
+            <span class="mbn-label">خانه</span>
+        </a>
+        <a href="/cart" class="mbn-item mbn-cart" data-mbn-index="1" title="سبد خرید">
+            <span class="mbn-icon">
+                <i class="fa fa-shopping-basket" aria-hidden="true"></i>
+                <span class="mbn-cart-badge js-mobile-cart-count">{{ cart_count or 0 }}</span>
+            </span>
+            <span class="mbn-label">سبد خرید</span>
+        </a>
+        <button type="button" class="mbn-item mbn-categories" data-mbn-index="2" data-mobile-categories-trigger title="دسته‌بندی‌ها">
+            <span class="mbn-icon"><i class="fa fa-bars" aria-hidden="true"></i></span>
+            <span class="mbn-label">دسته‌بندی</span>
+        </button>
+    </nav>
+    <div id="mobile-categories-overlay" data-mobile-categories-close></div>
+    <aside id="mobile-categories-drawer" aria-label="دسته‌بندی‌ها">
+        <div class="mcd-header">
+            <h3 class="mcd-title">دسته‌بندی‌ها</h3>
+            <button type="button" class="mcd-close" data-mobile-categories-close aria-label="بستن"><i class="fa fa-close" aria-hidden="true"></i></button>
+        </div>
+        <div class="mcd-body">
+            {% include "shop/_category_sidebar.html" %}
+        </div>
+    </aside>
     <div class="st-menu-right st-effect-right" data-st-cart>
         <div class="st-menu-close d-flex" data-close-st-cart><i class="material-icons">close</i></div>
         <div id="js-cart-sidebar" class="sidebar-cart cart-preview">
@@ -163,19 +222,30 @@
                 if (open) { html.classList.add('st-effect-left', 'st-menu-open'); }
                 else { html.classList.remove('st-effect-left', 'st-menu-open'); }
             }
+            function toggleProfileMenu(open) {
+                var html = document.documentElement;
+                if (open) { html.classList.add('profile-effect-left', 'profile-menu-open'); }
+                else { html.classList.remove('profile-effect-left', 'profile-menu-open'); }
+            }
             document.querySelectorAll('[data-left-nav-trigger]').forEach(function (el) {
                 el.addEventListener('click', function (e) {
                     e.preventDefault();
                     toggleMenu(true);
                 });
             });
+            document.querySelectorAll('[data-profile-left-nav-trigger]').forEach(function (el) {
+                el.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    toggleProfileMenu(true);
+                });
+            });
             document.querySelectorAll('[data-close-st-menu]').forEach(function (el) {
                 el.addEventListener('click', function () { toggleMenu(false); });
             });
             document.querySelectorAll('[data-close-profile-menu]').forEach(function (el) {
-                el.addEventListener('click', function () { toggleMenu(false); });
+                el.addEventListener('click', function () { toggleProfileMenu(false); });
             });
-            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { toggleMenu(false); } });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { toggleMenu(false); toggleProfileMenu(false); } });
         })();
     </script>
     <script>
@@ -293,6 +363,12 @@
                 var newHeader = doc.querySelector('.blockcart .cart-header');
                 var oldHeader = document.querySelector('.blockcart .cart-header');
                 if (newHeader && oldHeader) oldHeader.outerHTML = newHeader.outerHTML;
+                // Sync mobile cart badges from the refreshed header count
+                var countEl = doc.querySelector('.blockcart .cart-header .js-cart-count');
+                var countText = countEl ? countEl.textContent.trim() : '0';
+                document.querySelectorAll('.js-mobile-cart-count').forEach(function(el) {
+                    el.textContent = countText;
+                });
                 // 2. Update sticky cart
                 var headerSource = document.querySelector('[data-header-cart-source]');
                 var stickyCart = document.querySelector('[data-sticky-cart]');
@@ -401,6 +477,114 @@
             document.documentElement.classList.remove('st-effect-right', 'st-menu-open');
         });
     });
+    </script>
+    <script>
+    // ── Mobile bottom nav: active-state indicator, search panel, categories drawer ──
+    (function () {
+        var nav = document.getElementById('mobile-bottom-nav');
+        if (!nav) return;
+        var items = Array.prototype.slice.call(nav.querySelectorAll('.mbn-item'));
+        var indicator = nav.querySelector('.mbn-indicator');
+        var searchPanel = document.getElementById('mobile-search-panel');
+        var drawerEl = document.getElementById('mobile-categories-drawer');
+        var drawerOverlay = document.getElementById('mobile-categories-overlay');
+        var htmlEl = document.documentElement;
+        var ITEM_PCT = items.length ? (100 / items.length) : 25;
+
+        function setActive(index) {
+            // index < 0 means "no tab active" (e.g. product / category pages)
+            items.forEach(function (it, i) {
+                it.classList.toggle('active', i === index);
+            });
+            if (indicator) {
+                if (index < 0) {
+                    indicator.style.insetInlineStart = '-100%';
+                    return;
+                }
+                var itemW = nav.offsetWidth / items.length;
+                var indW = indicator.offsetWidth;
+                indicator.style.insetInlineStart = 'calc(' + (index * ITEM_PCT) + '% + ' + ((itemW - indW) / 2) + 'px)';
+                nav.setAttribute('data-ready', '1');
+            }
+        }
+
+        // Which bottom-nav item matches the current page?
+        // 0 = home, 1 = cart/checkout, -1 = nothing (product / category pages).
+        function indexForPath(p) {
+            if (p === '/' || p === '/home' || p.indexOf('/home') === 0) return 0;
+            if (p.indexOf('/cart') === 0 || p.indexOf('/checkout') === 0) return 1;
+            return -1;
+        }
+
+        // Pick the active item from the current path on first render.
+        setActive(indexForPath(window.location.pathname));
+
+        // Tapping a non-navigating item (categories) moves the indicator
+        // before running its action.
+        items.forEach(function (it, i) {
+            it.addEventListener('click', function () {
+                setActive(i);
+            });
+        });
+
+        // ── Search panel ──
+        function toggleSearch(open) {
+            if (!searchPanel) return;
+            if (open) {
+                searchPanel.classList.add('open');
+                var input = searchPanel.querySelector('input[type="text"]');
+                if (input) setTimeout(function(){ input.focus(); }, 80);
+            } else {
+                searchPanel.classList.remove('open');
+            }
+        }
+        document.querySelectorAll('[data-mobile-search-trigger]').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                toggleSearch(!searchPanel.classList.contains('open'));
+            });
+        });
+
+        // ── Categories drawer ──
+        function openDrawer() {
+            if (!drawerEl) return;
+            drawerEl.classList.add('open');
+            drawerOverlay.classList.add('open');
+            setActive(2);
+            htmlEl.classList.add('modal-open');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeDrawer() {
+            if (!drawerEl) return;
+            drawerEl.classList.remove('open');
+            drawerOverlay.classList.remove('open');
+            htmlEl.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            setActive(indexForPath(window.location.pathname));
+        }
+        document.querySelectorAll('[data-mobile-categories-trigger]').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                openDrawer();
+            });
+        });
+        document.querySelectorAll('[data-mobile-categories-close]').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeDrawer();
+            });
+        });
+
+        // Re-position the indicator when the viewport resizes or fonts settle.
+        window.addEventListener('resize', function () {
+            setActive(activeIndex());
+        });
+        function activeIndex() {
+            var a = -1;
+            items.forEach(function (it, i) { if (it.classList.contains('active')) a = i; });
+            return a;
+        }
+    })();
     </script>
     <script type="application/ld+json">
     {
