@@ -365,4 +365,59 @@
     opacity: 1;
     visibility: visible;
   }
+
+  /* ═══════════════ 4. Cart page (mobile only) ═══════════════
+     Layout:
+       line 1 (row):  image + item info (name/attributes/prices) at full width so
+                      long names render completely instead of being truncated
+       line 2 (full-width column): qty + total price + delete stacked vertically,
+                      so they no longer consume the item-info width.
+     Desktop is untouched (scoped to the cart page inside this media query). */
+  .page-cart .cart-item-row {
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .page-cart .cart-item-image {
+    flex: 0 0 80px !important;
+    width: 80px;
+  }
+  .page-cart .cart-item-image img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+  }
+  .page-cart .cart-item-details {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    padding-inline: 0 !important;
+  }
+  .page-cart .cart-item-details .cart-item-name {
+    display: block;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  /* qty, total and delete go on their own full-width lines → stacked column */
+  .page-cart .cart-item-qty,
+  .page-cart .cart-item-total,
+  .page-cart .cart-item-actions {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    justify-content: flex-start;
+  }
+  .page-cart .cart-item-qty .qty input {
+    width: 52px !important;
+    height: 38px;
+  }
+  .page-cart .cart-item-total {
+    min-width: 0 !important;
+    padding-inline: 0 !important;
+    text-align: start;
+  }
+  .page-cart .cart-item-actions {
+    align-self: flex-start;
+  }
 }
