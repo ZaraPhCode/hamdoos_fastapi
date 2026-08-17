@@ -572,7 +572,10 @@ async def shop_forgot_password_submit(
         if not disabled and cap_id:
             cap = await db.get(Captcha, uuid.UUID(cap_id))
             cap_code = cap.code if cap else ""
-        return RedirectResponse(url=f"/auth/reset-by-sms?phoneNumber={user.phone_number}&code={cap_code}", status_code=303)
+        reset_url = f"/auth/reset-by-sms?phoneNumber={user.phone_number}"
+        if cap_code:
+            reset_url += f"&code={cap_code}"
+        return RedirectResponse(url=reset_url, status_code=303)
 
     # Email-based reset (.NET procedure: template + callback link)
     token = auth_flow.create_password_reset_token(user.id)
