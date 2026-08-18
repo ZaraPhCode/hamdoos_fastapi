@@ -285,6 +285,14 @@
     });
 
     function registerReceipt(e) {
+        var orderSelect = document.getElementById('order_id');
+        var orderValue = orderSelect ? orderSelect.value : '';
+        if (!orderValue) {
+            document.querySelector('#result_alert .modal-body').innerHTML =
+                '<i class="fa fa-remove"></i> ابتدا یک سفارش از لیست سفارش‌های در انتظار پرداخت انتخاب کنید.';
+            setTimeout(function() { $('#result_alert').modal('show'); }, 100);
+            return;
+        }
         var formData = new FormData(document.getElementById('form_id'));
         var tab_value = document.getElementById('tab_value').value;
         var err = '';

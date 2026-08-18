@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="/static/ThemeLayout/jquery.fancybox.min.css" type="text/css" media="all">
     <link rel="stylesheet" href="/static/ThemeLayout/custom_rtl.min.css" type="text/css" media="all">
     <link rel="stylesheet" href="/static/ThemeLayout/vazirmatn.css" type="text/css" media="all">
-    <link rel="stylesheet" href="/static/ThemeLayout/mobile.css?v=9" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/ThemeLayout/mobile.css?v=13" type="text/css" media="all">
     <script src="/static/lib/jquery/dist/jquery.min.js"></script>
     <script src="/static/lib/slick-carousel/slick.min.js"></script>
     <script src="/static/ThemeLayout/js/js.js"></script>
@@ -68,6 +68,7 @@
             --c-border: {{ theme.border_color }};
             --c-control-bg: {{ theme.control_bg }};
             --c-slider-bg: {{ theme.slider_bg }};
+            --c-hint: {{ theme.hint_color }};
         }
         a, .btn-outline-primary, .btn-outline-primary.disabled, .btn-outline-primary:disabled, .btn-link, .page-link, .text-primary, .products-selection .total-products p, .products-selection .products-sort-order .product-display .display-select .selected, #header .left-nav-trigger .left-nav-icon, #footer .footer-about-us .fa, #footer .footer-about-us .material-icons, .feature .material-icons, .feature .fa, .feature2 a:hover { color: var(--c-primary) }
         .btn-primary, .btn-primary.disabled, .btn-primary:disabled, .btn-outline-primary:hover, .btn-outline-primary:not(:disabled):not(.disabled):active, .btn-outline-primary:not(:disabled):not(.disabled).active, .show > .btn-outline-primary.dropdown-toggle, .nav-pills .nav-link.active, .nav-pills .show > .nav-link, .page-item.active .page-link, .badge-primary, .progress-bar, .list-group-item.active, .bg-primary, .btn.btn-primary, .btn.btn-primary.disabled, .btn.btn-primary:disabled, .group-span-filestyle .btn-default, .add-to-cart, .add-to-cart.disabled, .add-to-cart:disabled, .sidebar-currency .currency-list .current .dropdown-item, .sidebar-language .language-list .current .dropdown-item, .pace .pace-progress, .pace-bounce .pace-activity, #header .mobile-header-version .mobile-menu-icon, .banner3:hover, #product-comments-list-pagination ul li.active span { background-color: var(--c-primary) }
@@ -85,9 +86,53 @@
         @media (min-width: 992px) {
             .aone-homepage .product-list .js-home-block-slider .slick-prev,
             .aone-homepage .product-list .js-home-block-slider .slick-next {
-                position: absolute; top: -50px; opacity: 1; z-index: 25; }
+                position: absolute; top: -50px; opacity: 1; z-index: 25;
+                width: 36px; height: 36px;
+                display: flex; align-items: center; justify-content: center;
+                border: 1px solid rgba(0, 0, 0, 0.08);
+                border-radius: 6px;
+                background: color-mix(in srgb, var(--c-primary, #00a693) 15%, #ffffff);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+                line-height: 1; }
             .aone-homepage .product-list .js-home-block-slider .slick-prev { left: 10px; right: auto; }
-            .aone-homepage .product-list .js-home-block-slider .slick-next { left: 41px; right: auto; }
+            .aone-homepage .product-list .js-home-block-slider .slick-next { left: 56px; right: auto; }
+            .aone-homepage .product-list .js-home-block-slider .slick-prev:before,
+            .aone-homepage .product-list .js-home-block-slider .slick-next:before {
+                font-family: FontAwesome !important;
+                font-size: 17px !important;
+                font-weight: normal !important;
+                line-height: 1 !important;
+                color: var(--c-primary, #00a693);
+                margin: 0 !important; }
+            .aone-homepage .product-list .js-home-block-slider .slick-prev:before { content: "\f053" !important; }
+            .aone-homepage .product-list .js-home-block-slider .slick-next:before { content: "\f054" !important; }
+        }
+        /* same rectangle + light-green slider buttons for related/similar sections
+           on the product detail page. Desktop keeps the theme's both-on-left
+           arrangement but with a gap between the buttons (prev left:10 →
+           next left:56). */
+        .js-category-products-slider .slick-prev,
+        .js-category-products-slider .slick-next {
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+            background: color-mix(in srgb, var(--c-primary, #00a693) 15%, #ffffff);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+            line-height: 1; }
+        .js-category-products-slider .slick-prev:before,
+        .js-category-products-slider .slick-next:before {
+            font-family: FontAwesome !important;
+            font-size: 17px !important;
+            font-weight: normal !important;
+            line-height: 1 !important;
+            color: var(--c-primary, #00a693);
+            margin: 0 !important; }
+        .js-category-products-slider .slick-prev:before { content: "\f053" !important; }
+        .js-category-products-slider .slick-next:before { content: "\f054" !important; }
+        @media (min-width: 992px) {
+            .js-category-products-slider .slick-prev { right: auto; left: 10px; }
+            .js-category-products-slider .slick-next { right: auto; left: 56px; }
         }
         @media (min-width: 992px) {
             .sidebar-column .column-wrapper { position: sticky; top: 80px; }

@@ -110,11 +110,6 @@
                             ('TopCategoryId','دسته بندی بالایی'),
                             ('MiddleCategoryId','دسته‌بندی میانی'),
                             ('BottomCategoryId','دسته بندی پایینی'),
-                            ('TopPosterCategoryId','پوستر دسته بندی بالایی'),
-                            ('MidLeftPosterCategoryId','پوستر دسته‌بندی چپ میانی'),
-                            ('MidRightPosterCategoryId','پوستر دسته‌بندی راست میانی'),
-                            ('MiddlePosterCategoryId','پوستر دسته‌بندی میانی'),
-                            ('BottomPosterCategoryId','پوستر دسته بندی پایینی'),
                         ] %}
                         <div>
                             <label class="form-label">{{ label }}</label>
@@ -126,6 +121,61 @@
                             </select>
                         </div>
                         {% endfor %}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="font-semibold text-gray-700">پوسترهای صفحه اصلی</h2></div>
+                    <div class="card-body space-y-6">
+                        <p class="text-sm text-gray-500">برای هر پوستر می‌توانید از تصویر دسته‌بندی استفاده کنید یا یک لینک/مسیر تصویر سفارشی (مثلاً <code class="dir-ltr">top_banner.png</code>) وارد کنید. اگر لینک سفارشی خالی باشد، تصویر دسته‌بندی انتخاب‌شده نمایش داده می‌شود.</p>
+                        {% for cat_field, url_field, label in [
+                            ('TopPosterCategoryId','TopPosterImageUrl','پوستر دسته بندی بالایی'),
+                            ('MiddlePosterCategoryId','MiddlePosterImageUrl','پوستر دسته‌بندی میانی'),
+                            ('MidLeftPosterCategoryId','MidLeftPosterImageUrl','پوستر دسته‌بندی چپ میانی'),
+                            ('MidRightPosterCategoryId','MidRightPosterImageUrl','پوستر دسته‌بندی راست میانی'),
+                            ('BottomPosterCategoryId','BottomPosterImageUrl','پوستر دسته بندی پایینی'),
+                        ] %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                            <div>
+                                <label class="form-label">{{ label }} — دسته بندی</label>
+                                <select name="{{ cat_field }}" class="form-input">
+                                    <option value="">انتخاب</option>
+                                    {% for c in cats %}
+                                    <option value="{{ c.id }}" {{ selval(cat_field, c.id) }}>{{ c.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">لینک عکس سفارشی {{ label }}</label>
+                                <input type="text" name="{{ url_field }}" value="{{ val(url_field) }}" class="form-input" dir="ltr" placeholder="مثلاً top_banner.png یا /media/posters/banner.jpg">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="font-semibold text-gray-700">پوستر پشتیبانی کادر کناری</h2></div>
+                    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                        <div>
+                            <label class="form-label">دسته بندی</label>
+                            <select name="SideBarSupportCategoryId" class="form-input">
+                                <option value="">انتخاب</option>
+                                {% for c in cats %}
+                                <option value="{{ c.id }}" {{ selval('SideBarSupportCategoryId', c.id) }}>{{ c.title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">لینک عکس سفارشی</label>
+                            <input type="text" name="SideBarSupportImageUrl" value="{{ val('SideBarSupportImageUrl') }}" class="form-input" dir="ltr" placeholder="مثلاً /static/ThemeLayout/img/customer-support.jpg">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2 class="font-semibold text-gray-700">سایر تنظیمات</h2></div>
+                    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="form-label">جدول فنی</label>
                             <select name="TechnicalTableId" class="form-input">
@@ -135,12 +185,6 @@
                                 {% endfor %}
                             </select>
                         </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header"><h2 class="font-semibold text-gray-700">سایر تنظیمات</h2></div>
-                    <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="form-label">محدودیت پست رایگان</label>
                             <input type="text" name="FreePostageLimitStr" value="{{ val('FreePostageLimitStr') }}" class="form-input" dir="ltr">

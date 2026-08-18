@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -1065,11 +1066,17 @@ async def admin_category_details(
     children = child_result.unique().scalars().all()
     # Get products for the category (including child categories, with pagination support)
     products, total_products = await product_service.get_products_by_category(db, cid, 1, 100)
+    media_stmt = (
+        select(Media)
+        .where(Media.category_id == cid, Media.is_removed == False)
+        .order_by(Media.picture_order, Media.insert_date)
+    )
+    medias = (await db.execute(media_stmt)).scalars().all()
     return templates.TemplateResponse("admin/category_detail.html", {
         "request": request, "current_user": current_user,
         "category": category, "children": children,
         "products": products, "total_products": total_products,
-        "medias": category.medias,
+        "medias": medias,
     })
 
 
@@ -1127,6 +1134,186 @@ async def _hide_category_children(db: AsyncSession, category: Category) -> None:
         for child in children:
             child.no_display = True
             stack.append(child)
+
+
+# ── Category Media (ManageMedias) ──
+
+async def _get_media(db: AsyncSession, media_id: str) -> Optional[Media]:
+    try:
+        mid = uuid.UUID(media_id)
+    except (ValueError, AttributeError):
+        return None
+    return (await db.execute(
+        select(Media).where(Media.id == mid, Media.is_removed == False)
+    )).scalar_one_or_none()
+
+
+async def _set_category_poster(db: AsyncSession, category: Category, media: Media) -> None:
+    """Mirrors .NET behavior: only one PosterImage per category; the URL is
+    promoted to Categories.PosterImageURL (used by the shop subcategory boxes)."""
+    others = (await db.execute(
+        select(Media).where(Media.category_id == category.id, Media.is_removed == False)
+    )).scalars().all()
+    for m in others:
+        if m.poster_image and m.id != media.id:
+            m.poster_image = False
+    media.poster_image = True
+    category.poster_image_url = media.url
+
+
+@router.get("/categories/{category_id}/add-picture", response_class=HTMLResponse)
+async def admin_category_add_picture(
+    request: Request,
+    category_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    cid = uuid.UUID(category_id)
+    category = await product_service.get_category_by_id(db, cid)
+    if category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return templates.TemplateResponse("admin/media_form.html", {
+        "request": request, "current_user": current_user,
+        "category": category, "media": None,
+    })
+
+
+@router.post("/categories/{category_id}/add-picture", response_class=HTMLResponse)
+async def admin_category_add_picture_submit(
+    request: Request,
+    category_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    cid = uuid.UUID(category_id)
+    category = await product_service.get_category_by_id(db, cid)
+    if category is None:
+        raise HTTPException(status_code=404, detail="Category not found")
+    form = await request.form()
+    poster_flag = form.get("poster_image") in ("1", "true", "on")
+    media = Media(
+        id=uuid.uuid4(),
+        category_id=cid,
+        url=(form.get("url") or "").strip(),
+        title=(form.get("title") or "").strip(),
+        description=form.get("description") or None,
+        display_photo=form.get("display_photo") in ("1", "true", "on"),
+        poster_image=poster_flag,
+        is_video=False,
+        type="Image",
+        picture_order=int(form.get("picture_order") or 0),
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    if poster_flag:
+        await _set_category_poster(db, category, media)
+    db.add(media)
+    db.add(Log(
+        record_id=media.id, table_name="medias",
+        description=f"افزودن عکس به دسته بندی: {category.title}",
+        created_by_user_id=current_user.id, type="Create",
+    ))
+    await db.commit()
+    return RedirectResponse(url=f"/administration/categories/{category_id}/details", status_code=303)
+
+
+@router.get("/medias/{media_id}/edit", response_class=HTMLResponse)
+async def admin_media_edit(
+    request: Request,
+    media_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    media = await _get_media(db, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media not found")
+    category = await product_service.get_category_by_id(db, media.category_id) if media.category_id else None
+    return templates.TemplateResponse("admin/media_form.html", {
+        "request": request, "current_user": current_user,
+        "category": category, "media": media,
+    })
+
+
+@router.post("/medias/{media_id}/edit", response_class=HTMLResponse)
+async def admin_media_edit_submit(
+    request: Request,
+    media_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    media = await _get_media(db, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media not found")
+    old_url = media.url
+    form = await request.form()
+    media.url = (form.get("url") or "").strip()
+    media.title = (form.get("title") or "").strip()
+    media.description = form.get("description") or None
+    media.picture_order = int(form.get("picture_order") or 0)
+    media.display_photo = form.get("display_photo") in ("1", "true", "on")
+    media.update_date = datetime.now(timezone.utc)
+
+    category = await product_service.get_category_by_id(db, media.category_id) if media.category_id else None
+    if category is not None:
+        if form.get("poster_image") in ("1", "true", "on"):
+            await _set_category_poster(db, category, media)
+        else:
+            media.poster_image = False
+            if category.poster_image_url in (old_url, media.url):
+                category.poster_image_url = None
+    db.add(Log(
+        record_id=media.id, table_name="medias",
+        description=f"ویرایش عکس دسته بندی: {media.title or category.title if category else 'دسته بندی'}",
+        created_by_user_id=current_user.id, type="Update",
+    ))
+    await db.commit()
+    if category is not None:
+        return RedirectResponse(url=f"/administration/categories/{category.id}/details", status_code=303)
+    return RedirectResponse(url="/administration/categories", status_code=303)
+
+
+@router.get("/medias/{media_id}/delete", response_class=HTMLResponse)
+async def admin_media_delete(
+    request: Request,
+    media_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    media = await _get_media(db, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media not found")
+    category = await product_service.get_category_by_id(db, media.category_id) if media.category_id else None
+    return templates.TemplateResponse("admin/media_delete.html", {
+        "request": request, "current_user": current_user,
+        "category": category, "media": media,
+    })
+
+
+@router.post("/medias/{media_id}/delete", response_class=HTMLResponse)
+async def admin_media_delete_submit(
+    request: Request,
+    media_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    media = await _get_media(db, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media not found")
+    category = await product_service.get_category_by_id(db, media.category_id) if media.category_id else None
+    if category is not None and category.poster_image_url == media.url:
+        category.poster_image_url = None
+    db.add(Log(
+        record_id=media.id, table_name="medias",
+        description=f"حذف عکس دسته بندی: {media.title or (category.title if category else '')}",
+        created_by_user_id=current_user.id, type="Delete",
+    ))
+    media.is_removed = True
+    media.update_date = datetime.now(timezone.utc)
+    await db.commit()
+    if category is not None:
+        return RedirectResponse(url=f"/administration/categories/{category.id}/details", status_code=303)
+    return RedirectResponse(url="/administration/categories", status_code=303)
 
 
 # ── Brands ──
@@ -2688,6 +2875,13 @@ def _apply_site_settings(s: SiteSetting, form) -> str | None:
     s.mid_right_poster_category_id = _parse_form_uuid(form.get("MidRightPosterCategoryId"))
     s.middle_poster_category_id = _parse_form_uuid(form.get("MiddlePosterCategoryId"))
     s.bottom_poster_category_id = _parse_form_uuid(form.get("BottomPosterCategoryId"))
+    s.top_poster_image_url = (form.get("TopPosterImageUrl") or "").strip() or None
+    s.middle_poster_image_url = (form.get("MiddlePosterImageUrl") or "").strip() or None
+    s.mid_left_poster_image_url = (form.get("MidLeftPosterImageUrl") or "").strip() or None
+    s.mid_right_poster_image_url = (form.get("MidRightPosterImageUrl") or "").strip() or None
+    s.bottom_poster_image_url = (form.get("BottomPosterImageUrl") or "").strip() or None
+    s.sidebar_support_category_id = _parse_form_uuid(form.get("SideBarSupportCategoryId"))
+    s.sidebar_support_image_url = (form.get("SideBarSupportImageUrl") or "").strip() or None
     s.technical_table_id = _parse_form_uuid(form.get("TechnicalTableId"))
     free_limit_str = (form.get("FreePostageLimitStr") or "").strip().replace(",", "")
     if free_limit_str and not free_limit_str.replace(".", "", 1).isdigit():
@@ -2710,7 +2904,7 @@ async def _site_setting_related(db, setting) -> dict | None:
     cat_ids = {setting.top_category_id, setting.middle_category_id, setting.bottom_category_id,
                setting.top_poster_category_id, setting.mid_left_poster_category_id,
                setting.mid_right_poster_category_id, setting.middle_poster_category_id,
-               setting.bottom_poster_category_id}
+               setting.bottom_poster_category_id, setting.sidebar_support_category_id}
     cat_ids = {c for c in cat_ids if c}
     names = {}
     if cat_ids:
@@ -2729,6 +2923,7 @@ async def _site_setting_related(db, setting) -> dict | None:
         "mid_right_poster_category": names.get(str(setting.mid_right_poster_category_id), ""),
         "middle_poster_category": names.get(str(setting.middle_poster_category_id), ""),
         "bottom_poster_category": names.get(str(setting.bottom_poster_category_id), ""),
+        "sidebar_support_category": names.get(str(setting.sidebar_support_category_id), ""),
         "technical_table": table_title,
         "free_postage_limit_str": _price_str(setting.free_postage_limit),
     }
@@ -2778,6 +2973,13 @@ def _settings_form_values(s) -> dict:
         "MidRightPosterCategoryId": uuid_str(s.mid_right_poster_category_id),
         "MiddlePosterCategoryId": uuid_str(s.middle_poster_category_id),
         "BottomPosterCategoryId": uuid_str(s.bottom_poster_category_id),
+        "TopPosterImageUrl": s.top_poster_image_url or "",
+        "MiddlePosterImageUrl": s.middle_poster_image_url or "",
+        "MidLeftPosterImageUrl": s.mid_left_poster_image_url or "",
+        "MidRightPosterImageUrl": s.mid_right_poster_image_url or "",
+        "BottomPosterImageUrl": s.bottom_poster_image_url or "",
+        "SideBarSupportCategoryId": uuid_str(s.sidebar_support_category_id),
+        "SideBarSupportImageUrl": s.sidebar_support_image_url or "",
         "TechnicalTableId": uuid_str(s.technical_table_id),
     }
 
@@ -2792,6 +2994,13 @@ _SITE_LOGGED_FIELDS = [
     ("mid_right_poster_category_id", "MidRightPosterCategoryId"),
     ("middle_poster_category_id", "MiddlePosterCategoryId"),
     ("bottom_poster_category_id", "BottomPosterCategoryId"),
+    ("top_poster_image_url", "TopPosterImageUrl"),
+    ("middle_poster_image_url", "MiddlePosterImageUrl"),
+    ("mid_left_poster_image_url", "MidLeftPosterImageUrl"),
+    ("mid_right_poster_image_url", "MidRightPosterImageUrl"),
+    ("bottom_poster_image_url", "BottomPosterImageUrl"),
+    ("sidebar_support_category_id", "SideBarSupportCategoryId"),
+    ("sidebar_support_image_url", "SideBarSupportImageUrl"),
     ("bank_name", "BankName"),
     ("account_number", "AccountNumber"),
     ("card_number", "CardNumber"),
@@ -4714,7 +4923,7 @@ async def admin_pay_method_create_submit(
         name=name,
         enable=enable,
         type=type_value,
-        description=(form.get("description") or "").strip() or None,
+        description=(form.get("description") or "").strip(),
         created_by_user_id=current_user.id,
         insert_date=datetime.now(timezone.utc),
         update_date=datetime.now(timezone.utc),
@@ -4789,7 +4998,7 @@ async def admin_pay_method_edit_submit(
     if type_value in PAY_METHOD_TYPES:
         pm.type = type_value
     pm.enable = (form.get("enable") or "") in ("on", "true", "1", "True")
-    pm.description = (form.get("description") or "").strip() or None
+    pm.description = (form.get("description") or "").strip()
     pm.update_date = datetime.now(timezone.utc)
     db.add(Log(record_id=pm.id, table_name="pay_methods",
                description=f"ویرایش روش پرداخت: {pm.name}",
@@ -4895,9 +5104,9 @@ async def admin_post_type_create_submit(
 
     def _num(val):
         try:
-            return float(val) if (val or "").strip() else None
+            return float(val) if (val or "").strip() else 0.0
         except ValueError:
-            return None
+            return 0.0
 
     image_file = form.get("image")
     image_url = await _save_post_type_image(image_file) if image_file else None
@@ -4908,7 +5117,7 @@ async def admin_post_type_create_submit(
         site=(form.get("site") or "").strip() or None,
         price=_num(form.get("price")),
         post_vat_rate=_num(form.get("post_vat_rate")),
-        description=(form.get("description") or "").strip() or None,
+        description=(form.get("description") or "").strip(),
         image_url=image_url,
         created_by_user_id=current_user.id,
         insert_date=datetime.now(timezone.utc),
@@ -4978,9 +5187,9 @@ async def admin_post_type_edit_submit(
 
     def _num(val):
         try:
-            return float(val) if (val or "").strip() else None
+            return float(val) if (val or "").strip() else 0.0
         except ValueError:
-            return None
+            return 0.0
 
     name = (form.get("name") or "").strip()
     if name:
@@ -4988,7 +5197,7 @@ async def admin_post_type_edit_submit(
     pt.site = (form.get("site") or "").strip() or None
     pt.price = _num(form.get("price"))
     pt.post_vat_rate = _num(form.get("post_vat_rate"))
-    pt.description = (form.get("description") or "").strip() or None
+    pt.description = (form.get("description") or "").strip()
 
     image_file = form.get("image")
     if image_file and getattr(image_file, "filename", ""):

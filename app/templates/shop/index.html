@@ -116,7 +116,7 @@
                     <div class="aone-column">
                         <div class="column-block md-bottom clearfix no-box">
                             <div class="static-html typo">
-                                <a href="{{ site_info.sidebar.support_image_link }}" target="_blank"><img loading="lazy" src="{{ site_info.sidebar.support_image }}" width="750" alt="{{ site_info.sidebar.support_image_alt }}"></a>
+                                <a href="{{ site_info.sidebar.support_image_link }}" target="_blank"><img loading="lazy" src="{{ sidebar_support_src or site_info.sidebar.support_image }}" width="750" alt="{{ site_info.sidebar.support_image_alt }}"></a>
                             </div>
                         </div>
                         <div class="column-block md-bottom clearfix shown-index">
@@ -139,15 +139,15 @@
             <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
                 <div class="center-wrapper">
                     <div class="aone-homepage home-blocks-middle">
-                        {% if top_category_poster %}
+                        {% if top_poster_src %}
                         <div class="block block_id_14 clearfix md-bottom">
                             <div class="static-html typo">
                                 <div class="row">
                                     <div class="col">
                                         <div class="banner2" style="margin-bottom:0;">
-                                            <a href="/category/{{ top_category_poster.en_title or top_category_poster.slug }}">
+                                            <a href="{% if top_category_poster %}/category/{{ top_category_poster.en_title or top_category_poster.slug }}{% else %}#{% endif %}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ top_category_poster.poster_image_url|media_url }}" alt="{{ top_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ top_poster_src }}" alt="{{ top_category_poster.en_title if top_category_poster else '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>
@@ -178,15 +178,15 @@
                             {% endif %}
                         </div>
 
-                        {% if middle_category_poster %}
+                        {% if middle_poster_src %}
                         <div class="block block_id_16 clearfix mb-4 md-bottom">
                             <div class="static-html typo">
                                 <div class="row">
                                     <div class="col">
                                         <div class="banner2">
-                                            <a href="/category/{{ middle_category_poster.en_title or middle_category_poster.slug }}">
+                                            <a href="{% if middle_category_poster %}/category/{{ middle_category_poster.en_title or middle_category_poster.slug }}{% else %}#{% endif %}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ middle_category_poster.poster_image_url|media_url }}" alt="{{ middle_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ middle_poster_src }}" alt="{{ middle_category_poster.en_title if middle_category_poster else '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>
@@ -217,24 +217,24 @@
                         </div>
                         {% endif %}
 
-                        {% if mid_right_poster or mid_left_poster %}
+                                                {% if mid_right_poster_src or mid_left_poster_src %}
                         <div class="block block_id_7 clearfix mb-4 md-bottom">
                             <div class="static-html typo">
                                 <div class="row">
-                                    {% if mid_right_poster %}
+                                    {% if mid_right_poster_src %}
                                     <div class="col-12 col-lg-6">
                                         <div class="banner2">
-                                            <a href="/category/{{ mid_right_poster.en_title or mid_right_poster.slug }}">
-                                                <img loading="lazy" src="{{ mid_right_poster.poster_image_url|media_url }}" alt="{{ mid_right_poster.en_title or '' }}" width="840" height="350">
+                                            <a href="{% if mid_right_poster %}/category/{{ mid_right_poster.en_title or mid_right_poster.slug }}{% else %}#{% endif %}">
+                                                <img loading="lazy" src="{{ mid_right_poster_src }}" alt="{{ mid_right_poster.en_title if mid_right_poster else '' }}" width="840" height="350">
                                             </a>
                                         </div>
                                     </div>
                                     {% endif %}
-                                    {% if mid_left_poster %}
+                                    {% if mid_left_poster_src %}
                                     <div class="col-12 col-lg-6">
                                         <div class="banner2">
-                                            <a href="/category/{{ mid_left_poster.en_title or mid_left_poster.slug }}">
-                                                <img loading="lazy" src="{{ mid_left_poster.poster_image_url|media_url }}" alt="{{ mid_left_poster.en_title or '' }}" width="840" height="350">
+                                            <a href="{% if mid_left_poster %}/category/{{ mid_left_poster.en_title or mid_left_poster.slug }}{% else %}#{% endif %}">
+                                                <img loading="lazy" src="{{ mid_left_poster_src }}" alt="{{ mid_left_poster.en_title if mid_left_poster else '' }}" width="840" height="350">
                                             </a>
                                         </div>
                                     </div>
@@ -265,15 +265,15 @@
                         </div>
                         {% endif %}
 
-                        {% if bottom_category_poster %}
+                        {% if bottom_poster_src %}
                         <div class="block block_id_7 clearfix mb-4 md-bottom">
                             <div class="static-html typo">
                                 <div class="row">
                                     <div class="col">
                                         <div class="banner2">
-                                            <a href="/category/{{ bottom_category_poster.en_title or bottom_category_poster.slug }}">
+                                            <a href="{% if bottom_category_poster %}/category/{{ bottom_category_poster.en_title or bottom_category_poster.slug }}{% else %}#{% endif %}">
                                                 <picture>
-                                                    <img loading="lazy" src="{{ bottom_category_poster.poster_image_url|media_url }}" alt="{{ bottom_category_poster.en_title or '' }}" width="1740" style="object-fit:cover">
+                                                    <img loading="lazy" src="{{ bottom_poster_src }}" alt="{{ bottom_category_poster.en_title if bottom_category_poster else '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
                                             </a>
                                         </div>

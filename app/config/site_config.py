@@ -43,6 +43,9 @@ THEME = {
     "control_bg": "#00a693",
     # Slick/carousel button background
     "slider_bg": "#00a693",
+    # Hint / notification color (e.g. cart count badge) — warm orange-red to
+    # stand out against the green/teal theme
+    "hint_color": "#ff5722",
 }
 
 SEED_USERS_ENV_VARS = {

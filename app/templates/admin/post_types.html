@@ -75,7 +75,7 @@
                             <td class="py-3 px-2">
                                 <div class="flex items-center gap-3">
                                     {% if item.image_url %}
-                                    <img src="{{ item.image_url }}" alt="{{ item.name }}" class="w-9 h-9 rounded-lg object-cover bg-gray-100">
+                                    <img src="{{ item.image_url | media_url }}" alt="{{ item.name }}" class="w-9 h-9 rounded-lg object-cover bg-gray-100">
                                     {% else %}
                                     <div class="w-9 h-9 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center"><i class="fas fa-truck text-sm"></i></div>
                                     {% endif %}

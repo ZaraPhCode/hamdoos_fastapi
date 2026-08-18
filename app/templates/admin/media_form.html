@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ "ویرایش عکس" if media else "افزودن عکس" }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Page header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-violet-500">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-violet-200">
+                    <i class="fas fa-image"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">{{ "ویرایش عکس" if media else "افزودن عکس جدید" }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">
+                        {% if category %}{{ category.title }}{% endif %}
+                    </p>
+                </div>
+            </div>
+            {% if category %}
+            <a href="/administration/categories/{{ category.id }}/details" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت
+            </a>
+            {% else %}
+            <a href="/administration/categories" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به لیست
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="POST" action="{{ '/administration/medias/' ~ media.id ~ '/edit' if media else '/administration/categories/' ~ category.id ~ '/add-picture' }}" class="space-y-6" id="media-form">
+        <!-- Image info -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-violet-50 to-fuchsia-50 border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center">
+                        <i class="fas fa-pen"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-semibold text-gray-800">اطلاعات عکس</h2>
+                        <p class="text-xs text-gray-500">آدرس فایل و مشخصات عکس را وارد کنید</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
+                    <div class="md:col-span-2">
+                        {% if media and media.url %}
+                        <div class="mb-4 flex items-start gap-4">
+                            <img src="{{ media.url|media_url }}" class="w-40 h-28 object-cover rounded-lg border border-gray-200" alt="">
+                            <div class="text-sm text-gray-500">
+                                <p class="mb-1"><i class="fas fa-file mr-1"></i> فایل فعلی:</p>
+                                <code class="bg-gray-100 rounded px-2 py-1 text-xs block" dir="ltr">{{ media.url }}</code>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <label class="form-label" for="url">آدرس تصویر (URL) <span class="text-red-500">*</span></label>
+                        <input type="text" id="url" name="url" value="{{ media.url if media else '' }}" class="form-input font-mono" required dir="ltr" placeholder="مثال: Media/laser/laser-diode/xxxx.jpg">
+                        <p class="text-xs text-gray-400 mt-1">مسیر فایل از پوشه Media (مثلاً <code>Media/laser/.../file.jpg</code>) یا آدرس کامل http</p>
+                    </div>
+                    <div>
+                        <label class="form-label" for="title">عنوان</label>
+                        <input type="text" id="title" name="title" value="{{ media.title if media else '' }}" class="form-input" placeholder="مثال: دیود لیزر">
+                    </div>
+                    <div>
+                        <label class="form-label" for="picture_order">ترتیب نمایش</label>
+                        <input type="number" id="picture_order" name="picture_order" value="{{ media.picture_order if media else 0 }}" class="form-input">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="form-label" for="description">توضیح</label>
+                        <textarea id="description" name="description" rows="3" class="form-input" placeholder="توضیح اختیاری">{{ media.description if media and media.description else '' }}</textarea>
+                    </div>
+                    <div class="md:col-span-2 flex items-center gap-8">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="display_photo" value="1" class="w-4 h-4" {% if media and media.display_photo %}checked{% endif %}>
+                            <span class="text-sm text-gray-700">عکس اصلی (DisplayPhoto)</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" name="poster_image" value="1" class="w-4 h-4" {% if media and media.poster_image %}checked{% endif %}>
+                            <span class="text-sm text-gray-700">عکس پوستر دسته‌بندی (PosterImage)</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-gray-300"></i>
+                    {{ "ویرایش عکس" if media else "افزودن عکس جدید" }}
+                </p>
+                <div class="flex items-center gap-3">
+                    {% if category %}
+                    <a href="/administration/categories/{{ category.id }}/details" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-times"></i> انصراف
+                    </a>
+                    {% endif %}
+                    <button type="submit" class="btn-success flex items-center gap-2 px-6 py-2.5 shadow-lg shadow-emerald-200">
+                        <i class="fas fa-check"></i> {{ "بروزرسانی" if media else "ذخیره" }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -204,7 +204,8 @@
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     z-index: 1050;
     display: flex;
-    background: #ffffff;
+    /* same light-green derived from the theme primary as the slider buttons */
+    background: color-mix(in srgb, var(--c-primary, #00a693) 15%, #ffffff);
     border-radius: 40px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
     padding: 8px 10px;
@@ -277,7 +278,7 @@
     height: 17px;
     padding: 0 4px;
     border-radius: 9px;
-    background: var(--c-accent-hover, #23883c);
+    background: var(--c-hint, #ff5722);
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -419,5 +420,50 @@
   }
   .page-cart .cart-item-actions {
     align-self: flex-start;
+  }
+
+  /* ═══════════════ 5. Home slider arrows (mobile only) ═══════════════
+     Replace the default circular buttons / ">>" "<<" text glyphs with a simple
+     rectangle button carrying a single direction icon (left / right). In RTL the
+     theme's [dir='rtl'] rules put .slick-prev on the right and .slick-next on the
+     left; on mobile we position prev on the left (pointing left) and next on the
+     right (pointing right). Scoped to the home block sliders so desktop is
+     unaffected. */
+  .aone-homepage .product-list .js-home-block-slider .slick-prev,
+  .aone-homepage .product-list .js-home-block-slider .slick-next {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    /* light green derived from the theme primary (never hardcoded) */
+    background: color-mix(in srgb, var(--c-primary, #00a693) 15%, #ffffff);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+    line-height: 1;
+  }
+  .aone-homepage .product-list .js-home-block-slider .slick-prev {
+    right: auto !important;
+    left: -10px !important;
+  }
+  .aone-homepage .product-list .js-home-block-slider .slick-next {
+    left: auto !important;
+    right: -10px !important;
+  }
+  .aone-homepage .product-list .js-home-block-slider .slick-prev:before,
+  .aone-homepage .product-list .js-home-block-slider .slick-next:before {
+    font-family: FontAwesome !important;
+    font-size: 17px !important;
+    font-weight: normal !important;
+    line-height: 1 !important;
+    color: var(--c-primary, #00a693);
+    margin: 0 !important;
+  }
+  .aone-homepage .product-list .js-home-block-slider .slick-prev:before {
+    content: "\f053" !important;
+  }
+  .aone-homepage .product-list .js-home-block-slider .slick-next:before {
+    content: "\f054" !important;
   }
 }

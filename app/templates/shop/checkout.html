@@ -162,7 +162,7 @@
                                                                         <div class="d-flex align-items-center carrier-box-bg">
                                                                             <div class="carrier-logo">
                                                                                 {% if pt.image_url %}
-                                                                                <img src="{{ pt.image_url }}" alt="{{ pt.name }}" width="80" height="80" />
+                                                                                <img src="{{ pt.image_url | media_url }}" alt="{{ pt.name }}" width="80" height="80" />
                                                                                 {% else %}
                                                                                 <img src="https://placehold.co/80x80" width="80" height="80" />
                                                                                 {% endif %}

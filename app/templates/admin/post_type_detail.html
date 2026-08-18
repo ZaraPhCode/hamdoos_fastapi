@@ -23,7 +23,7 @@
         <div class="p-6">
             <div class="flex items-start gap-5 mb-6">
                 {% if post_type.image_url %}
-                <img src="{{ post_type.image_url }}" alt="{{ post_type.name }}" class="w-24 h-24 rounded-xl object-cover bg-gray-100 border border-gray-200">
+                <img src="{{ post_type.image_url | media_url }}" alt="{{ post_type.name }}" class="w-24 h-24 rounded-xl object-cover bg-gray-100 border border-gray-200">
                 {% else %}
                 <div class="w-24 h-24 rounded-xl bg-gray-100 text-gray-400 flex items-center justify-center"><i class="fas fa-truck text-3xl"></i></div>
                 {% endif %}

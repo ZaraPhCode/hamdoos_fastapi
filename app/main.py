@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 import os
 
@@ -119,6 +120,14 @@ app.include_router(finance_router, prefix="/api/v1")
 app.include_router(notify_router, prefix="/api/v1")
 
 # Custom error pages
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_handler(request: Request, exc):
+    logger.error(
+        f"Validation error on {request.method} {request.url.path}: {exc.errors()}"
+    )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc):
     try:

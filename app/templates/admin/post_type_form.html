@@ -34,11 +34,11 @@
                     </div>
                     <div>
                         <label class="form-label" for="price">هزینه</label>
-                        <input type="number" step="0.01" id="price" name="price" value="{{ post_type.price or '' }}" class="form-input ltr-input" placeholder="ریال">
+                        <input type="number" step="0.01" id="price" name="price" value="{{ post_type.price if post_type is not none else '' }}" class="form-input ltr-input" placeholder="ریال">
                     </div>
                     <div>
                         <label class="form-label" for="post_vat_rate">نرخ مالیات ارسال (٪)</label>
-                        <input type="number" step="0.01" id="post_vat_rate" name="post_vat_rate" value="{{ post_type.post_vat_rate or '' }}" class="form-input ltr-input" placeholder="مثال: 9">
+                        <input type="number" step="0.01" id="post_vat_rate" name="post_vat_rate" value="{{ post_type.post_vat_rate if post_type is not none else '' }}" class="form-input ltr-input" placeholder="مثال: 9">
                     </div>
                     <div class="md:col-span-2">
                         <label class="form-label" for="image">تصویر</label>
@@ -48,7 +48,7 @@
                                 <p class="text-xs text-gray-400 mt-1">در صورت انتخاب، تصویر فعلی جایگزین می‌شود.</p>
                             </div>
                             {% if post_type and post_type.image_url %}
-                            <img src="{{ post_type.image_url }}" alt="{{ post_type.name }}" class="w-16 h-16 rounded-xl object-cover bg-gray-100 border border-gray-200">
+                            <img src="{{ post_type.image_url | media_url }}" alt="{{ post_type.name }}" class="w-16 h-16 rounded-xl object-cover bg-gray-100 border border-gray-200">
                             {% endif %}
                         </div>
                     </div>

@@ -93,6 +93,20 @@ class SiteSetting(Base, BaseEntityMixin):
     bottom_poster_category_id: Mapped[Optional[uuid.UUID]] = mapped_column("BottomPosterCategoryId", UUID(as_uuid=True), ForeignKey("Categories.Id"), nullable=True)
     technical_table_id: Mapped[Optional[uuid.UUID]] = mapped_column("TechnicalTableId", UUID(as_uuid=True), ForeignKey("TechnicalTables.Id"), nullable=True)
 
+    # Custom image URL substitutes for the homepage posters. When set, they take
+    # priority over the poster category image; otherwise the category's
+    # poster_image_url is used. Managed in the admin "تنظیمات سایت" form.
+    top_poster_image_url: Mapped[Optional[str]] = mapped_column("TopPosterImageUrl", Text, nullable=True)
+    middle_poster_image_url: Mapped[Optional[str]] = mapped_column("MiddlePosterImageUrl", Text, nullable=True)
+    mid_left_poster_image_url: Mapped[Optional[str]] = mapped_column("MidLeftPosterImageUrl", Text, nullable=True)
+    mid_right_poster_image_url: Mapped[Optional[str]] = mapped_column("MidRightPosterImageUrl", Text, nullable=True)
+    bottom_poster_image_url: Mapped[Optional[str]] = mapped_column("BottomPosterImageUrl", Text, nullable=True)
+
+    # Sidebar support poster (shown on the homepage/category sidebar). When
+    # empty, falls back to SITE_INFO.sidebar.support_image.
+    sidebar_support_category_id: Mapped[Optional[uuid.UUID]] = mapped_column("SideBarSupportCategoryId", UUID(as_uuid=True), ForeignKey("Categories.Id"), nullable=True)
+    sidebar_support_image_url: Mapped[Optional[str]] = mapped_column("SideBarSupportImageUrl", Text, nullable=True)
+
 
 class Captcha(Base, BaseEntityMixin):
     __tablename__ = "Captchas"

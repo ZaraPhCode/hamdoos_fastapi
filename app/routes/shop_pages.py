@@ -53,6 +53,29 @@ def _normalize_media_url(url):
 
 templates.env.filters["media_url"] = _normalize_media_url
 
+
+async def _resolve_sidebar_support_src(db: AsyncSession, site_settings) -> str:
+    """Resolve the sidebar "customer support" poster image.
+
+    Priority: custom image URL -> sidebar support category's poster_image_url
+    -> site_config default (/static/ThemeLayout/img/customer-support.jpg).
+    """
+    from app.config.site_config import SITE_INFO
+    src = None
+    if site_settings:
+        if site_settings.sidebar_support_image_url:
+            src = _normalize_media_url(site_settings.sidebar_support_image_url)
+        elif site_settings.sidebar_support_category_id:
+            cat = (await db.execute(
+                select(Category).where(
+                    Category.id == site_settings.sidebar_support_category_id,
+                    Category.is_removed == False,
+                )
+            )).scalars().first()
+            if cat and cat.poster_image_url:
+                src = _normalize_media_url(cat.poster_image_url)
+    return src or SITE_INFO["sidebar"]["support_image"]
+
 NET_ORDER_OPTIONS = ("Sale", "Id", "AlphabetAsc", "AlphabetDesc", "Cheapest", "Expensive")
 
 
@@ -353,6 +376,7 @@ async def home_page(
             site_settings.mid_right_poster_category_id,
             site_settings.middle_poster_category_id,
             site_settings.bottom_poster_category_id,
+            site_settings.sidebar_support_category_id,
         }
         ref_ids.discard(None)
         cats_map = {}
@@ -386,6 +410,33 @@ async def home_page(
 
     _map = lambda pl: [product_service._build_product_list_response(p) for p in pl]
     cc = await _get_cart_context(request, db)
+
+    # Resolve each homepage poster image: a custom URL (set in admin Site
+    # Settings) takes priority; otherwise fall back to the poster category's
+    # poster_image_url. None means the position stays hidden.
+    def _poster_src(category, custom_url):
+        if custom_url:
+            return _normalize_media_url(custom_url)
+        if category is not None and category.poster_image_url:
+            return _normalize_media_url(category.poster_image_url)
+        return None
+
+    top_poster_src = _poster_src(top_category_poster, site_settings.top_poster_image_url if site_settings else None)
+    middle_poster_src = _poster_src(middle_category_poster, site_settings.middle_poster_image_url if site_settings else None)
+    mid_left_poster_src = _poster_src(mid_left_poster, site_settings.mid_left_poster_image_url if site_settings else None)
+    mid_right_poster_src = _poster_src(mid_right_poster, site_settings.mid_right_poster_image_url if site_settings else None)
+    bottom_poster_src = _poster_src(bottom_category_poster, site_settings.bottom_poster_image_url if site_settings else None)
+
+    # Sidebar support poster: custom URL -> category poster -> site_config default.
+    from app.config.site_config import SITE_INFO
+    sidebar_support_category = None
+    if site_settings and site_settings.sidebar_support_category_id:
+        sidebar_support_category = cats_map.get(site_settings.sidebar_support_category_id)
+    sidebar_support_src = _poster_src(
+        sidebar_support_category,
+        (site_settings.sidebar_support_image_url if site_settings else None)
+    ) or SITE_INFO["sidebar"]["support_image"]
+
     return templates.TemplateResponse("shop/index.html", {
         "request": request,
         "special_products": _map(special_products),
@@ -396,16 +447,22 @@ async def home_page(
         "top_category_title": top_category.title if top_category else None,
         "top_category_products": _map(top_category_products),
         "top_category_poster": top_category_poster,
+        "top_poster_src": top_poster_src,
         "middle_category": middle_category,
         "middle_category_title": middle_category.title if middle_category else None,
         "middle_category_products": _map(middle_category_products),
         "middle_category_poster": middle_category_poster,
+        "middle_poster_src": middle_poster_src,
         "mid_left_poster": mid_left_poster,
+        "mid_left_poster_src": mid_left_poster_src,
         "mid_right_poster": mid_right_poster,
+        "mid_right_poster_src": mid_right_poster_src,
         "bottom_category": bottom_category,
         "bottom_category_title": bottom_category.title if bottom_category else None,
         "bottom_category_products": _map(bottom_category_products),
         "bottom_category_poster": bottom_category_poster,
+        "bottom_poster_src": bottom_poster_src,
+        "sidebar_support_src": sidebar_support_src,
         "categories": categories,
         "header_categories": categories,
         "site_settings": site_settings,
@@ -561,6 +618,7 @@ async def _render_product_list(
         "filter_qs": filter_qs,
         "site_settings": site_settings,
         "category_hierarchy": category_hierarchy,
+        "sidebar_support_src": await _resolve_sidebar_support_src(db, site_settings),
         "current_user": current_user,
         "page_title": page_title,
         **cc,
@@ -886,7 +944,7 @@ async def orders_page(request: Request, current_user: User = Depends(get_current
 @router.get("/orders/unpaid", response_class=HTMLResponse)
 async def orders_unpaid_page(request: Request, current_user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
     orders_list, _ = await order_service.get_user_orders(db, current_user.id, 1, 50)
-    unpaid = [order_service.build_order_response(o) for o in orders_list if o.order_status in ("AwaitingPayment", "Ordering")]
+    unpaid = [order_service.build_order_response(o) for o in orders_list if o.order_status == "AwaitingPayment"]
     cc = await _get_cart_context(request, db)
     return templates.TemplateResponse("shop/unpaid_orders.html", {
         "request": request, "current_user": current_user, "orders": unpaid, **cc,
@@ -2588,8 +2646,8 @@ async def profile_register_receipt_page(
 @router.post("/profile/register-receipt")
 async def profile_register_receipt_submit(
     request: Request,
-    order_id: str = Form(...),
-    price: float = Form(0),
+    order_id: str = Form(""),
+    price: str = Form("0"),
     description: str = Form(""),
     destination_bank: Optional[str] = Form(None),
     deposit_date: Optional[str] = Form(None),
@@ -2604,6 +2662,8 @@ async def profile_register_receipt_submit(
     from uuid import UUID
     from datetime import datetime
 
+    from app.utils.persian_tools import to_english_number, from_farsi_date
+
     try:
         oid = UUID(order_id) if order_id else None
     except ValueError:
@@ -2613,10 +2673,18 @@ async def profile_register_receipt_submit(
         stmt = select(Order).where(Order.id == oid, Order.user_id == current_user.id, Order.is_removed == False)
         order = (await db.execute(stmt)).scalar_one_or_none()
     if not order:
-        return JSONResponse({"errors": ["خطا در عملیات"], "success": []})
+        if not oid:
+            return JSONResponse({"errors": ["سفارشی انتخاب نشده است. لطفاً از لیست سفارش‌های در انتظار پرداخت، یک سفارش انتخاب کنید."], "success": []})
+        return JSONResponse({"errors": ["سفارش موردنظر یافت نشد."], "success": []})
 
+    try:
+        price = float(to_english_number(str(price).replace(",", "")).strip() or 0)
+    except (ValueError, TypeError):
+        price = 0
     if price <= 0:
         return JSONResponse({"errors": ["خطا در عملیات"], "success": []})
+
+    destination_bank = (destination_bank or "").strip() or None
 
     receipt = Receipt(
         price=price,
@@ -2648,10 +2716,7 @@ async def profile_register_receipt_submit(
         receipt.destination_bank = None
     else:
         if deposit_date:
-            try:
-                receipt.deposit_date = datetime.strptime(deposit_date, "%Y/%m/%d")
-            except ValueError:
-                pass
+            receipt.deposit_date = from_farsi_date(to_english_number(str(deposit_date)))
 
     receipt.created_by_user_id = current_user.id
     receipt.insert_date = datetime.now(timezone.utc)
