@@ -378,12 +378,23 @@ class ProductOrder(str, enum.Enum):
 # ── Support ──
 class TicketStatus(str, enum.Enum):
     OPEN = "Open"
+    ANSWERED = "Answered"
     CLOSED = "Closed"
     PENDING = "Pending"
 
 
+class TicketPriority(str, enum.Enum):
+    LOW = "Low"
+    MEDIUM = "Medium"
+    HIGH = "High"
+
+
 class ProblemSubject(str, enum.Enum):
-    pass
+    GENERAL = "General"
+    TECHNICAL = "Technical"
+    ORDER_TRACKING = "OrderTracking"
+    FINANCIAL = "Financial"
+    SUGGESTION = "Suggestion"
 
 
 class ChatSubject(str, enum.Enum):

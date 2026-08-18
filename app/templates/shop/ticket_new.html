@@ -1,17 +1,167 @@
 {% extends "shop/base.html" %}
-{% block title %}تیکت جدید - آشا شاپ{% endblock %}
+{% block title %}تیکت جدید{% endblock %}
+{% block body_id %}module-support-tickets{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page- tax-display-enabled customer-has-logged st-wrapper{% endblock %}
+{% block extra_head %}
+<style>
+.ticket-form-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 16px; padding: 1.75rem 1.5rem; }
+.ticket-form-card .form-group { margin-bottom: 1.25rem; }
+.ticket-form-card .form-control-label { font-weight: 600; font-size: .85rem; color: #444; margin-bottom: .45rem; display: block; }
+.ticket-form-card .form-control, .ticket-form-card select.form-control, .ticket-form-card textarea.form-control { border-radius: 10px; border-color: #e2e2e2; font-size: .9rem; }
+.ticket-form-card .form-control:focus { border-color: var(--c-primary); box-shadow: 0 0 0 .2rem rgba(0,0,0,.04); }
+.field-hint { font-size: .75rem; color: #aaa; margin-top: .3rem; }
+.file-drop { border: 1.5px dashed #d4d4d4; border-radius: 10px; padding: .9rem 1rem; display: flex; align-items: center; gap: .6rem; color: #999; cursor: pointer; transition: all .2s ease; }
+.file-drop:hover { border-color: var(--c-primary); color: var(--c-primary); }
+.file-drop.has-file { border-color: #16a34a; color: #16a34a; }
+.seg-btn { display: flex; flex-wrap: wrap; gap: .5rem; }
+.seg-btn .btn { border-radius: 999px; font-size: .82rem; }
+.ticket-title-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+</style>
+{% endblock %}
 {% block content %}
-<div class="max-w-lg mx-auto">
-    <div class="bg-white rounded-lg shadow-sm border p-6">
-        <h1 class="text-xl font-bold mb-6">تیکت جدید</h1>
-        <form method="POST" action="/tickets/new" class="space-y-4">
-            <div><label class="block text-sm mb-1">موضوع</label><input name="subject" class="w-full border rounded-lg px-3 py-2"></div>
-            <div><label class="block text-sm mb-1">نام</label><input name="name" required class="w-full border rounded-lg px-3 py-2" value="{{ current_user.full_name if current_user else '' }}"></div>
-            <div><label class="block text-sm mb-1">ایمیل</label><input name="email" type="email" class="w-full border rounded-lg px-3 py-2" value="{{ current_user.email if current_user else '' }}"></div>
-            <div><label class="block text-sm mb-1">شماره تماس</label><input name="telephone" class="w-full border rounded-lg px-3 py-2" value="{{ current_user.phone_number if current_user else '' }}"></div>
-            <div><label class="block text-sm mb-1">توضیحات</label><textarea name="description" required rows="5" class="w-full border rounded-lg px-3 py-2"></textarea></div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700">ثبت تیکت</button>
-        </form>
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="3" itemscope="" itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/"><i class="fa fa-home home" aria-hidden="true"></i><span itemprop="name">خانه</span></a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile"><span itemprop="name">حساب کاربری</span></a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile/tickets"><span itemprop="name">تیکت‌های پشتیبانی</span></a>
+                <meta itemprop="position" content="3">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <span itemprop="name">تیکت جدید</span>
+                <meta itemprop="position" content="4">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                ثبت تیکت جدید
+                            </h4>
+                        </div>
+                        <div class="body">
+                            {% if error %}
+                            <div class="alert alert-danger">{{ error }}</div>
+                            {% endif %}
+                            <div class="ticket-form-card">
+                                <form method="POST" action="/profile/tickets/new" enctype="multipart/form-data">
+                                    <div class="form-group">
+                                        <label class="form-control-label">موضوع تیکت <span class="text-danger">*</span></label>
+                                        <input type="text" name="subject" class="form-control" placeholder="خلاصه‌ای از مشکل خود بنویسید..." required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-control-label">دسته‌بندی <span class="text-danger">*</span></label>
+                                        <div class="seg-btn" id="category-seg">
+                                            {% for key, label in categories.items() %}
+                                            <button type="button" class="btn {{ 'btn-primary' if loop.first else 'btn-outline-secondary' }}" data-cat="{{ key }}">{{ label }}</button>
+                                            {% endfor %}
+                                        </div>
+                                        <input type="hidden" name="category" id="category-input" value="{{ 'General' if categories else '' }}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-control-label">اولویت <span class="text-danger">*</span></label>
+                                        <div class="seg-btn" id="priority-seg">
+                                            {% for key, label in priorities.items() %}
+                                            <button type="button" class="btn {{ 'btn-primary' if key == 'Medium' else 'btn-outline-secondary' }}" data-prio="{{ key }}">{{ label }}</button>
+                                            {% endfor %}
+                                        </div>
+                                        <input type="hidden" name="priority" id="priority-input" value="Medium">
+                                        <div class="field-hint">برای مسائل فوری اولویت «زیاد» را انتخاب کنید.</div>
+                                    </div>
+                                    <div class="form-group" id="order-field" style="display:none">
+                                        <label class="form-control-label">سفارش مرتبط</label>
+                                        <select name="order_id" class="form-control">
+                                            <option value="">انتخاب سفارش...</option>
+                                            {% for o in orders %}
+                                            <option value="{{ o.id }}">سفارش شماره {{ o.reference_code }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="field-hint">سفارشی که نیاز به پیگیری دارد را انتخاب کنید.</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-control-label">شرح کامل مشکل <span class="text-danger">*</span></label>
+                                        <textarea name="description" rows="6" class="form-control" placeholder="مشکل خود را با جزئیات کامل شرح دهید..." required></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-control-label">پیوست (اختیاری)</label>
+                                        <div class="file-drop" id="file-drop">
+                                            <i class="fa fa-paperclip"></i>
+                                            <span id="file-label">تصویر یا فایل مرتبط را انتخاب کنید</span>
+                                        </div>
+                                        <input type="file" name="file" id="file-input" class="d-none">
+                                        <div class="field-hint">تصاویر، اسکرین‌شات یا مدارک مرتبط با مشکل</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-control-label">اطلاعات تماس</label>
+                                        <div class="row">
+                                            <div class="col-md-6"><input type="text" class="form-control mb-2" value="{{ current_user.full_name or current_user.user_name }}" readonly></div>
+                                            <div class="col-md-6"><input type="text" class="form-control mb-2" value="{{ current_user.email }}" readonly></div>
+                                            <div class="col-md-6"><input type="text" class="form-control" value="{{ current_user.phone_number }}" readonly></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-left">
+                                        <button type="submit" class="btn btn-primary px-4" style="border-radius:999px"><i class="fa fa-paper-plane" style="margin-inline-end:.4rem"></i>ثبت تیکت</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+(function () {
+    var catInput = document.getElementById('category-input');
+    var orderField = document.getElementById('order-field');
+
+    document.querySelectorAll('#category-seg .btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('#category-seg .btn').forEach(function (b) { b.classList.remove('btn-primary'); b.classList.add('btn-outline-secondary'); });
+            btn.classList.remove('btn-outline-secondary'); btn.classList.add('btn-primary');
+            catInput.value = btn.getAttribute('data-cat');
+            orderField.style.display = (catInput.value === 'OrderTracking') ? '' : 'none';
+        });
+    });
+
+    document.querySelectorAll('#priority-seg .btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('#priority-seg .btn').forEach(function (b) { b.classList.remove('btn-primary'); b.classList.add('btn-outline-secondary'); });
+            btn.classList.remove('btn-outline-secondary'); btn.classList.add('btn-primary');
+            document.getElementById('priority-input').value = btn.getAttribute('data-prio');
+        });
+    });
+
+    var drop = document.getElementById('file-drop');
+    var fileInput = document.getElementById('file-input');
+    var fileLabel = document.getElementById('file-label');
+    drop.addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files.length) {
+            fileLabel.textContent = fileInput.files[0].name;
+            drop.classList.add('has-file');
+        }
+    });
+})();
+</script>
 {% endblock %}

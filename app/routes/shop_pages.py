@@ -3111,3 +3111,186 @@ async def _render_category_page(slug: str, request: Request, db: AsyncSession, c
         order=order, query=query, page=page, page_size=page_size,
         current_user=current_user,
     )
+
+
+# ── Support Tickets ──
+
+def _ticket_labels() -> dict:
+    from app.services.support_service import (
+        TICKET_CATEGORIES, TICKET_PRIORITIES, TICKET_STATUSES,
+    )
+    return {
+        "categories": TICKET_CATEGORIES,
+        "priorities": TICKET_PRIORITIES,
+        "statuses": TICKET_STATUSES,
+    }
+
+
+async def _save_ticket_attachment(file: Optional[UploadFile], user_id) -> tuple[Optional[str], Optional[str]]:
+    import aiofiles
+    import os
+    if not file or not file.filename:
+        return None, None
+    upload_dir = "app/static/uploads/tickets"
+    os.makedirs(upload_dir, exist_ok=True)
+    ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
+    fname = f"ticket_{user_id.hex[:8]}_{uuid.uuid4().hex[:8]}.{ext}"
+    file_path = os.path.join(upload_dir, fname)
+    content = await file.read()
+    async with aiofiles.open(file_path, "wb") as f:
+        await f.write(content)
+    return f"/static/uploads/tickets/{fname}", file.filename
+
+
+@router.get("/profile/tickets", response_class=HTMLResponse)
+async def profile_tickets(
+    request: Request,
+    page: int = Query(1, ge=1),
+    status_filter: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import support_service
+    tickets, total = await support_service.get_user_tickets(db, current_user.id, page, 20, status_filter)
+    cc = await _get_cart_context(request, db)
+    labels = _ticket_labels()
+    return templates.TemplateResponse("shop/ticket_list.html", {
+        "request": request, "current_user": current_user, "section": "tickets",
+        "tickets": [support_service.build_ticket_response(t) for t in tickets],
+        "total": total, "page": page, "total_pages": (total + 19) // 20,
+        "status_filter": status_filter, **labels, **cc,
+    })
+
+
+@router.get("/profile/tickets/new", response_class=HTMLResponse)
+async def profile_ticket_new(
+    request: Request,
+    error: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import support_service
+    cc = await _get_cart_context(request, db)
+    orders = (await db.execute(
+        select(Order).where(Order.user_id == current_user.id, Order.is_removed == False).order_by(Order.date.desc()).limit(30)
+    )).scalars().all()
+    labels = _ticket_labels()
+    return templates.TemplateResponse("shop/ticket_new.html", {
+        "request": request, "current_user": current_user, "section": "tickets",
+        "orders": orders, "error": error, **labels, **cc,
+    })
+
+
+@router.post("/profile/tickets/new")
+async def profile_ticket_create(
+    request: Request,
+    subject: str = Form(""),
+    category: str = Form("General"),
+    priority: str = Form("Medium"),
+    order_id: str = Form(""),
+    description: str = Form(""),
+    file: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import support_service
+    if not description.strip():
+        return RedirectResponse(url="/profile/tickets/new?error=متن تیکت الزامی است", status_code=303)
+    try:
+        oid = uuid.UUID(order_id) if order_id else None
+    except ValueError:
+        oid = None
+    if oid:
+        owned = (await db.execute(
+            select(Order).where(Order.id == oid, Order.user_id == current_user.id, Order.is_removed == False)
+        )).scalar_one_or_none()
+        if not owned:
+            oid = None
+    file_path, file_name = await _save_ticket_attachment(file, current_user.id)
+
+    class _TicketForm:
+        def __init__(self):
+            self.name = current_user.full_name or current_user.user_name
+            self.email = current_user.email
+            self.telephone = current_user.phone_number
+            self.subject = subject.strip() or None
+            self.description = description.strip()
+            self.category = category
+            self.priority = priority
+            self.order_id = oid
+
+    ticket = await support_service.create_ticket(
+        db, _TicketForm(), current_user.id, file_path=file_path, file_name=file_name
+    )
+    await db.commit()
+    return RedirectResponse(url=f"/profile/tickets/{ticket.id}", status_code=303)
+
+
+@router.get("/profile/tickets/{ticket_id}", response_class=HTMLResponse)
+async def profile_ticket_detail(
+    request: Request,
+    ticket_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import support_service
+    try:
+        tid = uuid.UUID(ticket_id)
+    except ValueError:
+        return RedirectResponse(url="/profile/tickets", status_code=303)
+    ticket = await support_service.get_ticket_by_id(db, tid)
+    if not ticket or ticket.user_id != current_user.id:
+        return RedirectResponse(url="/profile/tickets", status_code=303)
+    cc = await _get_cart_context(request, db)
+    labels = _ticket_labels()
+    return templates.TemplateResponse("shop/ticket_detail.html", {
+        "request": request, "current_user": current_user, "section": "tickets",
+        "ticket": support_service.build_ticket_response(ticket), **labels, **cc,
+    })
+
+
+@router.post("/profile/tickets/{ticket_id}/reply")
+async def profile_ticket_reply(
+    request: Request,
+    ticket_id: str,
+    message: str = Form(""),
+    file: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import support_service
+    try:
+        tid = uuid.UUID(ticket_id)
+    except ValueError:
+        return RedirectResponse(url="/profile/tickets", status_code=303)
+    ticket = await support_service.get_ticket_by_id(db, tid)
+    if not ticket or ticket.user_id != current_user.id:
+        return RedirectResponse(url="/profile/tickets", status_code=303)
+    if message.strip():
+        file_path, file_name = await _save_ticket_attachment(file, current_user.id)
+        await support_service.reply_to_ticket(
+            db, ticket, message.strip(), current_user.id,
+            is_admin=False, file_path=file_path, file_name=file_name,
+        )
+        await db.commit()
+    return RedirectResponse(url=f"/profile/tickets/{ticket.id}", status_code=303)
+
+
+@router.post("/profile/tickets/{ticket_id}/close")
+async def profile_ticket_close(
+    request: Request,
+    ticket_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services import support_service
+    try:
+        tid = uuid.UUID(ticket_id)
+    except ValueError:
+        return RedirectResponse(url="/profile/tickets", status_code=303)
+    ticket = await support_service.get_ticket_by_id(db, tid)
+    if not ticket or ticket.user_id != current_user.id:
+        return RedirectResponse(url="/profile/tickets", status_code=303)
+    await support_service.close_ticket(db, ticket)
+    await db.commit()
+    return RedirectResponse(url=f"/profile/tickets/{ticket.id}", status_code=303)

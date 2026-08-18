@@ -20,12 +20,13 @@ router = APIRouter(prefix="/tickets", tags=["Support Tickets"])
 @router.post("", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_ticket(
     request: TicketCreate,
-    current_user: Optional[User] = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a support ticket (authenticated or anonymous)."""
-    user_id = current_user.id if current_user else None
-    ticket = await support_service.create_ticket(db, request, user_id)
+    """Create a support ticket (logged-in users only)."""
+    ticket = await support_service.create_ticket(db, request, current_user.id)
+    await db.commit()
+    ticket = await support_service.get_ticket_by_id(db, ticket.id)
     return support_service.build_ticket_response(ticket)
 
 
@@ -33,10 +34,13 @@ async def create_ticket(
 async def get_user_tickets(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    status_filter: Optional[str] = Query(None),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    tickets, total = await support_service.get_user_tickets(db, current_user.id, page, page_size)
+    tickets, total = await support_service.get_user_tickets(
+        db, current_user.id, page, page_size, status_filter
+    )
     items = [support_service.build_ticket_response(t) for t in tickets]
     return PaginatedResponse(items=items, total=total, page=page, page_size=page_size, total_pages=(total + page_size - 1) // page_size)
 
@@ -75,7 +79,9 @@ async def reply_to_ticket(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
     if ticket.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your ticket")
-    msg = await support_service.reply_to_ticket(db, ticket, request.message, current_user.id)
+    msg = await support_service.reply_to_ticket(db, ticket, request.message, current_user.id, is_admin=request.is_admin)
+    await db.commit()
+    ticket = await support_service.get_ticket_by_id(db, ticket.id)
     return support_service.build_ticket_response(ticket)
 
 
@@ -95,6 +101,8 @@ async def close_ticket(
     if ticket.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your ticket")
     await support_service.close_ticket(db, ticket)
+    await db.commit()
+    ticket = await support_service.get_ticket_by_id(db, ticket.id)
     return support_service.build_ticket_response(ticket)
 
 
@@ -105,9 +113,13 @@ async def get_all_tickets(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status_filter: Optional[str] = Query(None),
+    category_filter: Optional[str] = Query(None),
+    priority_filter: Optional[str] = Query(None),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    tickets, total = await support_service.get_all_tickets(db, page, page_size, status_filter)
+    tickets, total = await support_service.get_all_tickets(
+        db, page, page_size, status_filter, category_filter, priority_filter
+    )
     items = [support_service.build_ticket_response(t) for t in tickets]
     return PaginatedResponse(items=items, total=total, page=page, page_size=page_size, total_pages=(total + page_size - 1) // page_size)

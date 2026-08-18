@@ -1,28 +1,121 @@
 {% extends "shop/base.html" %}
-{% block title %}تیکت‌های پشتیبانی - آشا شاپ{% endblock %}
+{% block title %}تیکت‌های پشتیبانی{% endblock %}
+{% block body_id %}module-support-tickets{% endblock %}
+{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width page- tax-display-enabled customer-has-logged st-wrapper{% endblock %}
+{% block extra_head %}
+<style>
+.ticket-page { padding-bottom: 2.5rem; }
+.ticket-card { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #fff; border: 1px solid #e8e8e8; border-radius: 14px; transition: all .2s ease; }
+.ticket-card:hover { border-color: var(--c-primary); box-shadow: 0 6px 18px rgba(0,0,0,.06); transform: translateY(-1px); text-decoration: none; }
+.ticket-card + .ticket-card { margin-top: .75rem; }
+.ticket-icon { width: 48px; height: 48px; flex: 0 0 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: var(--c-primary); background: rgba(0,0,0,.04); }
+.ticket-main { flex: 1; min-width: 0; }
+.ticket-subject { font-weight: 600; color: #333; font-size: .95rem; margin-bottom: .35rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ticket-meta { font-size: .78rem; color: #999; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.ticket-side { text-align: left; flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; }
+.ticket-badge { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 500; padding: .25rem .6rem; border-radius: 999px; }
+.badge-cat { background: #eef3ff; color: #2f54c7; }
+.badge-status-open { background: #e6f7ff; color: #1890ff; }
+.badge-status-answered { background: #f0fdf4; color: #16a34a; }
+.badge-status-closed { background: #f1f1f1; color: #6b7280; }
+.badge-prio-low { background: #f0fdf4; color: #16a34a; }
+.badge-prio-medium { background: #fff7e6; color: #d46b08; }
+.badge-prio-high { background: #fff1f0; color: #d4380d; }
+.ticket-date { font-size: .75rem; color: #999; }
+.ticket-filters { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.ticket-filters .btn { font-size: .82rem; border-radius: 999px; }
+.ticket-empty { text-align: center; padding: 4rem 1rem; color: #aaa; }
+.ticket-empty i { font-size: 3rem; color: #ddd; margin-bottom: .75rem; }
+.ticket-empty p { margin-bottom: .5rem; }
+.ticket-empty .btn { margin-top: .75rem; }
+.ticket-pagination { display: flex; justify-content: center; gap: .35rem; margin-top: 1.5rem; }
+.ticket-pagination a, .ticket-pagination span { min-width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-size: .85rem; color: #666; background: #fff; border: 1px solid #e5e5e5; }
+.ticket-pagination a.active { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+.ticket-pagination a:hover { text-decoration: none; border-color: var(--c-primary); color: var(--c-primary); }
+</style>
+{% endblock %}
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-xl font-bold">تیکت‌های پشتیبانی</h1>
-    <a href="/tickets/new" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700"><i class="fas fa-plus ml-1"></i>تیکت جدید</a>
-</div>
-{% if tickets %}
-<div class="bg-white rounded-lg shadow-sm border">
-    {% for t in tickets %}
-    <a href="/tickets/{{ t.id }}" class="flex items-center justify-between p-4 border-b hover:bg-gray-50">
-        <div>
-            <p class="font-medium">{{ t.subject or 'بدون موضوع' }}</p>
-            <p class="text-xs text-gray-500 mt-1">{{ t.description[:80] }}{% if t.description|length > 80 %}...{% endif %}</p>
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="3" itemscope="" itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/"><i class="fa fa-home home" aria-hidden="true"></i><span itemprop="name">خانه</span></a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <a itemprop="item" href="/profile"><span itemprop="name">حساب کاربری</span></a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope="" itemtype="https://schema.org/ListItem">
+                <span class="separator material-icons">chevron_right</span>
+                <span itemprop="name">تیکت‌های پشتیبانی</span>
+                <meta itemprop="position" content="3">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="row">
+            {% include "shop/_profile_sidebar.html" %}
+            <div id="center-column" class="center-column col-12 col-md-8 col-lg-9">
+                <div class="center-wrapper">
+                    <section id="main" class="box-bg-title-body">
+                        <div class="title">
+                            <h4 class="page-heading" style="margin-bottom: 0; font-size: 1.2rem; padding: 0;">
+                                تیکت‌های پشتیبانی
+                            </h4>
+                        </div>
+                        <div class="body">
+                            <div class="ticket-page">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap" style="gap:.5rem">
+                                    <div class="ticket-filters mb-0">
+                                        <a href="/profile/tickets" class="btn {{ 'btn-primary' if not status_filter else 'btn-outline-secondary' }}">همه</a>
+                                        <a href="/profile/tickets?status=Open" class="btn {{ 'btn-primary' if status_filter == 'Open' else 'btn-outline-secondary' }}">باز</a>
+                                        <a href="/profile/tickets?status=Answered" class="btn {{ 'btn-primary' if status_filter == 'Answered' else 'btn-outline-secondary' }}">پاسخ داده شده</a>
+                                        <a href="/profile/tickets?status=Closed" class="btn {{ 'btn-primary' if status_filter == 'Closed' else 'btn-outline-secondary' }}">بسته شده</a>
+                                    </div>
+                                    <a href="/profile/tickets/new" class="btn btn-primary" style="border-radius:999px"><i class="fa fa-plus" style="margin-inline-end:.4rem"></i>تیکت جدید</a>
+                                </div>
+                                {% if tickets %}
+                                {% for t in tickets %}
+                                <a href="/profile/tickets/{{ t.id }}" class="ticket-card">
+                                    <div class="ticket-icon"><i class="fa fa-headset"></i></div>
+                                    <div class="ticket-main">
+                                        <div class="ticket-subject">{{ t.subject or 'بدون موضوع' }}</div>
+                                        <div class="ticket-meta">
+                                            <span><i class="fa fa-folder-open"></i> {{ categories.get(t.category, t.category or '—') }}</span>
+                                            <span><i class="fa fa-tag"></i> {{ statuses.get(t.status, t.status or '—') }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="ticket-side">
+                                        {% if t.priority %}<span class="ticket-badge badge-prio-{{ t.priority|lower }}">{{ priorities.get(t.priority) }}</span>{% endif %}
+                                        <span class="ticket-badge badge-status-{{ t.status|lower }}">{{ statuses.get(t.status, t.status) }}</span>
+                                        <span class="ticket-date">{{ t.insert_date.strftime('%Y/%m/%d') if t.insert_date else '' }}</span>
+                                    </div>
+                                </a>
+                                {% endfor %}
+                                {% if total_pages > 1 %}
+                                <div class="ticket-pagination">
+                                    {% for p in range(1, total_pages + 1) %}
+                                    <a href="/profile/tickets?page={{ p }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="{{ 'active' if p == page else '' }}">{{ p }}</a>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                <div class="ticket-empty">
+                                    <i class="fa fa-ticket-alt"></i>
+                                    <p>هنوز تیکتی ثبت نکرده‌اید</p>
+                                    <a href="/profile/tickets/new" class="btn btn-primary" style="border-radius:999px"><i class="fa fa-plus" style="margin-inline-end:.4rem"></i>ثبت اولین تیکت</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
         </div>
-        <div class="text-left">
-            <span class="px-2 py-0.5 rounded text-xs {% if t.status == 'Open' %}bg-blue-100 text-blue-700{% elif t.status == 'Closed' %}bg-gray-100 text-gray-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">{{ t.status }}</span>
-            <p class="text-xs text-gray-400 mt-1">{{ t.insert_date[:10] if t.insert_date else '' }}</p>
-        </div>
-    </a>
-    {% endfor %}
+    </div>
 </div>
-{% else %}
-<div class="text-center py-16 text-gray-400">
-    <i class="fas fa-ticket-alt text-5xl mb-4"></i><p>تیکتی ثبت نشده است</p>
-</div>
-{% endif %}
 {% endblock %}

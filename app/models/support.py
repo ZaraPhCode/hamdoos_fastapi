@@ -17,9 +17,13 @@ class Ticket(Base, BaseEntityMixin):
     description: Mapped[Optional[str]] = mapped_column("Description", Text, nullable=True)
     subject: Mapped[Optional[str]] = mapped_column("Subject", String(100), nullable=True)
     status: Mapped[Optional[str]] = mapped_column("Status", String(50), nullable=True)
+    category: Mapped[Optional[str]] = mapped_column("Category", String(50), nullable=True)
+    priority: Mapped[Optional[str]] = mapped_column("Priority", String(50), nullable=True)
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column("UserId", UUID(as_uuid=True), ForeignKey("Users.Id", ondelete="SET NULL"), nullable=True)
+    order_id: Mapped[Optional[uuid.UUID]] = mapped_column("OrderId", UUID(as_uuid=True), ForeignKey("Orders.Id", ondelete="SET NULL"), nullable=True)
 
     chat_messages: Mapped[list["ChatMessage"]] = relationship("ChatMessage", back_populates="ticket", lazy="selectin")
+    order: Mapped[Optional["OrderModel"]] = relationship("OrderModel", foreign_keys=[order_id])
 
 
 class Chat(Base, BaseEntityMixin):
@@ -37,6 +41,7 @@ class ChatMessage(Base, BaseEntityMixin):
 
     message: Mapped[Optional[str]] = mapped_column("Message", Text, nullable=True)
     is_seen: Mapped[bool] = mapped_column("IsSeen", Boolean, default=False)
+    is_admin: Mapped[bool] = mapped_column("IsAdmin", Boolean, default=False)
     group_id: Mapped[Optional[uuid.UUID]] = mapped_column("GroupId", UUID(as_uuid=True), ForeignKey("Chats.Id", ondelete="SET NULL"), nullable=True)
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column("UserId", UUID(as_uuid=True), ForeignKey("Users.Id", ondelete="SET NULL"), nullable=True)
     media_id: Mapped[Optional[uuid.UUID]] = mapped_column("MediaId", UUID(as_uuid=True), ForeignKey("Medias.Id", ondelete="SET NULL"), nullable=True)
@@ -45,6 +50,7 @@ class ChatMessage(Base, BaseEntityMixin):
     chat_group: Mapped[Optional[Chat]] = relationship("Chat", back_populates="chat_messages")
     ticket: Mapped[Optional[Ticket]] = relationship("Ticket", back_populates="chat_messages")
     media: Mapped[Optional["Media"]] = relationship("Media")
+    user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[user_id])
 
 
 class ChatReferenceHistory(Base, BaseEntityMixin):

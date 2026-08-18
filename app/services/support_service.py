@@ -12,11 +12,60 @@ from sqlalchemy.orm import selectinload
 
 from app.models.support import Ticket, Chat, ChatMessage, ChatReferenceHistory
 from app.models.identity import User
+from app.models.customer_content import Media
+
+
+TICKET_CATEGORIES = {
+    "General": "عمومی",
+    "Technical": "فنی",
+    "OrderTracking": "پیگیری سفارش",
+    "Financial": "مالی / پرداخت",
+    "Suggestion": "پیشنهاد / انتقاد",
+}
+
+TICKET_PRIORITIES = {
+    "Low": "کم",
+    "Medium": "متوسط",
+    "High": "زیاد",
+}
+
+TICKET_STATUSES = {
+    "Open": "باز",
+    "Answered": "پاسخ داده شده",
+    "Closed": "بسته شده",
+}
 
 
 # ── Tickets ──
 
-async def create_ticket(db: AsyncSession, request, user_id: Optional[uuid.UUID] = None) -> Ticket:
+async def _create_media(db: AsyncSession, file_path: str, file_name: str) -> Media:
+    media = Media(
+        id=uuid.uuid4(),
+        url=file_path,
+        title=file_name,
+        type="Unknown",
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(media)
+    await db.flush()
+    return media
+
+
+async def create_ticket(
+    db: AsyncSession,
+    request,
+    user_id: Optional[uuid.UUID] = None,
+    file_path: Optional[str] = None,
+    file_name: Optional[str] = None,
+) -> Ticket:
+    order_id = getattr(request, "order_id", None)
+    if order_id:
+        try:
+            order_id = uuid.UUID(str(order_id))
+        except (ValueError, TypeError):
+            order_id = None
+
     ticket = Ticket(
         id=uuid.uuid4(),
         name=request.name,
@@ -25,6 +74,9 @@ async def create_ticket(db: AsyncSession, request, user_id: Optional[uuid.UUID] 
         description=request.description,
         subject=request.subject,
         status="Open",
+        category=getattr(request, "category", None),
+        priority=getattr(request, "priority", None),
+        order_id=order_id,
         user_id=user_id,
         insert_date=datetime.now(timezone.utc),
         update_date=datetime.now(timezone.utc),
@@ -34,12 +86,18 @@ async def create_ticket(db: AsyncSession, request, user_id: Optional[uuid.UUID] 
 
     # Create initial message from the ticket description
     if request.description:
+        media_id = None
+        if file_path and file_name:
+            media = await _create_media(db, file_path, file_name)
+            media_id = media.id
         msg = ChatMessage(
             id=uuid.uuid4(),
             message=request.description,
             is_seen=False,
+            is_admin=False,
             ticket_id=ticket.id,
             user_id=user_id,
+            media_id=media_id,
             insert_date=datetime.now(timezone.utc),
             update_date=datetime.now(timezone.utc),
         )
@@ -49,12 +107,19 @@ async def create_ticket(db: AsyncSession, request, user_id: Optional[uuid.UUID] 
     return ticket
 
 
+def _ticket_load_options():
+    return (
+        selectinload(Ticket.chat_messages).selectinload(ChatMessage.user),
+        selectinload(Ticket.chat_messages).selectinload(ChatMessage.media),
+        selectinload(Ticket.order),
+    )
+
+
 async def get_ticket_by_id(db: AsyncSession, ticket_id: uuid.UUID) -> Optional[Ticket]:
     stmt = (
         select(Ticket)
-        .options(
-            selectinload(Ticket.chat_messages).order_by(ChatMessage.insert_date),
-        )
+        .options(*_ticket_load_options())
+        .execution_options(populate_existing=True)
         .where(Ticket.id == ticket_id, Ticket.is_removed == False)
     )
     result = await db.execute(stmt)
@@ -62,18 +127,24 @@ async def get_ticket_by_id(db: AsyncSession, ticket_id: uuid.UUID) -> Optional[T
 
 
 async def get_user_tickets(
-    db: AsyncSession, user_id: uuid.UUID, page: int = 1, page_size: int = 20
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    page: int = 1,
+    page_size: int = 20,
+    status_filter: Optional[str] = None,
 ) -> tuple[list[Ticket], int]:
-    count_stmt = select(func.count(Ticket.id)).where(
-        Ticket.user_id == user_id, Ticket.is_removed == False
-    )
+    conditions = [Ticket.user_id == user_id, Ticket.is_removed == False]
+    if status_filter:
+        conditions.append(Ticket.status == status_filter)
+
+    count_stmt = select(func.count(Ticket.id)).where(*conditions)
     count_result = await db.execute(count_stmt)
     total = count_result.scalar() or 0
 
     stmt = (
         select(Ticket)
-        .options(selectinload(Ticket.chat_messages))
-        .where(Ticket.user_id == user_id, Ticket.is_removed == False)
+        .options(*_ticket_load_options())
+        .where(*conditions)
         .order_by(Ticket.insert_date.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -84,11 +155,20 @@ async def get_user_tickets(
 
 
 async def get_all_tickets(
-    db: AsyncSession, page: int = 1, page_size: int = 20, status_filter: Optional[str] = None
+    db: AsyncSession,
+    page: int = 1,
+    page_size: int = 20,
+    status_filter: Optional[str] = None,
+    category_filter: Optional[str] = None,
+    priority_filter: Optional[str] = None,
 ) -> tuple[list[Ticket], int]:
     conditions = [Ticket.is_removed == False]
     if status_filter:
         conditions.append(Ticket.status == status_filter)
+    if category_filter:
+        conditions.append(Ticket.category == category_filter)
+    if priority_filter:
+        conditions.append(Ticket.priority == priority_filter)
 
     count_stmt = select(func.count(Ticket.id)).where(*conditions)
     count_result = await db.execute(count_stmt)
@@ -96,7 +176,7 @@ async def get_all_tickets(
 
     stmt = (
         select(Ticket)
-        .options(selectinload(Ticket.chat_messages))
+        .options(*_ticket_load_options())
         .where(*conditions)
         .order_by(Ticket.insert_date.desc())
         .offset((page - 1) * page_size)
@@ -108,21 +188,40 @@ async def get_all_tickets(
 
 
 async def reply_to_ticket(
-    db: AsyncSession, ticket: Ticket, message_text: str, user_id: uuid.UUID
+    db: AsyncSession,
+    ticket: Ticket,
+    message_text: str,
+    user_id: uuid.UUID,
+    is_admin: bool = False,
+    file_path: Optional[str] = None,
+    file_name: Optional[str] = None,
 ) -> ChatMessage:
+    media_id = None
+    if file_path and file_name:
+        media = await _create_media(db, file_path, file_name)
+        media_id = media.id
+
     msg = ChatMessage(
         id=uuid.uuid4(),
         message=message_text,
         is_seen=False,
+        is_admin=is_admin,
         ticket_id=ticket.id,
         user_id=user_id,
+        media_id=media_id,
         insert_date=datetime.now(timezone.utc),
         update_date=datetime.now(timezone.utc),
     )
     db.add(msg)
 
-    # Update ticket status
-    ticket.status = "Answered" if ticket.status == "Open" else ticket.status
+    # Update ticket status — a user reply re-opens, an admin reply marks answered
+    if ticket.status != "Closed":
+        if is_admin:
+            if ticket.status == "Open":
+                ticket.status = "Answered"
+        elif ticket.status == "Answered":
+            ticket.status = "Open"
+
     ticket.update_date = datetime.now(timezone.utc)
     await db.flush()
     return msg
@@ -203,6 +302,9 @@ async def mark_messages_seen(db: AsyncSession, chat_id: uuid.UUID, user_id: uuid
 
 
 def build_ticket_response(ticket: Ticket) -> dict:
+    order_reference = None
+    if ticket.order:
+        order_reference = getattr(ticket.order, "reference_code", None)
     return {
         "id": ticket.id,
         "name": ticket.name,
@@ -211,6 +313,10 @@ def build_ticket_response(ticket: Ticket) -> dict:
         "description": ticket.description,
         "subject": ticket.subject,
         "status": ticket.status,
+        "category": ticket.category,
+        "priority": ticket.priority,
+        "order_id": ticket.order_id,
+        "order_reference": order_reference,
         "user_id": ticket.user_id,
         "insert_date": ticket.insert_date,
         "messages": [
@@ -219,7 +325,16 @@ def build_ticket_response(ticket: Ticket) -> dict:
                 "message": m.message,
                 "is_seen": m.is_seen,
                 "group_id": m.group_id,
+                "ticket_id": m.ticket_id,
                 "user_id": m.user_id,
+                "is_admin": bool(m.is_admin) or (bool(m.user_id) and m.user_id != ticket.user_id),
+                "sender_name": (
+                    "پشتیبانی"
+                    if (bool(m.is_admin) or (bool(m.user_id) and m.user_id != ticket.user_id))
+                    else (m.user.full_name or m.user.user_name if m.user else (ticket.name or "کاربر"))
+                ),
+                "file_url": m.media.url if m.media else None,
+                "file_name": m.media.title if m.media else None,
                 "insert_date": m.insert_date,
             }
             for m in (ticket.chat_messages or [])

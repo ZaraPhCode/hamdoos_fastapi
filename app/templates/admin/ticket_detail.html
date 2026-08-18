@@ -1,70 +1,119 @@
-?{% extends "admin/base.html" %}
-{% block title %}تیکت {{ ticket.subject }}{% endblock %}
+{% extends "admin/base.html" %}
+{% block title %}تیکت {{ ticket.subject or ticket.id|short_id }}{% endblock %}
 {% block content %}
-<div class="max-w-4xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">{{ ticket.subject }}</h1>
-        <div class="flex items-center gap-3">
-            {% if ticket.status != 'closed' %}
-            <form method="POST" action="/administration/tickets/{{ ticket.id }}/close" onsubmit="return confirm('تیکت بسته شود؟')">
-                <button type="submit" class="btn-danger flex items-center gap-2"><i class="fas fa-times"></i> بستن تیکت</button>
-            </form>
-            {% endif %}
-            <a href="/administration/tickets" class="btn-secondary flex items-center gap-2">
-                <i class="fas fa-arrow-right"></i> بازگشت
-            </a>
-        </div>
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div class="card lg:col-span-2">
-            <div class="card-header"><h2 class="text-lg font-semibold">پیام‌ها</h2></div>
-            <div class="card-body space-y-4 max-h-[500px] overflow-y-auto" id="chat-thread">
-                {% for msg in ticket.messages %}
-                <div class="flex {{ 'justify-start' if msg.is_admin else 'justify-end' }}">
-                    <div class="max-w-[80%] {{ 'bg-blue-50 border border-blue-200' if msg.is_admin else 'bg-gray-100 border border-gray-200' }} rounded-xl px-4 py-3">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-medium {{ 'text-blue-600' if msg.is_admin else 'text-gray-600' }}">
-                                {{ msg.sender_name or ( 'مدیر' if msg.is_admin else ticket.name ) }}
-                            </span>
-                            <span class="text-xs text-gray-400">{{ msg.insert_date }}</span>
-                        </div>
-                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ msg.message }}</p>
-                        {% if msg.file_url %}
-                        <a href="{{ msg.file_url }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-2">
-                            <i class="fas fa-paperclip"></i> فایل پیوست
-                        </a>
+<div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-blue-500">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-blue-200"><i class="fas fa-headset"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">تیکت #{{ ticket.id|short_id }}</h1>
+                    <p class="text-sm text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                        <span class="badge
+                            {%- if ticket.status == 'Open' %} bg-blue-100 text-blue-800
+                            {%- elif ticket.status == 'Answered' %} bg-emerald-100 text-emerald-800
+                            {%- elif ticket.status == 'Closed' %} bg-gray-100 text-gray-800
+                            {%- else %} bg-gray-100 text-gray-800{% endif %}">
+                            {{ statuses.get(ticket.status, ticket.status) }}
+                        </span>
+                        <span class="badge bg-indigo-100 text-indigo-800"><i class="fas fa-folder-open ml-1"></i>{{ categories.get(ticket.category, ticket.category or 'عمومی') }}</span>
+                        {% if ticket.priority %}
+                        <span class="badge
+                            {%- if ticket.priority == 'High' %} bg-red-100 text-red-800
+                            {%- elif ticket.priority == 'Medium' %} bg-amber-100 text-amber-800
+                            {%- elif ticket.priority == 'Low' %} bg-emerald-100 text-emerald-800
+                            {%- else %} bg-gray-100 text-gray-800{% endif %}">
+                            {{ priorities.get(ticket.priority) }}
+                        </span>
                         {% endif %}
-                    </div>
+                        <span class="text-gray-400">|</span>
+                        <span>ثبت: {{ ticket.insert_date.strftime('%Y/%m/%d - %H:%M') if ticket.insert_date else ticket.insert_date }}</span>
+                    </p>
                 </div>
-                {% else %}
-                <p class="text-gray-500 text-sm text-center">هیچ پیامی وجود ندارد.</p>
-                {% endfor %}
             </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><h2 class="text-lg font-semibold">اطلاعات تیکت</h2></div>
-            <div class="card-body space-y-3">
-                <div><span class="text-gray-500 text-sm">نام:</span><p class="font-medium">{{ ticket.name or '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">ایمیل:</span><p class="font-medium" dir="ltr">{{ ticket.email or '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">موبایل:</span><p class="font-medium" dir="ltr">{{ ticket.mobile or '---' }}</p></div>
-                <div><span class="text-gray-500 text-sm">موضوع:</span><p class="font-medium">{{ ticket.subject }}</p></div>
-                <div><span class="text-gray-500 text-sm">وضعیت:</span>
-                    <p>{% if ticket.status == 'open' %}<span class="badge bg-blue-100 text-blue-800">باز</span>
-                    {% elif ticket.status == 'answered' %}<span class="badge bg-emerald-100 text-emerald-800">پاسخ داده شده</span>
-                    {% elif ticket.status == 'closed' %}<span class="badge bg-gray-100 text-gray-800">بسته شده</span>
-                    {% else %}<span class="badge bg-gray-100 text-gray-800">{{ ticket.status }}</span>{% endif %}</p>
-                </div>
-                <div><span class="text-gray-500 text-sm">تاریخ ایجاد:</span><p class="font-medium">{{ ticket.insert_date }}</p></div>
-                <div><span class="text-gray-500 text-sm">پیام‌ها:</span><p class="font-medium">{{ ticket.messages|length }}</p></div>
+            <div class="flex items-center gap-2">
+                {% if ticket.status != 'Closed' %}
+                <form method="POST" action="/administration/tickets/{{ ticket.id }}/close" onsubmit="return confirm('تیکت بسته شود؟')">
+                    <button type="submit" class="btn-danger flex items-center gap-2"><i class="fas fa-times"></i> بستن تیکت</button>
+                </form>
+                {% endif %}
+                <a href="/administration/tickets" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
             </div>
         </div>
     </div>
-    {% if ticket.status != 'closed' %}
-    <div class="card">
-        <div class="card-header"><h2 class="text-lg font-semibold">پاسخ به تیکت</h2></div>
-        <div class="card-body">
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Messages -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                <h2 class="font-semibold text-gray-800"><i class="fas fa-comments ml-2 text-indigo-500"></i>پیام‌ها</h2>
+                <span class="badge bg-gray-100 text-gray-700">{{ ticket.messages|length }} پیام</span>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4 max-h-[520px] overflow-y-auto" id="chat-thread">
+                    {% for msg in ticket.messages %}
+                    <div class="flex {{ 'justify-start' if msg.is_admin else 'justify-end' }}">
+                        <div class="max-w-[80%] {{ 'bg-blue-50 border border-blue-200' if msg.is_admin else 'bg-gray-100 border border-gray-200' }} rounded-xl px-4 py-3">
+                            <div class="flex items-center justify-between mb-1 gap-4">
+                                <span class="text-xs font-medium {{ 'text-blue-600' if msg.is_admin else 'text-gray-600' }}">
+                                    <i class="fas {{ 'fa-user-shield ml-1' if msg.is_admin else 'fa-user ml-1' }}"></i>
+                                    {{ msg.sender_name or ( 'مدیر' if msg.is_admin else ticket.name ) }}
+                                </span>
+                                <span class="text-xs text-gray-400">{{ msg.insert_date.strftime('%Y/%m/%d - %H:%M') if msg.insert_date else msg.insert_date }}</span>
+                            </div>
+                            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ msg.message }}</p>
+                            {% if msg.file_url %}
+                            <a href="{{ msg.file_url }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-2 bg-white/70 rounded-lg px-2 py-1">
+                                <i class="fas fa-paperclip"></i> {{ msg.file_name or 'فایل پیوست' }}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-400 text-sm text-center py-8">هیچ پیامی وجود ندارد.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Ticket info -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden self-start">
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-gray-200 px-6 py-4">
+                <h2 class="font-semibold text-gray-800"><i class="fas fa-id-card ml-2 text-emerald-500"></i>اطلاعات تیکت</h2>
+            </div>
+            <div class="p-6">
+                <dl class="space-y-4">
+                    <div><dt class="text-xs text-gray-500 mb-1">نام</dt><dd class="text-sm font-medium">{{ ticket.name or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">ایمیل</dt><dd class="text-sm font-medium ltr-input">{{ ticket.email or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">موبایل</dt><dd class="text-sm font-medium ltr-input">{{ ticket.telephone or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">موضوع</dt><dd class="text-sm font-medium">{{ ticket.subject or '—' }}</dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">دسته‌بندی</dt><dd class="text-sm font-medium"><span class="badge bg-indigo-100 text-indigo-800">{{ categories.get(ticket.category, ticket.category or '—') }}</span></dd></div>
+                    <div><dt class="text-xs text-gray-500 mb-1">اولویت</dt>
+                        <dd>{% if ticket.priority == 'High' %}<span class="badge bg-red-100 text-red-800">زیاد</span>
+                        {% elif ticket.priority == 'Medium' %}<span class="badge bg-amber-100 text-amber-800">متوسط</span>
+                        {% elif ticket.priority == 'Low' %}<span class="badge bg-emerald-100 text-emerald-800">کم</span>
+                        {% else %}<span class="badge bg-gray-100 text-gray-800">—</span>{% endif %}</dd>
+                    </div>
+                    {% if ticket.order_reference %}
+                    <div><dt class="text-xs text-gray-500 mb-1">سفارش مرتبط</dt><dd class="text-sm font-medium"><span class="badge bg-sky-100 text-sky-800"><i class="fas fa-shopping-cart ml-1"></i>سفارش {{ ticket.order_reference }}</span></dd></div>
+                    {% endif %}
+                    <div><dt class="text-xs text-gray-500 mb-1">تاریخ ایجاد</dt><dd class="text-sm font-medium">{{ ticket.insert_date.strftime('%Y/%m/%d') if ticket.insert_date else ticket.insert_date }}</dd></div>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reply -->
+    {% if ticket.status != 'Closed' %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800"><i class="fas fa-paper-plane ml-2 text-amber-500"></i>پاسخ به تیکت</h2>
+        </div>
+        <div class="p-6">
             <form method="POST" action="/administration/tickets/{{ ticket.id }}/reply" enctype="multipart/form-data" class="space-y-4">
                 <div>
+                    <label class="form-label" for="message">متن پاسخ</label>
                     <textarea id="message" name="message" rows="5" class="form-input" placeholder="متن پاسخ خود را وارد کنید..." required></textarea>
                 </div>
                 <div>
@@ -72,7 +121,7 @@
                     <input type="file" id="file" name="file" class="form-input">
                 </div>
                 <div class="flex justify-end">
-                    <button type="submit" class="btn-primary"><i class="fas fa-paper-plane ml-2"></i> ارسال پاسخ</button>
+                    <button type="submit" class="btn-primary flex items-center gap-2"><i class="fas fa-paper-plane"></i> ارسال پاسخ</button>
                 </div>
             </form>
         </div>

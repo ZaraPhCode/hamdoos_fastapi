@@ -17,6 +17,9 @@ class TicketCreate(BaseModel):
     telephone: Optional[str] = None
     description: str = Field(..., min_length=1)
     subject: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[str] = None
+    order_id: Optional[UUID] = None
 
 
 class TicketReply(BaseModel):
@@ -32,6 +35,9 @@ class TicketResponse(BaseModel):
     description: Optional[str] = None
     subject: Optional[str] = None
     status: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[str] = None
+    order_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     insert_date: Optional[datetime] = None
     messages: list[ChatMessageResponse] = []
@@ -45,6 +51,8 @@ class TicketListResponse(BaseModel):
     email: Optional[str] = None
     subject: Optional[str] = None
     status: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[str] = None
     message_count: int = 0
     last_message_date: Optional[datetime] = None
     insert_date: Optional[datetime] = None
@@ -69,6 +77,9 @@ class ChatMessageResponse(BaseModel):
     ticket_id: Optional[UUID] = None
     user_id: Optional[UUID] = None
     user_name: Optional[str] = None
+    is_admin: bool = False
+    file_url: Optional[str] = None
+    file_name: Optional[str] = None
     insert_date: Optional[datetime] = None
 
     model_config = {"from_attributes": True}

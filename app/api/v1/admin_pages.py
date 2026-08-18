@@ -4378,19 +4378,36 @@ async def admin_warehouse(
 
 # ── Tickets ──
 
+def _normalize_ticket_status(value):
+    return {
+        "open": "Open", "answered": "Answered", "closed": "Closed",
+        "Open": "Open", "Answered": "Answered", "Closed": "Closed",
+    }.get(value or "", value or None)
+
+
 @router.get("/tickets", response_class=HTMLResponse)
 async def admin_tickets(
     request: Request,
     page: int = Query(1),
     status_filter: str = Query(None),
+    category_filter: str = Query(None),
+    priority_filter: str = Query(None),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    tickets, total = await support_service.get_all_tickets(db, page, 20, status_filter)
+    tickets, total = await support_service.get_all_tickets(
+        db, page, 20,
+        _normalize_ticket_status(status_filter), category_filter, priority_filter,
+    )
+    from app.services.support_service import (
+        TICKET_CATEGORIES, TICKET_PRIORITIES, TICKET_STATUSES,
+    )
     return templates.TemplateResponse("admin/tickets.html", {
         "request": request, "current_user": current_user,
         "tickets": [support_service.build_ticket_response(t) for t in tickets],
         "total": total, "page": page, "total_pages": (total + 19) // 20,
+        "status_filter": status_filter, "category_filter": category_filter, "priority_filter": priority_filter,
+        "categories": TICKET_CATEGORIES, "priorities": TICKET_PRIORITIES, "statuses": TICKET_STATUSES,
     })
 
 
@@ -4406,10 +4423,75 @@ async def admin_ticket_detail(
     ticket = await support_service.get_ticket_by_id(db, tid)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    from app.services.support_service import (
+        TICKET_CATEGORIES, TICKET_PRIORITIES, TICKET_STATUSES,
+    )
     return templates.TemplateResponse("admin/ticket_detail.html", {
         "request": request, "current_user": current_user,
         "ticket": support_service.build_ticket_response(ticket),
+        "categories": TICKET_CATEGORIES, "priorities": TICKET_PRIORITIES, "statuses": TICKET_STATUSES,
     })
+
+
+@router.post("/tickets/{ticket_id}/reply")
+async def admin_ticket_reply(
+    request: Request,
+    ticket_id: str,
+    message: str = Form(""),
+    file: Optional[UploadFile] = File(None),
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    try:
+        tid = uuid.UUID(ticket_id)
+    except ValueError:
+        return RedirectResponse(url="/administration/tickets", status_code=303)
+    ticket = await support_service.get_ticket_by_id(db, tid)
+    if not ticket:
+        return RedirectResponse(url="/administration/tickets", status_code=303)
+
+    file_path = None
+    file_name = None
+    if file and file.filename:
+        import aiofiles
+        upload_dir = "app/static/uploads/tickets"
+        os.makedirs(upload_dir, exist_ok=True)
+        ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
+        fname = f"ticket_admin_{current_user.id.hex[:8]}_{uuid.uuid4().hex[:8]}.{ext}"
+        file_path = f"/static/uploads/tickets/{fname}"
+        file_name = file.filename
+        content = await file.read()
+        async with aiofiles.open(os.path.join(upload_dir, fname), "wb") as f:
+            await f.write(content)
+
+    if message.strip():
+        await support_service.reply_to_ticket(
+            db, ticket, message.strip(), current_user.id,
+            is_admin=True, file_path=file_path, file_name=file_name,
+        )
+        await db.commit()
+    return RedirectResponse(url=f"/administration/tickets/{ticket.id}", status_code=303)
+
+
+@router.post("/tickets/{ticket_id}/close")
+async def admin_ticket_close(
+    request: Request,
+    ticket_id: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid
+    try:
+        tid = uuid.UUID(ticket_id)
+    except ValueError:
+        return RedirectResponse(url="/administration/tickets", status_code=303)
+    ticket = await support_service.get_ticket_by_id(db, tid)
+    if not ticket:
+        return RedirectResponse(url="/administration/tickets", status_code=303)
+    await support_service.close_ticket(db, ticket)
+    await db.commit()
+    return RedirectResponse(url=f"/administration/tickets/{ticket.id}", status_code=303)
 
 
 # ── Product Types ──
