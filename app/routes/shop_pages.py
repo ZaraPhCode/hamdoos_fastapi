@@ -25,12 +25,12 @@ from app.models.customer_content import Comment
 from app.models.finance import Receipt
 from app.models.order import OrderStatusRecord
 from app.schemas.order import CartItemCreate, CreateOrderRequest, OrderAddressInput
-from app.services import product_service, order_service, auth_service
+from app.services import product_service, order_service, auth_service, support_service
 from app.services.cart_cookie_service import (
     Cart, CartItem as CartCookieItem, parse_cart, save_cart_response, enrich_cart, cart_context,
 )
 from app.schemas.product import ProductSearchParams
-from app.utils.persian_tools import normalize_image_url
+from app.utils.persian_tools import normalize_image_url, price_to_string
 from app.config.site_config import register_template_globals
 
 templates = register_template_globals(Jinja2Templates(directory="app/templates"))
@@ -427,6 +427,14 @@ async def home_page(
     mid_right_poster_src = _poster_src(mid_right_poster, site_settings.mid_right_poster_image_url if site_settings else None)
     bottom_poster_src = _poster_src(bottom_category_poster, site_settings.bottom_poster_image_url if site_settings else None)
 
+    # A poster shown via a custom image URL is not tied to its category page:
+    # it must not navigate anywhere when clicked.
+    top_poster_is_custom = bool(site_settings and site_settings.top_poster_image_url)
+    middle_poster_is_custom = bool(site_settings and site_settings.middle_poster_image_url)
+    mid_left_poster_is_custom = bool(site_settings and site_settings.mid_left_poster_image_url)
+    mid_right_poster_is_custom = bool(site_settings and site_settings.mid_right_poster_image_url)
+    bottom_poster_is_custom = bool(site_settings and site_settings.bottom_poster_image_url)
+
     # Sidebar support poster: custom URL -> category poster -> site_config default.
     from app.config.site_config import SITE_INFO
     sidebar_support_category = None
@@ -448,20 +456,25 @@ async def home_page(
         "top_category_products": _map(top_category_products),
         "top_category_poster": top_category_poster,
         "top_poster_src": top_poster_src,
+        "top_poster_is_custom": top_poster_is_custom,
         "middle_category": middle_category,
         "middle_category_title": middle_category.title if middle_category else None,
         "middle_category_products": _map(middle_category_products),
         "middle_category_poster": middle_category_poster,
         "middle_poster_src": middle_poster_src,
+        "middle_poster_is_custom": middle_poster_is_custom,
         "mid_left_poster": mid_left_poster,
         "mid_left_poster_src": mid_left_poster_src,
+        "mid_left_poster_is_custom": mid_left_poster_is_custom,
         "mid_right_poster": mid_right_poster,
         "mid_right_poster_src": mid_right_poster_src,
+        "mid_right_poster_is_custom": mid_right_poster_is_custom,
         "bottom_category": bottom_category,
         "bottom_category_title": bottom_category.title if bottom_category else None,
         "bottom_category_products": _map(bottom_category_products),
         "bottom_category_poster": bottom_category_poster,
         "bottom_poster_src": bottom_poster_src,
+        "bottom_poster_is_custom": bottom_poster_is_custom,
         "sidebar_support_src": sidebar_support_src,
         "categories": categories,
         "header_categories": categories,
@@ -536,6 +549,42 @@ async def search_page(
         order=order, query=search_term, page=page, page_size=page_size,
         tags=tags, page_title=page_title, current_user=current_user,
     )
+
+
+@router.post("/search/autocomplete", response_class=JSONResponse)
+async def search_autocomplete(
+    q: str = Form(""),
+    resultsPerPage: int = Form(10),
+    db: AsyncSession = Depends(get_db),
+):
+    """Live typeahead search used by the header search box.
+
+    Posts a query term and returns a JSON payload shaped like the .NET-era
+    widget expects: {"products": [{id, slug, partNumber, name, price,
+    featureImageURL}]}. The list narrows as the user keeps typing because
+    the frontend calls this endpoint on each keystroke.
+    """
+    term = (q or "").strip()
+    products: list = []
+    if term:
+        products, _ = await product_service.search_products(
+            db, ProductSearchParams(query=term, page=1, page_size=max(1, resultsPerPage))
+        )
+
+    items = []
+    for p in products:
+        img = _normalize_media_url(p.feature_image_url) if p.feature_image_url else None
+        if img and img.startswith("/") and not img.startswith("//"):
+            img = img.lstrip("/")
+        items.append({
+            "id": str(p.id),
+            "slug": p.slug or "",
+            "partNumber": p.part_number or "",
+            "name": p.name,
+            "price": price_to_string(p.price_after_discount or p.price or 0),
+            "featureImageURL": img or "",
+        })
+    return JSONResponse({"products": items})
 
 
 async def _render_product_list(
@@ -3126,20 +3175,23 @@ def _ticket_labels() -> dict:
     }
 
 
-async def _save_ticket_attachment(file: Optional[UploadFile], user_id) -> tuple[Optional[str], Optional[str]]:
+async def _save_ticket_attachment(file: Optional[UploadFile], user_id) -> tuple[Optional[str], Optional[str], Optional[str]]:
     import aiofiles
     import os
     if not file or not file.filename:
-        return None, None
+        return None, None, None
+    content = await file.read()
+    ok, error = support_service.validate_ticket_attachment(file.filename, content)
+    if not ok:
+        return None, None, error
     upload_dir = "app/static/uploads/tickets"
     os.makedirs(upload_dir, exist_ok=True)
     ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
     fname = f"ticket_{user_id.hex[:8]}_{uuid.uuid4().hex[:8]}.{ext}"
     file_path = os.path.join(upload_dir, fname)
-    content = await file.read()
     async with aiofiles.open(file_path, "wb") as f:
         await f.write(content)
-    return f"/static/uploads/tickets/{fname}", file.filename
+    return f"/static/uploads/tickets/{fname}", file.filename, None
 
 
 @router.get("/profile/tickets", response_class=HTMLResponse)
@@ -3206,7 +3258,9 @@ async def profile_ticket_create(
         )).scalar_one_or_none()
         if not owned:
             oid = None
-    file_path, file_name = await _save_ticket_attachment(file, current_user.id)
+    file_path, file_name, file_error = await _save_ticket_attachment(file, current_user.id)
+    if file_error:
+        return RedirectResponse(url=f"/profile/tickets/new?error={file_error}", status_code=303)
 
     class _TicketForm:
         def __init__(self):
@@ -3230,6 +3284,7 @@ async def profile_ticket_create(
 async def profile_ticket_detail(
     request: Request,
     ticket_id: str,
+    error: Optional[str] = Query(None),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -3245,7 +3300,7 @@ async def profile_ticket_detail(
     labels = _ticket_labels()
     return templates.TemplateResponse("shop/ticket_detail.html", {
         "request": request, "current_user": current_user, "section": "tickets",
-        "ticket": support_service.build_ticket_response(ticket), **labels, **cc,
+        "ticket": support_service.build_ticket_response(ticket), "error": error, **labels, **cc,
     })
 
 
@@ -3267,7 +3322,9 @@ async def profile_ticket_reply(
     if not ticket or ticket.user_id != current_user.id:
         return RedirectResponse(url="/profile/tickets", status_code=303)
     if message.strip():
-        file_path, file_name = await _save_ticket_attachment(file, current_user.id)
+        file_path, file_name, file_error = await _save_ticket_attachment(file, current_user.id)
+        if file_error:
+            return RedirectResponse(url=f"/profile/tickets/{ticket.id}?error={file_error}", status_code=303)
         await support_service.reply_to_ticket(
             db, ticket, message.strip(), current_user.id,
             is_admin=False, file_path=file_path, file_name=file_name,

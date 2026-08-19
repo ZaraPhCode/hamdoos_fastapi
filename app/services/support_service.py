@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select, func
@@ -34,6 +34,65 @@ TICKET_STATUSES = {
     "Answered": "پاسخ داده شده",
     "Closed": "بسته شده",
 }
+
+TICKET_ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "gif", "webp", "pdf"}
+TICKET_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+_MAGIC_BYTES = {
+    "png": (b"\x89PNG\r\n\x1a\n", None),
+    "jpg": (b"\xff\xd8\xff", None),
+    "jpeg": (b"\xff\xd8\xff", None),
+    "bmp": (b"BM", None),
+    "gif": (b"GIF8", None),
+    "webp": (b"RIFF", b"WEBP"),
+    "pdf": (b"%PDF-", None),
+}
+
+# Suspicious PDF markers — JavaScript / auto-launching / embedded executables
+_PDF_DANGER_MARKERS = (
+    b"/javascript",
+    b"/js",
+    b"/launch",
+    b"/openaction",
+    b"/embeddedfile",
+    b"/richmedia",
+    b"/acroform",
+)
+
+
+def validate_ticket_attachment(filename: str, content: bytes) -> tuple[bool, Optional[str]]:
+    """Validate a ticket attachment by extension, size, magic bytes and content.
+
+    Returns (ok, error_message). A falsy filename/content is considered valid (no file).
+    """
+    if not filename:
+        return True, None
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext not in TICKET_ALLOWED_EXTENSIONS:
+        allowed = ", ".join(sorted(e.upper() for e in TICKET_ALLOWED_EXTENSIONS))
+        return False, f"فرمت فایل مجاز نیست. فرمت‌های مجاز: {allowed}"
+    if len(content) > TICKET_MAX_FILE_SIZE:
+        max_mb = TICKET_MAX_FILE_SIZE // (1024 * 1024)
+        return False, f"حجم فایل بیشتر از حد مجاز ({max_mb} مگابایت) است."
+
+    magic = _MAGIC_BYTES[ext]
+    if not content.startswith(magic[0]) or (magic[1] and magic[1] not in content[:16]):
+        return False, "محتوای فایل با پسوند آن مطابقت ندارد. فایل معتبر نیست."
+
+    if ext in {"png", "jpg", "jpeg", "bmp", "gif", "webp"}:
+        from PIL import Image
+        import io
+        try:
+            img = Image.open(io.BytesIO(content))
+            img.verify()
+        except Exception:
+            return False, "فایل تصویر خراب یا معتبر نیست."
+    elif ext == "pdf":
+        low = content[: min(len(content), 1_000_000)].lower()
+        for marker in _PDF_DANGER_MARKERS:
+            if marker in low:
+                return False, "فایل PDF حاوی کد اجرایی مشکوک است و قابل پذیرش نیست."
+    return True, None
 
 
 # ── Tickets ──
@@ -231,6 +290,37 @@ async def close_ticket(db: AsyncSession, ticket: Ticket) -> Ticket:
     ticket.status = "Closed"
     ticket.update_date = datetime.now(timezone.utc)
     return ticket
+
+
+STALE_TICKET_DAYS = 7
+
+
+async def close_stale_tickets(db: AsyncSession) -> int:
+    """Auto-close open tickets with no activity (new message from user or support)
+    in the last STALE_TICKET_DAYS days. Returns the number of closed tickets."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=STALE_TICKET_DAYS)
+    stmt = (
+        select(Ticket)
+        .where(Ticket.status.in_(["Open", "Answered"]), Ticket.is_removed == False)
+        .options(*_ticket_load_options())
+    )
+    result = await db.execute(stmt)
+    tickets = result.unique().scalars().all()
+
+    closed = 0
+    for ticket in tickets:
+        messages = ticket.chat_messages or []
+        last_activity = ticket.insert_date
+        for m in messages:
+            if m.insert_date and m.insert_date > last_activity:
+                last_activity = m.insert_date
+        if last_activity < cutoff:
+            ticket.status = "Closed"
+            ticket.update_date = datetime.now(timezone.utc)
+            closed += 1
+    if closed:
+        await db.flush()
+    return closed
 
 
 # ── Chats ──

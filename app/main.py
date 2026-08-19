@@ -42,12 +42,33 @@ from app.utils.common_works import TimedHostedService
 background_service: TimedHostedService | None = None
 
 
+async def run_periodic_jobs() -> None:
+    from loguru import logger
+    from app.database import async_session_factory
+    from app.services import support_service
+    from app.services.notified_product_service import process_back_in_stock_notifications
+
+    async with async_session_factory() as session:
+        try:
+            tickets_closed = await support_service.close_stale_tickets(session)
+            await session.commit()
+            if tickets_closed:
+                logger.info(f"Auto-closed {tickets_closed} stale ticket(s)")
+            notifications = await process_back_in_stock_notifications(session)
+            await session.commit()
+            if notifications:
+                logger.info(f"Sent {notifications} back-in-stock notification(s)")
+        except Exception:
+            await session.rollback()
+            raise
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global background_service
     logger.info(f"Starting {settings.APP_NAME} in {settings.ENVIRONMENT} mode")
-    # Start background service for back-in-stock notifications
-    background_service = TimedHostedService(interval_seconds=3600)
+    # Background jobs: back-in-stock notifications + auto-close stale tickets
+    background_service = TimedHostedService(interval_seconds=3600, handler=run_periodic_jobs)
     await background_service.start()
     yield
     if background_service:

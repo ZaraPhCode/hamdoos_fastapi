@@ -12,9 +12,9 @@ $(document).ready(function () {
             if (product.partNumber && product.partNumber != '') {
                 ref = $('<span>').addClass('pref').html(' (Ref: ' + product.partNumber + ')');
             }
-           
+
             return $('<li>').addClass('search-menu-item')
-                .append($('<a href="/Shop/Product/details/' + product.partNumber +'">"').addClass('search-item')
+                .append($('<a href="/products/' + (product.slug || product.partNumber) + '">').addClass('search-item')
                     .append(cover)
                     .append($('<span>').addClass('info')
                         .append($('<span>').html(product.name).addClass('product'))
@@ -25,7 +25,7 @@ $(document).ready(function () {
             ;
         }
     });
-    
+
     $searchBox.psBlockSearchAutocomplete({
         source: function (query, response) {
             $.post(searchURL, {
@@ -46,8 +46,31 @@ $(document).ready(function () {
             });
         },
         select: function (event, ui) {
-            //var url = ui.item.url;
-            window.location.href = "/Shop/Product/details/" + ui.item.partNumber;
+            var dest = ui.item.slug || ui.item.partNumber;
+            window.location.href = "/products/" + dest;
         },
     });
+
+    // Enable the same live autocomplete on the mobile search panel.
+    var $mobileSearch = $('#mobile-search-panel input[type=text]');
+    if ($mobileSearch.length) {
+        $mobileSearch.psBlockSearchAutocomplete({
+            source: function (query, response) {
+                $.post(searchURL, {
+                    q: query.term,
+                    resultsPerPage: 10
+                }, null, 'json')
+                .then(function (resp) {
+                    response(resp.products);
+                })
+                .fail(function () {
+                    response([]);
+                });
+            },
+            select: function (event, ui) {
+                var dest = ui.item.slug || ui.item.partNumber;
+                window.location.href = "/products/" + dest;
+            },
+        });
+    }
 });

@@ -105,8 +105,9 @@
                                             <i class="fa fa-paperclip"></i>
                                             <span id="file-label">تصویر یا فایل مرتبط را انتخاب کنید</span>
                                         </div>
-                                        <input type="file" name="file" id="file-input" class="d-none">
-                                        <div class="field-hint">تصاویر، اسکرین‌شات یا مدارک مرتبط با مشکل</div>
+                                        <input type="file" name="file" id="file-input" class="d-none" accept=".png,.jpg,.jpeg,.bmp,.gif,.webp,.pdf">
+                                        <div class="field-hint" id="file-error" style="color:#d4380d; display:none"></div>
+                                        <div class="field-hint">تصاویر، اسکرین‌شات یا مدارک مرتبط با مشکل — حداکثر ۵ مگابایت (PNG, JPG, JPEG, BMP, GIF, WEBP, PDF)</div>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-control-label">اطلاعات تماس</label>
@@ -155,11 +156,30 @@
     var drop = document.getElementById('file-drop');
     var fileInput = document.getElementById('file-input');
     var fileLabel = document.getElementById('file-label');
+    var errBox = document.getElementById('file-error');
+    var ALLOWED = ['png', 'jpg', 'jpeg', 'bmp', 'gif', 'webp', 'pdf'];
+    var MAX_SIZE = 5 * 1024 * 1024;
     drop.addEventListener('click', function () { fileInput.click(); });
     fileInput.addEventListener('change', function () {
+        errBox.style.display = 'none';
         if (fileInput.files && fileInput.files.length) {
             fileLabel.textContent = fileInput.files[0].name;
             drop.classList.add('has-file');
+        }
+    });
+    var form = drop.closest('form');
+    form.addEventListener('submit', function (e) {
+        if (fileInput.files && fileInput.files.length) {
+            var f = fileInput.files[0];
+            var ext = (f.name.split('.').pop() || '').toLowerCase();
+            var msg = '';
+            if (ALLOWED.indexOf(ext) === -1) msg = 'فرمت فایل مجاز نیست. فرمت‌های مجاز: PNG, JPG, JPEG, BMP, GIF, WEBP, PDF';
+            else if (f.size > MAX_SIZE) msg = 'حجم فایل بیشتر از حد مجاز (5 مگابایت) است.';
+            if (msg) {
+                e.preventDefault();
+                errBox.textContent = msg;
+                errBox.style.display = 'block';
+            }
         }
     });
 })();

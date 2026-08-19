@@ -226,8 +226,9 @@ from loguru import logger
 class TimedHostedService:
     """Background task scheduler — runs periodic jobs."""
 
-    def __init__(self, interval_seconds: int = 3600):
+    def __init__(self, interval_seconds: int = 3600, handler=None):
         self.interval = interval_seconds
+        self._handler = handler
         self._task: Optional[asyncio.Task] = None
 
     async def start(self):
@@ -242,7 +243,12 @@ class TimedHostedService:
     async def _run(self):
         while True:
             try:
-                await self._execute()
+                if self._handler:
+                    await self._handler()
+                else:
+                    await self._execute()
+            except asyncio.CancelledError:
+                break
             except Exception as e:
                 logger.error(f"TimedHostedService error: {e}")
             await asyncio.sleep(self.interval)

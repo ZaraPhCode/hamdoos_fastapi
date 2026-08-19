@@ -14,10 +14,10 @@
     @media (max-width: 1200px) { #hamdoosfooter li { flex-direction: column; border: none; } #hamdoosfooter li span { margin-top: 8px; white-space: normal; } }
     @media (max-width: 768px) { #hamdoosfooter li { flex: 0 0 50%; } #hamdoosfooter li span { font-size: 13px; } }
     @media (max-width: 568px) {
-        #hamdoosfooter li { flex: 0 0 100%; padding: 1em 0; font-size: 16px; text-align: right !important; justify-content: flex-start; flex-direction: row; border: none; }
-        #hamdoosfooter li img.feature-img { width: 40px; height: 40px; flex-basis: 40px; }
-        #hamdoosfooter li span { white-space: normal; }
-        #hamdoosfooter li a { padding-right: 1em; }
+        #hamdoosfooter li { flex: 0 0 20%; padding: 0.75em 2px; font-size: 16px; text-align: center; justify-content: center; flex-direction: column; border: none; gap: 4px; }
+        #hamdoosfooter li img.feature-img { width: 36px; height: 36px; flex-basis: 36px; }
+        #hamdoosfooter li span { white-space: normal; font-size: 11px; line-height: 1.3; word-break: break-word; }
+        #hamdoosfooter li a { padding-right: 0; }
     }
 </style>
 {% set s = request.state.site_settings %}

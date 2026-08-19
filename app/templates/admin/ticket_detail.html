@@ -2,6 +2,11 @@
 {% block title %}تیکت {{ ticket.subject or ticket.id|short_id }}{% endblock %}
 {% block content %}
 <div class="max-w-6xl mx-auto space-y-6">
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm flex items-center gap-2">
+        <i class="fas fa-exclamation-triangle"></i> {{ error }}
+    </div>
+    {% endif %}
     <!-- Header -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-blue-500">
         <div class="flex flex-wrap items-center justify-between gap-4">
@@ -118,10 +123,12 @@
                 </div>
                 <div>
                     <label class="form-label" for="file">فایل پیوست (اختیاری)</label>
-                    <input type="file" id="file" name="file" class="form-input">
+                    <input type="file" id="file" name="file" class="form-input" accept=".png,.jpg,.jpeg,.bmp,.gif,.webp,.pdf">
+                    <p class="text-xs text-gray-400 mt-1">حداکثر ۵ مگابایت — PNG, JPG, JPEG, BMP, GIF, WEBP, PDF</p>
+                    <p class="text-xs text-red-500 mt-1" id="admin-file-error" style="display:none"></p>
                 </div>
                 <div class="flex justify-end">
-                    <button type="submit" class="btn-primary flex items-center gap-2"><i class="fas fa-paper-plane"></i> ارسال پاسخ</button>
+                    <button type="submit" class="btn-primary flex items-center gap-2" id="admin-reply-submit"><i class="fas fa-paper-plane"></i> ارسال پاسخ</button>
                 </div>
             </form>
         </div>
@@ -133,5 +140,26 @@
 <script>
     var thread = document.getElementById('chat-thread');
     if (thread) thread.scrollTop = thread.scrollHeight;
+    var fileInput = document.getElementById('file');
+    var errBox = document.getElementById('admin-file-error');
+    var ALLOWED = ['png', 'jpg', 'jpeg', 'bmp', 'gif', 'webp', 'pdf'];
+    var MAX_SIZE = 5 * 1024 * 1024;
+    if (fileInput) {
+        var form = fileInput.closest('form');
+        form.addEventListener('submit', function (e) {
+            if (fileInput.files && fileInput.files.length) {
+                var f = fileInput.files[0];
+                var ext = (f.name.split('.').pop() || '').toLowerCase();
+                var msg = '';
+                if (ALLOWED.indexOf(ext) === -1) msg = 'فرمت فایل مجاز نیست. فرمت‌های مجاز: PNG, JPG, JPEG, BMP, GIF, WEBP, PDF';
+                else if (f.size > MAX_SIZE) msg = 'حجم فایل بیشتر از حد مجاز (5 مگابایت) است.';
+                if (msg) {
+                    e.preventDefault();
+                    errBox.textContent = msg;
+                    errBox.style.display = 'block';
+                }
+            }
+        });
+    }
 </script>
 {% endblock %}

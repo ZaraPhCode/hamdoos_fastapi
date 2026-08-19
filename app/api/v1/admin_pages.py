@@ -4415,6 +4415,7 @@ async def admin_tickets(
 async def admin_ticket_detail(
     request: Request,
     ticket_id: str,
+    error: Optional[str] = Query(None),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -4428,7 +4429,7 @@ async def admin_ticket_detail(
     )
     return templates.TemplateResponse("admin/ticket_detail.html", {
         "request": request, "current_user": current_user,
-        "ticket": support_service.build_ticket_response(ticket),
+        "ticket": support_service.build_ticket_response(ticket), "error": error,
         "categories": TICKET_CATEGORIES, "priorities": TICKET_PRIORITIES, "statuses": TICKET_STATUSES,
     })
 
@@ -4454,6 +4455,10 @@ async def admin_ticket_reply(
     file_path = None
     file_name = None
     if file and file.filename:
+        content = await file.read()
+        ok, file_error = support_service.validate_ticket_attachment(file.filename, content)
+        if not ok:
+            return RedirectResponse(url=f"/administration/tickets/{ticket.id}?error={file_error}", status_code=303)
         import aiofiles
         upload_dir = "app/static/uploads/tickets"
         os.makedirs(upload_dir, exist_ok=True)
@@ -4461,7 +4466,6 @@ async def admin_ticket_reply(
         fname = f"ticket_admin_{current_user.id.hex[:8]}_{uuid.uuid4().hex[:8]}.{ext}"
         file_path = f"/static/uploads/tickets/{fname}"
         file_name = file.filename
-        content = await file.read()
         async with aiofiles.open(os.path.join(upload_dir, fname), "wb") as f:
             await f.write(content)
 

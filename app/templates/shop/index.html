@@ -145,7 +145,7 @@
                                 <div class="row">
                                     <div class="col">
                                         <div class="banner2" style="margin-bottom:0;">
-                                            <a href="{% if top_category_poster %}/category/{{ top_category_poster.en_title or top_category_poster.slug }}{% else %}#{% endif %}">
+                                            <a href="{% if top_poster_is_custom %}#{% elif top_category_poster %}/category/{{ top_category_poster.en_title or top_category_poster.slug }}{% else %}#{% endif %}">
                                                 <picture>
                                                     <img loading="lazy" src="{{ top_poster_src }}" alt="{{ top_category_poster.en_title if top_category_poster else '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
@@ -184,7 +184,7 @@
                                 <div class="row">
                                     <div class="col">
                                         <div class="banner2">
-                                            <a href="{% if middle_category_poster %}/category/{{ middle_category_poster.en_title or middle_category_poster.slug }}{% else %}#{% endif %}">
+                                            <a href="{% if middle_poster_is_custom %}#{% elif middle_category_poster %}/category/{{ middle_category_poster.en_title or middle_category_poster.slug }}{% else %}#{% endif %}">
                                                 <picture>
                                                     <img loading="lazy" src="{{ middle_poster_src }}" alt="{{ middle_category_poster.en_title if middle_category_poster else '' }}" width="1740" style="object-fit:cover">
                                                 </picture>
@@ -224,7 +224,7 @@
                                     {% if mid_right_poster_src %}
                                     <div class="col-12 col-lg-6">
                                         <div class="banner2">
-                                            <a href="{% if mid_right_poster %}/category/{{ mid_right_poster.en_title or mid_right_poster.slug }}{% else %}#{% endif %}">
+                                            <a href="{% if mid_right_poster_is_custom %}#{% elif mid_right_poster %}/category/{{ mid_right_poster.en_title or mid_right_poster.slug }}{% else %}#{% endif %}">
                                                 <img loading="lazy" src="{{ mid_right_poster_src }}" alt="{{ mid_right_poster.en_title if mid_right_poster else '' }}" width="840" height="350">
                                             </a>
                                         </div>
@@ -233,7 +233,7 @@
                                     {% if mid_left_poster_src %}
                                     <div class="col-12 col-lg-6">
                                         <div class="banner2">
-                                            <a href="{% if mid_left_poster %}/category/{{ mid_left_poster.en_title or mid_left_poster.slug }}{% else %}#{% endif %}">
+                                            <a href="{% if mid_left_poster_is_custom %}#{% elif mid_left_poster %}/category/{{ mid_left_poster.en_title or mid_left_poster.slug }}{% else %}#{% endif %}">
                                                 <img loading="lazy" src="{{ mid_left_poster_src }}" alt="{{ mid_left_poster.en_title if mid_left_poster else '' }}" width="840" height="350">
                                             </a>
                                         </div>
@@ -271,7 +271,7 @@
                                 <div class="row">
                                     <div class="col">
                                         <div class="banner2">
-                                            <a href="{% if bottom_category_poster %}/category/{{ bottom_category_poster.en_title or bottom_category_poster.slug }}{% else %}#{% endif %}">
+                                            <a href="{% if bottom_poster_is_custom %}#{% elif bottom_category_poster %}/category/{{ bottom_category_poster.en_title or bottom_category_poster.slug }}{% else %}#{% endif %}">
                                                 <picture>
                                                     <img loading="lazy" src="{{ bottom_poster_src }}" alt="{{ bottom_category_poster.en_title if bottom_category_poster else '' }}" width="1740" style="object-fit:cover">
                                                 </picture>

@@ -26,7 +26,11 @@
   #header .desktop-header-version { display: none !important; }
   #header .mobile-header-version { display: block; }
 
-  #header .mobile-header-version {
+  /* Sticky must live on #header (not .mobile-header-version): its parent
+     (#page/.st-pusher) spans the full page, giving the sticky element room to
+     stick. Sticking the inner div fails because #header is only as tall as the
+     header itself, so it scrolls away with the page. */
+  #header {
     position: sticky;
     top: 0;
     z-index: 1020;
