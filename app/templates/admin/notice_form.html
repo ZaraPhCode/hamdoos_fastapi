@@ -1,0 +1,97 @@
+{% extends "admin/base.html" %}
+{% set notice_active = form_active if form_active is defined and form_active is not none else true %}
+{% block title %}{{ 'ویرایش اطلاع رسانی' if notice else 'ایجاد اطلاع رسانی' }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center gap-2 mb-6">
+        <a href="/administration/notices" class="btn-secondary inline-flex items-center gap-2 text-sm"><i class="fas fa-arrow-right"></i> بازگشت</a>
+        <h1 class="text-2xl font-bold text-gray-800">{{ 'ویرایش اطلاع رسانی' if notice else 'ایجاد اطلاع رسانی' }}</h1>
+    </div>
+
+    {% if errors %}
+    <div class="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
+        <ul class="text-sm space-y-1">
+            {% for e in errors %}<li><i class="fas fa-circle-exclamation"></i> {{ e }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ action_url }}" class="space-y-6">
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">محتوا</h2></div>
+            <div class="card-body space-y-4">
+                <div>
+                    <label class="form-label" for="message">متن اطلاع رسانی <span class="text-red-500">*</span></label>
+                    <textarea id="message" name="message" rows="3" class="form-input" placeholder="مثلا: فروش ویژه انیم لیزر ..." required>{{ form_message or '' }}</textarea>
+                    <p class="text-xs text-gray-400 mt-1">این متن در بنر زیر هدر فروشگاه به همه کاربران نمایش داده می‌شود.</p>
+                </div>
+                <div>
+                    <label class="form-label" for="notice_type">نوع اطلاع رسانی</label>
+                    <select id="notice_type" name="notice_type" class="form-input">
+                        {% for type_key, style in notice_styles.items() %}
+                        <option value="{{ type_key }}" {{ 'selected' if (form_type if form_type is defined and form_type else 'info') == type_key else '' }}>{{ style.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        {% for type_key, style in notice_styles.items() %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style="background-color: {{ style.bg }}; color: {{ style.text }}">{{ style.label }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">زمان‌بندی نمایش</h2></div>
+            <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label" for="start_date">تاریخ شروع (اختیاری)</label>
+                    <input type="text" id="start_date" name="start_date" class="form-input" autocomplete="off" placeholder="۱۴۰۴/۰۵/۱۵" value="{{ start_date or '' }}">
+                </div>
+                <div>
+                    <label class="form-label" for="end_date">تاریخ پایان (اختیاری)</label>
+                    <input type="text" id="end_date" name="end_date" class="form-input" autocomplete="off" placeholder="۱۴۰۴/۰۵/۲۰" value="{{ end_date or '' }}">
+                </div>
+                <p class="text-xs text-gray-400 md:col-span-2">هر دو فیلد اختیاری است؛ در صورت خالی بودن، اطلاع رسانی بدون محدودیت زمانی نمایش داده می‌شود.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">وضعیت</h2></div>
+            <div class="card-body">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="is_active" name="is_active" value="1" class="w-4 h-4 rounded border-gray-300 text-blue-600" {{ 'checked' if notice_active else '' }}>
+                    <span class="text-sm text-gray-700">فعال</span>
+                </label>
+                <p class="text-xs text-gray-400 mt-1">اگر غیرفعال باشد، این اطلاع رسانی در فروشگاه نمایش داده نمی‌شود.</p>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3">
+            <a href="/administration/notices" class="btn-secondary">انصراف</a>
+            <button type="submit" class="btn-primary flex items-center gap-2"><i class="fas fa-save"></i> ذخیره</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<link rel="stylesheet" href="/static/ThemeLayout/kamadatepicker.min.css">
+<script src="/static/ThemeLayout/js/kamadatepicker.min.js"></script>
+<script src="/static/ThemeLayout/js/kamadatepicker.holidays.js"></script>
+<script>
+$(document).ready(function() {
+    if (typeof kamaDatepicker === 'function') {
+        kamaDatepicker('start_date', {
+            forceFarsiDigits: true, markToday: true, markHolidays: true,
+            highlightSelectedDay: true, sync: true,
+            pastYearsCount: 5, futureYearsCount: 3, swapNextPrev: true,
+        });
+        kamaDatepicker('end_date', {
+            forceFarsiDigits: true, markToday: true, markHolidays: true,
+            highlightSelectedDay: true, sync: true,
+            pastYearsCount: 5, futureYearsCount: 3, swapNextPrev: true,
+        });
+    }
+});
+</script>
+{% endblock %}

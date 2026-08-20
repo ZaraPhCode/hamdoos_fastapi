@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import math
 import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import quote
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -23,7 +25,7 @@ from app.models.invoice import Invoice, InvoiceProduct, Supplier, SupplierProduc
 from app.models.finance import Receipt, Wallet, CurrencyDetail, WarehouseMovement, PaymentRequest
 from app.models.customer_content import Comment, Media, NotifiedProduct
 from app.models.support import Ticket, Chat
-from app.models.common import Log, AdminParameter, SmsCode, MobileNumber, BankInfo, SiteSetting
+from app.models.common import Log, AdminParameter, SmsCode, MobileNumber, BankInfo, SiteSetting, SiteNotice
 from app.models.manufacturer import Manufacturer
 from app.models.log_enums import (
     LOG_TABLE_ORDER as TABLE_OPTIONS,
@@ -4148,6 +4150,18 @@ async def admin_currency_delete(
     return RedirectResponse(url="/administration/currency", status_code=303)
 
 
+def _round_to_order(amount: float, exponent_offset: int) -> float:
+    """Mirrors .NET CurrenciesController.UpdateVarietyPrice rounding."""
+    amount = float(amount)
+    if amount <= 0:
+        return amount
+    order = math.log10(amount) - exponent_offset
+    if order < 0:
+        order = 0
+    order = math.pow(10, int(order))
+    return float(int((amount + 5 * order / 10) / order) * order)
+
+
 @router.get("/currencies/{currency_id}/update-price", response_class=HTMLResponse)
 async def admin_currency_update_price_form(
     request: Request,
@@ -4155,6 +4169,8 @@ async def admin_currency_update_price_form(
     page: int = Query(1),
     product_search: str = Query(None),
     part_search: str = Query(None),
+    success: str = Query(None),
+    error: str = Query(None),
     current_user: User = Depends(require_any_role("Admin", "Financial Manager")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -4174,27 +4190,37 @@ async def admin_currency_update_price_form(
     detail_result = await db.execute(detail_stmt)
     last_detail = detail_result.scalar_one_or_none()
     currency._last_price = last_detail
-    conditions = [Product.is_removed == False, Product.no_display == False]
+    # .NET GetVarieties: filter varieties by AutomaticPriceCalculation + CurrencyId,
+    # plus optional product name / part-number search.
+    conditions = [
+        Variety.is_removed == False,
+        Variety.automatic_price_calculation == True,
+        Variety.currency_id == cid,
+    ]
     if product_search:
         conditions.append(Product.name.ilike(f"%{product_search}%"))
     if part_search:
         conditions.append(Product.part_number.ilike(f"%{part_search}%"))
-    count_stmt = select(func.count(Product.id)).where(*conditions)
-    total_products = (await db.execute(count_stmt)).scalar() or 0
-    stmt = (
-        select(Product)
+    base_stmt = (
+        select(Variety)
+        .join(Variety.product)
+        .options(
+            selectinload(Variety.product),
+            selectinload(Variety.product_varieties).selectinload(ProductVariety.category_option),
+        )
         .where(*conditions)
-        .order_by(Product.insert_date.desc())
-        .offset((page - 1) * 25)
-        .limit(25)
     )
-    products = (await db.execute(stmt)).scalars().all()
+    count_stmt = select(func.count()).select_from(base_stmt.subquery())
+    total_products = (await db.execute(count_stmt)).scalar() or 0
+    stmt = base_stmt.order_by(Product.name.asc()).offset((page - 1) * 25).limit(25)
+    varieties = (await db.execute(stmt)).scalars().all()
     return templates.TemplateResponse("admin/currency_update_price.html", {
         "request": request, "current_user": current_user,
-        "currency": currency, "products": products,
+        "currency": currency, "varieties": varieties,
         "total_products": total_products, "page": page,
         "total_pages": (total_products + 24) // 25,
         "product_search": product_search or "", "part_search": part_search or "",
+        "success": success, "error": error,
     })
 
 
@@ -4212,30 +4238,113 @@ async def admin_currency_update_price_submit(
     currency = await finance_service.get_currency_by_id(db, cid)
     if not currency:
         raise HTTPException(status_code=404, detail="Currency not found")
+
     form = await request.form()
-    try:
-        price = float(form.get("price", 0))
-        profit_rate = float(form.get("profit_rate", 0))
-        discount_percent = float(form.get("discount_percent", 0))
-    except (ValueError, TypeError):
-        return RedirectResponse(url=f"/administration/currencies/{currency_id}/update-price", status_code=303)
-    cd = await finance_service.add_currency_price(db, cid, price)
-    # Update all products/varieties with this currency
-    from app.models.product import Variety as VarietyModel
-    conditions = [VarietyModel.is_removed == False, VarietyModel.currency_id == cid]
-    stmt = select(VarietyModel).where(*conditions)
+    selected_ids = [uuid.UUID(x) for x in form.getlist("ids") if x and x.strip()]
+    cur_price = form.get("curPrice")
+    profit_ratio = form.get("profitRatio")
+    discount_ratio = form.get("discountRatio")
+
+    def parse_val(s):
+        if s is None or not str(s).strip():
+            return None
+        return float(str(s).replace(",", ""))
+
+    price_val = parse_val(cur_price)
+    profit_val = parse_val(profit_ratio)
+    discount_val = parse_val(discount_ratio)
+
+    redirect_error = f"/administration/currencies/{currency_id}/update-price?error={quote('خطا در انجام عملیات')}"
+    redirect_success = f"/administration/currencies/{currency_id}/update-price?success={quote('عملیات با موفقیت انجام شد')}"
+
+    if not selected_ids or (price_val is None and profit_val is None and discount_val is None):
+        return RedirectResponse(url=redirect_error, status_code=303)
+
+    # .NET: only the selected varieties are updated.
+    stmt = (
+        select(Variety)
+        .where(Variety.id.in_(selected_ids), Variety.is_removed == False)
+        .options(selectinload(Variety.product))
+    )
     varieties = (await db.execute(stmt)).scalars().all()
-    for v in varieties:
-        v.currency_price = price
-        if profit_rate >= 0:
-            v.profit_rate = profit_rate
-        v.automatic_price_calculation = True
-        v.update_date = datetime.now(timezone.utc)
-    db.add(Log(record_id=cd.id, table_name="currency_details",
-               description=f"بروزرسانی قیمت دسته‌ای {currency.name}: قیمت={price}, نرخ سود={profit_rate}, تخفیف={discount_percent}",
+    if not varieties:
+        return RedirectResponse(url=redirect_error, status_code=303)
+
+    try:
+        for item in varieties:
+            # .NET computes the effective currency rate when not supplied from
+            # the item's existing price, currency price and profit rate.
+            profit_before = float(item.profit_rate or 1)
+            px = price_val
+            if profit_val is None and float(item.profit_rate or 0) <= 0:
+                raise ValueError()
+            if px is None:
+                cur_price_rate = float(item.currency_price or 0)
+                if cur_price_rate <= 0:
+                    raise ValueError()
+                px = float(item.price) / (cur_price_rate * profit_before)
+
+            item._discount_input = discount_val  # percentage, may be None
+
+            if profit_val is not None:
+                item.profit_rate = float(profit_val)
+
+            # UpdateVarietyPrice mirror
+            new_price = float(item.currency_price or 0) * float(item.profit_rate or 1) * px
+            new_price = _round_to_order(new_price, 2)
+            item.price = new_price
+
+            di = getattr(item, "_discount_input", None)
+            if di is not None and di >= 0:
+                disc = new_price * di / 100.0
+                if disc > 0:
+                    disc = _round_to_order(disc, 1)
+                if disc > new_price:
+                    disc = new_price
+                item.discount_amount = disc
+            item.price_after_discount = float(item.price) - float(item.discount_amount or 0)
+            item.automatic_price_calculation = True
+            item.update_date = datetime.now(timezone.utc)
+
+        product_ids = list({v.product_id for v in varieties})
+        # Update parent products exactly like .NET UpdateProductByVariety.
+        products = (
+            await db.execute(
+                select(Product)
+                .options(selectinload(Product.varieties))
+                .where(Product.id.in_(product_ids), Product.is_removed == False)
+            )
+        ).scalars().all()
+        for p in products:
+            vv = [v for v in (p.varieties or []) if not getattr(v, "is_removed", False)]
+            p.number_of_variations = len(vv)
+            if not vv:
+                p.price = 0
+                p.discount_amount = 0
+                p.discount_percentage = 0
+                p.stock_quantity = 0
+                p.max_price = None
+                continue
+            min_v = min(vv, key=lambda v: float(v.price_after_discount if v.price_after_discount is not None else float("inf")))
+            p.price = min_v.price
+            p.discount_amount = min_v.discount_amount
+            p.discount_percentage = float(min_v.discount_amount or 0) / float(min_v.price or 1) * 100 if float(min_v.price or 0) else 0
+            p.stock_quantity = min_v.stock_quantity
+            if len(vv) > 1:
+                max_v = max(vv, key=lambda v: float(v.price_after_discount if v.price_after_discount is not None else float("-inf")))
+                if float(max_v.price_after_discount or 0) != float(min_v.price_after_discount or 0):
+                    p.max_price = max_v.price_after_discount
+                p.stock_quantity = sum(float(v.stock_quantity or 0) for v in vv)
+            if p.stock_quantity == 0 and p.status == "InStock":
+                p.status = "OutOfStock"
+    except (ValueError, TypeError, ZeroDivisionError):
+        return RedirectResponse(url=redirect_error, status_code=303)
+
+    db.add(Log(record_id=currency.id, table_name="currencies",
+               description=f"بروزرسانی قیمت دسته‌ای {currency.name}: قیمت={price_val}, نرخ سود={profit_val}, تخفیف={discount_val}",
                created_by_user_id=current_user.id, type="Update"))
     await db.commit()
-    return RedirectResponse(url=f"/administration/currencies/{currency_id}/update-price", status_code=303)
+    return RedirectResponse(url=redirect_success, status_code=303)
 
 
 @router.get("/currencies/{currency_id}/export-excel")
@@ -4254,33 +4363,43 @@ async def admin_currency_export_excel(
         raise HTTPException(status_code=404, detail="Currency not found")
     import openpyxl
     from io import BytesIO
-    from datetime import datetime
     import jdatetime
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Currencies"
     headers = ["ردیف", "دسته بندی", "شماره قطعه", "نام", "قیمت", "قیمت ارزی", "موجودی انبار", "درصد تخفیف", "نرخ سود", "تاریخ ایجاد", "محصول", "نام انگلیسی", "تاریخ خرید", "لینک"]
     ws.append(headers)
-    from app.models.product import Product as ProductModel, Category
-    stmt = (
-        select(ProductModel)
-        .options(selectinload(ProductModel.category))
-        .where(ProductModel.is_removed == False, ProductModel.no_display == False)
-        .order_by(ProductModel.insert_date.desc())
+    vtmt = (
+        select(Variety)
+        .join(Variety.product)
+        .options(
+            selectinload(Variety.product).selectinload(Product.category),
+            selectinload(Variety.product).selectinload(Product.supplier_products),
+            selectinload(Variety.product_varieties).selectinload(ProductVariety.category_option),
+        )
+        .where(
+            Variety.is_removed == False,
+            Variety.automatic_price_calculation == True,
+            Variety.currency_id == cid,
+        )
+        .order_by(Product.name.asc())
     )
-    products = (await db.execute(stmt)).unique().scalars().all()
-    for idx, p in enumerate(products, 1):
+    variety_rows = (await db.execute(vtmt)).unique().scalars().all()
+    for idx, v in enumerate(variety_rows, 1):
+        p = v.product
         cat_name = p.category.name if p.category else ""
-        link = f"https://eshop.eca.ir/product/{p.slug}" if p.slug else ""
+        link = (p.supplier_products[0].link if p.supplier_products else "") or ""
+        values = "،".join([pv.value for pv in (v.product_varieties or [])])
+        disc_percent = (float(v.discount_amount or 0) / float(v.price or 1) * 100) if float(v.price or 0) else 0
         ws.append([
             idx, cat_name, p.part_number or "", p.name or "",
-            float(p.price) if p.price else 0,
-            float(p.currency_price) if p.currency_price else 0,
-            p.stock_quantity or 0,
-            float(p.discount_percentage) if p.discount_percentage else 0,
-            float(p.profit_rate) if p.profit_rate else 0,
-            p.insert_date.strftime("%Y/%m/%d") if p.insert_date else "",
-            "", p.en_name or "",
+            float(v.price) if v.price else 0,
+            float(v.currency_price) if v.currency_price else 0,
+            v.stock_quantity or 0,
+            round(disc_percent, 2),
+            float(v.profit_rate) if v.profit_rate else 0,
+            v.insert_date.strftime("%Y/%m/%d") if v.insert_date else "",
+            values, p.en_name or "",
             p.purchase_date.strftime("%Y/%m/%d") if p.purchase_date else "",
             link,
         ])
@@ -7937,3 +8056,253 @@ async def admin_technical_feature_config(
         "fa_name": tf.fa_name,
         "fields": fields,
     })
+
+
+# ── Site Notices (اطلاع رسانی‌ها) ──
+#
+# Admin-managed banner messages shown below the storefront header. Each notice
+# carries a type (info / announcement / hint), an optional start/end window and
+# an active flag. Colors are driven by ``NOTICE_STYLES`` in site_config.py.
+
+def _notice_type_label(notice_type: str) -> str:
+    from app.config.site_config import NOTICE_STYLES
+    return NOTICE_STYLES.get(notice_type or "", {}).get("label", notice_type or "اطلاع رسانی")
+
+
+async def _get_notice(db: AsyncSession, notice_id: str) -> Optional[SiteNotice]:
+    try:
+        nid = uuid.UUID(notice_id)
+    except (ValueError, AttributeError):
+        return None
+    notice = await db.get(SiteNotice, nid)
+    if notice is None or notice.is_removed:
+        return None
+    return notice
+
+
+def _notice_view(notice: SiteNotice) -> dict:
+    return {
+        "id": str(notice.id),
+        "message": notice.message,
+        "notice_type": notice.notice_type,
+        "notice_type_label": _notice_type_label(notice.notice_type),
+        "start_date_str": _to_fa_date(notice.start_date),
+        "end_date_str": _to_fa_date(notice.end_date),
+        "is_active": bool(notice.is_active),
+        "insert_date_str": _to_fa_datetime(notice.insert_date),
+    }
+
+
+@router.get("/notices", response_class=HTMLResponse)
+async def admin_notices(
+    request: Request,
+    active: str = Query(None),
+    current_user: User = Depends(require_any_role("Admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import select
+
+    stmt = select(SiteNotice).where(SiteNotice.is_removed == False)
+    if active == "active":
+        stmt = stmt.where(SiteNotice.is_active == True)
+    elif active == "inactive":
+        stmt = stmt.where(SiteNotice.is_active == False)
+    stmt = stmt.order_by(SiteNotice.insert_date.desc())
+    notices = (await db.execute(stmt)).scalars().all()
+    return templates.TemplateResponse("admin/notices.html", {
+        "request": request, "current_user": current_user,
+        "items": [_notice_view(n) for n in notices],
+        "active": active or "",
+        "notice_styles": _notice_styles_for_template(),
+    })
+
+
+def _notice_styles_for_template() -> dict:
+    from app.config.site_config import NOTICE_STYLES
+    return {
+        key: {"bg": styles.get("bg", ""), "text": styles.get("text", ""), "label": styles.get("label", key)}
+        for key, styles in NOTICE_STYLES.items()
+    }
+
+
+@router.get("/notices/new", response_class=HTMLResponse)
+async def admin_notice_create(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin")),
+):
+    return templates.TemplateResponse("admin/notice_form.html", {
+        "request": request, "current_user": current_user,
+        "notice": None, "notice_styles": _notice_styles_for_template(),
+        "errors": [], "action_url": "/administration/notices/new",
+    })
+
+
+@router.post("/notices/new", response_class=HTMLResponse)
+async def admin_notice_create_submit(
+    request: Request,
+    current_user: User = Depends(require_any_role("Admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.config.site_config import NOTICE_STYLES
+
+    form = await request.form()
+    message = (form.get("message") or "").strip()
+    notice_type = (form.get("notice_type") or "info").strip().lower()
+    is_active = form.get("is_active") in ("1", "true", "on")
+    if notice_type not in NOTICE_STYLES:
+        notice_type = "info"
+    if not message:
+        return templates.TemplateResponse("admin/notice_form.html", {
+            "request": request, "current_user": current_user,
+            "notice": None, "notice_styles": _notice_styles_for_template(),
+            "errors": ["متن اطلاع رسانی الزامی است."],
+            "action_url": "/administration/notices/new",
+            "form_message": message, "form_type": notice_type, "form_active": is_active,
+            "start_date": (form.get("start_date") or "").strip(),
+            "end_date": (form.get("end_date") or "").strip(),
+        })
+
+    start_date = _parse_notice_date(form.get("start_date"), end_of_day=False)
+    end_date = _parse_notice_date(form.get("end_date"), end_of_day=True)
+
+    notice = SiteNotice(
+        id=uuid.uuid4(),
+        message=message,
+        notice_type=notice_type,
+        start_date=start_date,
+        end_date=end_date,
+        is_active=is_active,
+        created_by_user_id=current_user.id,
+        insert_date=datetime.now(timezone.utc),
+        update_date=datetime.now(timezone.utc),
+    )
+    db.add(notice)
+    db.add(Log(
+        record_id=notice.id, table_name="site_notices",
+        description=f"ایجاد اطلاع رسانی: {message[:60]}",
+        created_by_user_id=current_user.id, type="Create",
+    ))
+    await db.commit()
+    return RedirectResponse(url="/administration/notices", status_code=303)
+
+
+def _parse_notice_date(value: Optional[str], end_of_day: bool = False) -> Optional[datetime]:
+    """Parse a Persian (yyyy/MM/dd) date input into an aware datetime. For an
+    end date the time is set to end-of-day so the notice shows through that day."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    d = from_farsi_date(value)
+    if d is None:
+        return None
+    date_part = datetime(d.year, d.month, d.day, tzinfo=timezone.utc)
+    return date_part.replace(hour=23, minute=59, second=59, microsecond=999999) if end_of_day else date_part
+
+
+@router.get("/notices/{notice_id}/edit", response_class=HTMLResponse)
+async def admin_notice_edit(
+    request: Request,
+    notice_id: str,
+    current_user: User = Depends(require_any_role("Admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    notice = await _get_notice(db, notice_id)
+    if notice is None:
+        raise HTTPException(status_code=404, detail="اطلاع رسانی یافت نشد")
+    return templates.TemplateResponse("admin/notice_form.html", {
+        "request": request, "current_user": current_user,
+        "notice": _notice_view(notice), "notice_styles": _notice_styles_for_template(),
+        "errors": [], "action_url": f"/administration/notices/{notice.id}/edit",
+        "form_message": notice.message, "form_type": notice.notice_type,
+        "form_active": bool(notice.is_active),
+        "start_date": _to_fa_date(notice.start_date),
+        "end_date": _to_fa_date(notice.end_date),
+    })
+
+
+@router.post("/notices/{notice_id}/edit", response_class=HTMLResponse)
+async def admin_notice_edit_submit(
+    request: Request,
+    notice_id: str,
+    current_user: User = Depends(require_any_role("Admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.config.site_config import NOTICE_STYLES
+
+    notice = await _get_notice(db, notice_id)
+    if notice is None:
+        raise HTTPException(status_code=404, detail="اطلاع رسانی یافت نشد")
+    form = await request.form()
+    message = (form.get("message") or "").strip()
+    notice_type = (form.get("notice_type") or "info").strip().lower()
+    is_active = form.get("is_active") in ("1", "true", "on")
+    if notice_type not in NOTICE_STYLES:
+        notice_type = "info"
+    if not message:
+        return templates.TemplateResponse("admin/notice_form.html", {
+            "request": request, "current_user": current_user,
+            "notice": _notice_view(notice), "notice_styles": _notice_styles_for_template(),
+            "errors": ["متن اطلاع رسانی الزامی است."],
+            "action_url": f"/administration/notices/{notice.id}/edit",
+            "form_message": message, "form_type": notice_type,
+            "form_active": is_active,
+            "start_date": (form.get("start_date") or "").strip(),
+            "end_date": (form.get("end_date") or "").strip(),
+        })
+
+    notice.message = message
+    notice.notice_type = notice_type
+    notice.is_active = is_active
+    notice.start_date = _parse_notice_date(form.get("start_date"), end_of_day=False)
+    notice.end_date = _parse_notice_date(form.get("end_date"), end_of_day=True)
+    notice.update_date = datetime.now(timezone.utc)
+    db.add(Log(
+        record_id=notice.id, table_name="site_notices",
+        description=f"ویرایش اطلاع رسانی: {message[:60]}",
+        created_by_user_id=current_user.id, type="Update",
+    ))
+    await db.commit()
+    return RedirectResponse(url="/administration/notices", status_code=303)
+
+
+@router.post("/notices/{notice_id}/toggle", response_class=HTMLResponse)
+async def admin_notice_toggle(
+    request: Request,
+    notice_id: str,
+    current_user: User = Depends(require_any_role("Admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    notice = await _get_notice(db, notice_id)
+    if notice is None:
+        raise HTTPException(status_code=404, detail="اطلاع رسانی یافت نشد")
+    notice.is_active = not notice.is_active
+    notice.update_date = datetime.now(timezone.utc)
+    db.add(Log(
+        record_id=notice.id, table_name="site_notices",
+        description=f"{'فعال' if notice.is_active else 'غیرفعال'} کردن اطلاع رسانی",
+        created_by_user_id=current_user.id, type="Update",
+    ))
+    await db.commit()
+    return RedirectResponse(url="/administration/notices", status_code=303)
+
+
+@router.post("/notices/{notice_id}/delete", response_class=HTMLResponse)
+async def admin_notice_delete(
+    request: Request,
+    notice_id: str,
+    current_user: User = Depends(require_any_role("Admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    notice = await _get_notice(db, notice_id)
+    if notice is None:
+        raise HTTPException(status_code=404, detail="اطلاع رسانی یافت نشد")
+    message = notice.message
+    notice.is_removed = True
+    notice.update_date = datetime.now(timezone.utc)
+    db.add(Log(
+        record_id=notice.id, table_name="site_notices",
+        description=f"حذف اطلاع رسانی: {message[:60]}",
+        created_by_user_id=current_user.id, type="Delete",
+    ))
+    await db.commit()
+    return RedirectResponse(url="/administration/notices", status_code=303)

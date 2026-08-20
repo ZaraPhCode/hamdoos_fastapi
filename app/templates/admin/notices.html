@@ -1,0 +1,138 @@
+{% extends "admin/base.html" %}
+{% block title %}مدیریت اطلاع رسانی‌ها{% endblock %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">اطلاع رسانی‌ها</h1>
+            <p class="text-sm text-gray-500 mt-1">بنر اطلاع رسانی که پایین هدر فروشگاه به همه نمایش داده می‌شود</p>
+        </div>
+        <a href="/administration/notices/new" class="btn-success flex items-center gap-2 text-base px-5 py-2.5">
+            <i class="fas fa-plus"></i> ایجاد اطلاع رسانی
+        </a>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="flex items-center gap-2">
+        <a href="/administration/notices" class="inline-flex px-4 py-2 rounded-lg text-sm font-medium {{ 'bg-blue-600 text-white' if active == '' else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+            همه
+        </a>
+        <a href="/administration/notices?active=active" class="inline-flex px-4 py-2 rounded-lg text-sm font-medium {{ 'bg-blue-600 text-white' if active == 'active' else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+            فعال
+        </a>
+        <a href="/administration/notices?active=inactive" class="inline-flex px-4 py-2 rounded-lg text-sm font-medium {{ 'bg-blue-600 text-white' if active == 'inactive' else 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+            غیرفعال
+        </a>
+        <span class="badge bg-gray-100 text-gray-500 ms-auto">{{ items|length }} مورد</span>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% if items %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-gray-500 border-b bg-gray-50">
+                            <th class="text-right py-3 px-2">متن</th>
+                            <th class="text-center py-3 px-2 w-40">نوع</th>
+                            <th class="text-center py-3 px-2 w-48">زمان‌بندی</th>
+                            <th class="text-center py-3 px-2 w-32">وضعیت</th>
+                            <th class="text-center py-3 px-2 w-64">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr class="border-b hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2">
+                                <div class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-800" title="{{ item.message }}">{{ item.message }}</div>
+                                <div class="text-xs text-gray-400 mt-1">ثبت: {{ item.insert_date_str }}</div>
+                            </td>
+                            <td class="py-3 px-2 text-center">
+                                {% set style = notice_styles.get(item.notice_type) %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style="background-color: {{ style.bg if style else '#e5e7eb' }}; color: {{ style.text if style else '#374151' }}">
+                                    <span class="w-2 h-2 rounded-full" style="background-color: {{ style.bg if style else '#9ca3af' }}"></span>
+                                    {{ item.notice_type_label }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-2 text-center">
+                                {% if item.start_date_str or item.end_date_str %}
+                                    <span class="text-gray-700">{{ item.start_date_str or '—' }}<i class="fas fa-arrow-left text-xs text-gray-500 mx-1"></i>{{ item.end_date_str or 'نامحدود' }}</span>
+                                {% else %}
+                                    <span class="text-gray-400">نامحدود</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2 text-center">
+                                {% if item.is_active %}
+                                    <span class="badge bg-emerald-100 text-emerald-700">فعال</span>
+                                {% else %}
+                                    <span class="badge bg-gray-200 text-gray-600">غیرفعال</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2">
+                                <div class="flex items-center justify-center gap-2">
+                                    <form method="POST" action="/administration/notices/{{ item.id }}/toggle" class="inline">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg {{ 'bg-amber-100 text-amber-700' if item.is_active else 'bg-emerald-100 text-emerald-700' }} text-xs font-medium hover:opacity-80">
+                                            <i class="fas fa-power-off"></i> {{ 'غیرفعال' if item.is_active else 'فعال' }}
+                                        </button>
+                                    </form>
+                                    <a href="/administration/notices/{{ item.id }}/edit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-200 transition-colors">
+                                        <i class="fas fa-edit"></i> ویرایش
+                                    </a>
+                                    <button type="button" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors delete-btn" data-id="{{ item.id }}" data-message="{{ item.message }}">
+                                        <i class="fas fa-trash"></i> حذف
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="py-12 text-center text-gray-400">
+                <i class="fas fa-bullhorn text-3xl mb-3"></i>
+                <p>اطلاع رسانی‌ای یافت نشد.</p>
+                <a href="/administration/notices/new" class="text-blue-600 hover:underline mt-2 inline-block">ایجاد اولین اطلاع رسانی</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+        <div class="text-center">
+            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trash text-red-500 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">حذف اطلاع رسانی</h3>
+            <p class="text-sm text-gray-500 mb-6">آیا از حذف <span id="delete-message" class="font-semibold text-gray-700"></span> اطمینان دارید؟</p>
+            <form id="delete-form" method="POST" action="">
+                <div class="flex items-center gap-3 justify-center">
+                    <button type="button" id="delete-cancel" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(document).ready(function () {
+    var $modal = $('#delete-modal');
+    $('.delete-btn').on('click', function (e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        var message = $(this).data('message') || '';
+        $('#delete-message').text(message.length > 40 ? message.substring(0, 40) + '…' : message);
+        $('#delete-form').attr('action', '/administration/notices/' + id + '/delete');
+        $modal.removeClass('hidden');
+    });
+    $('#delete-cancel').on('click', function () { $modal.addClass('hidden'); });
+    $modal.on('click', function (e) { if (e.target === this) $modal.addClass('hidden'); });
+});
+</script>
+{% endblock %}

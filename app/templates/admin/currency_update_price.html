@@ -8,12 +8,18 @@
                 <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-amber-200"><i class="fas fa-coins"></i></div>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-800">بروزرسانی قیمت ارز</h1>
-                    <p class="text-sm text-gray-500 mt-0.5">بروزرسانی قیمت ارز {{ currency.name }} و اعمال به محصولات</p>
+                    <p class="text-sm text-gray-500 mt-0.5">بروزرسانی قیمت ارز {{ currency.name }} و اعمال به تنوع‌های انتخاب‌شده</p>
                 </div>
             </div>
             <a href="/administration/currencies" class="btn-secondary flex items-center gap-2"><i class="fas fa-arrow-right"></i> بازگشت به لیست</a>
         </div>
     </div>
+
+    {% if success %}
+    <div class="mb-4 px-4 py-3 rounded-lg bg-green-100 text-green-800">{{ success }}</div>
+    {% elif error %}
+    <div class="mb-4 px-4 py-3 rounded-lg bg-red-100 text-red-800">{{ error }}</div>
+    {% endif %}
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-center gap-6 mb-4">
@@ -25,18 +31,19 @@
                 <i class="fas fa-download"></i> دانلود Currencies.xlsx
             </a>
         </div>
-        <form method="POST" action="/administration/currencies/{{ currency.id }}/update-price" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <form method="POST" action="/administration/currencies/{{ currency.id }}/update-price" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end" id="price-update-form">
+            <select hidden multiple id="ids" name="ids"></select>
             <div>
-                <label class="form-label text-xs">قیمت</label>
-                <input type="number" name="price" value="{{ currency._last_price.price if currency._last_price else '' }}" class="form-input" min="0" step="0.01" dir="ltr" required>
+                <label class="form-label text-xs">قیمت (نرخ ارز)</label>
+                <input type="text" name="curPrice" value="{{ (currency._last_price.price|string) if currency._last_price else '' }}" class="form-input" min="0" step="0.01" dir="ltr" oninput="formatPrice(this)">
             </div>
             <div>
                 <label class="form-label text-xs">نرخ سود</label>
-                <input type="number" name="profit_rate" value="0" class="form-input" min="0" step="0.01" dir="ltr">
+                <input type="text" name="profitRatio" value="3" class="form-input" min="0" step="0.01" dir="ltr">
             </div>
             <div>
                 <label class="form-label text-xs">درصد تخفیف</label>
-                <input type="number" name="discount_percent" value="0" class="form-input" min="0" max="100" step="0.01" dir="ltr">
+                <input type="text" name="discountRatio" value="" class="form-input" min="0" max="100" step="0.01" dir="ltr">
             </div>
             <button type="submit" class="btn-primary"><i class="fas fa-sync-alt ml-2"></i> بروزرسانی قیمت محصولات</button>
         </form>
@@ -67,9 +74,12 @@
         <div class="overflow-x-auto p-5">
             <table class="w-full text-sm">
                 <thead><tr class="text-gray-500 border-b">
+                    <th class="text-right py-3 px-2 w-10">
+                        <input id="SelectAll" class="form-checkbox h-4 w-4 text-amber-600" type="checkbox" />
+                    </th>
                     <th class="text-right py-3 px-2">#</th>
-                    <th class="text-right py-3 px-2"></th>
                     <th class="text-right py-3 px-2">محصول</th>
+                    <th class="text-right py-3 px-2"></th>
                     <th class="text-right py-3 px-2">تنوع</th>
                     <th class="text-right py-3 px-2">موجودی انبار</th>
                     <th class="text-right py-3 px-2">قیمت ارزی</th>
@@ -80,22 +90,25 @@
                     <th class="text-right py-3 px-2">شماره قطعه</th>
                 </tr></thead>
                 <tbody>
-                    {% for p in products %}
+                    {% for v in varieties %}
                     <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-2"><input id="{{ v.id }}" class="form-checkbox h-4 w-4 text-amber-600 variety-check" type="checkbox" value="{{ v.id }}" /></td>
                         <td class="py-3 px-2 text-gray-400">{{ loop.index + (page-1)*25 }}</td>
-                        <td class="py-3 px-2"><a href="/shop/Product/Details/{{ p.part_number }}" target="_blank" class="text-blue-600 hover:underline text-xs">مشاهده در سایت</a></td>
-                        <td class="py-3 px-2 font-medium">{{ p.name }}</td>
-                        <td class="py-3 px-2 text-gray-500">—</td>
-                        <td class="py-3 px-2">{{ p.stock_quantity or 0 }}</td>
-                        <td class="py-3 px-2">{{ "{:,.0f}".format(p.currency_price or 0) }}</td>
-                        <td class="py-3 px-2">{% if p.profit_rate is not none %}{{ p.profit_rate }}{% else %}0{% endif %}</td>
-                        <td class="py-3 px-2 font-medium">{{ "{:,.0f}".format(p.price or 0) }}</td>
-                        <td class="py-3 px-2">{% if p.discount_percentage %}{{ p.discount_percentage }}%{% else %}0%{% endif %}</td>
-                        <td class="py-3 px-2 text-gray-500">{{ p.purchase_date.strftime('%Y/%m/%d') if p.purchase_date else '—' }}</td>
-                        <td class="py-3 px-2" dir="ltr">{{ p.part_number or '---' }}</td>
+                        <td class="py-3 px-2 font-medium">
+                            <a href="/administration/products/{{ v.product_id }}/details" class="text-blue-600 hover:underline">{{ v.product.name if v.product else '—' }}</a>
+                        </td>
+                        <td class="py-3 px-2"><a href="/shop/Product/Details/{{ v.product.part_number if v.product else '' }}" target="_blank" class="text-blue-600 hover:underline text-xs">مشاهده در سایت</a></td>
+                        <td class="py-3 px-2 text-gray-500">{{ v.product_varieties|map(attribute='value')|join('،') if v.product_varieties else '—' }}</td>
+                        <td class="py-3 px-2">{{ v.stock_quantity or 0 }}</td>
+                        <td class="py-3 px-2">{{ "{:,.0f}".format(v.currency_price or 0) }}</td>
+                        <td class="py-3 px-2">{% if v.profit_rate is not none %}{{ v.profit_rate }}{% else %}0{% endif %}</td>
+                        <td class="py-3 px-2 font-medium">{{ "{:,.0f}".format(v.price or 0) }}</td>
+                        <td class="py-3 px-2">{% set dperc = ((v.discount_amount or 0) / (v.price or 1) * 100) if v.price else 0 %}{{ "%.2f"|format(dperc) }}% <br /> <span class="text-gray-500 text-xs">{{ "{:,.0f}".format(v.discount_amount or 0) }}</span></td>
+                        <td class="py-3 px-2 text-gray-500">{{ v.product.purchase_date.strftime('%Y/%m/%d') if v.product and v.product.purchase_date else '—' }}</td>
+                        <td class="py-3 px-2" dir="ltr">{{ v.product.part_number if v.product and v.product.part_number else '---' }}</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="11" class="text-center py-8 text-gray-400">محصولی یافت نشد</td></tr>
+                    <tr><td colspan="12" class="text-center py-8 text-gray-400">تنوعی با محاسبه خودکار قیمت برای این ارز یافت نشد</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -108,8 +121,82 @@
         </div>
         {% endif %}
         <div class="border-t px-5 py-3 text-sm text-gray-400">
-            نمایش 1 تا {{ products|length }} از {{ total_products or 0 }} رکورد
+            نمایش {{ varieties|length }} رکورد از {{ total_products or 0 }} تنوع
         </div>
     </div>
 </div>
+
+<script>
+    var ids = [];
+
+    function RemoveFromArray(array, valueToRemove) {
+        array = array.filter(function (value) { return value !== valueToRemove; });
+        return array;
+    }
+
+    function SetCheckboxChange() {
+        document.querySelectorAll('.variety-check').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                if (this.checked) {
+                    ids.push(this.value);
+                } else {
+                    ids = RemoveFromArray(ids, this.value);
+                    var sa = document.getElementById('SelectAll');
+                    if (sa) sa.checked = false;
+                }
+            });
+        });
+
+        var sa = document.getElementById('SelectAll');
+        if (sa) {
+            sa.addEventListener('change', function () {
+                ids = [];
+                document.querySelectorAll('.variety-check').forEach(function (cb) {
+                    if (this.checked) {
+                        ids.push(this.value);
+                        cb.checked = true;
+                    } else {
+                        cb.checked = false;
+                    }
+                }.bind(sa));
+            });
+        }
+    }
+
+    var form = document.getElementById('price-update-form');
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            // Only keep checkboxes on the currently rendered page.
+            ids = [];
+            document.querySelectorAll('.variety-check:checked').forEach(function (cb) { ids.push(cb.value); });
+            if (ids.length === 0) {
+                alert('هیچ تنوعی انتخاب نشده است');
+                event.preventDefault();
+                return;
+            }
+            var select = document.getElementById('ids');
+            select.innerHTML = '';
+            ids.forEach(function (val) {
+                var opt = document.createElement('option');
+                opt.value = val;
+                opt.selected = true;
+                opt.text = '';
+                select.appendChild(opt);
+            });
+        });
+    }
+
+    function formatPrice(input) {
+        var value = input.value.replace(/,/g, '');
+        var dotCount = (input.value.match(/\./g) || []).length;
+        if (dotCount > 1) {
+            value = value.slice(0, -1);
+        }
+        var parts = value.split('.');
+        parts[0] = parts[0].replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        input.value = parts.join('.');
+    }
+
+    SetCheckboxChange();
+</script>
 {% endblock %}

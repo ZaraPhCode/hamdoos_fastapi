@@ -6,7 +6,7 @@ from app.core.base import Base, BaseEntityMixin
 # Common
 from app.models.common import (
     ProvinceCity, City, Address, SiteSetting, Captcha, BankInfo,
-    MobileNumber, SmsCode, Log, AdminParameter,
+    MobileNumber, SmsCode, Log, AdminParameter, SiteNotice,
 )
 
 # Identity
@@ -72,6 +72,7 @@ __all__ = [
     # Common
     "ProvinceCity", "City", "Address", "SiteSetting", "Captcha",
     "BankInfo", "MobileNumber", "SmsCode", "Log", "AdminParameter",
+    "SiteNotice",
 
     # Identity
     "User", "Role", "UserRole", "RoleClaim", "UserClaim", "Claim",

@@ -1,0 +1,21 @@
+{% if request.state.site_notices is defined and request.state.site_notices %}
+<div class="asha-site-notices">
+    {% for notice in request.state.site_notices %}
+        {% set style = notice_styles.get(notice.notice_type, notice_styles.get('info', {})) %}
+        <div class="asha-notice-banner" data-notice-type="{{ notice.notice_type or 'info' }}"
+             style="background-color: {{ style.get('bg', '#e3f2ec') }}; color: {{ style.get('text', '#1e7e34') }}">
+            <div class="asha-notice-inner">
+                <span class="asha-notice-badge">{{ (style.get('label') or notice.notice_type or 'اطلاع رسانی') }}</span>
+                <span class="asha-notice-text">{{ notice.message }}</span>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+<style>
+    .asha-site-notices { margin: 0; }
+    .asha-notice-banner { padding: 8px 16px; font-size: 13px; line-height: 1.6; border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .asha-notice-inner { display: flex; align-items: center; gap: 10px; }
+    .asha-notice-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: rgba(0,0,0,0.10); }
+    .asha-notice-text { flex: 1; }
+</style>
+{% endif %}

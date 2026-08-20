@@ -48,6 +48,33 @@ THEME = {
     "hint_color": "#ff5722",
 }
 
+
+# ── Site-notice banner styles ──
+#
+# Each message type has its own two-color scheme (background + text). Changng
+# these values here recolours the banner in the storefront. The key matches the
+# ``notice_type`` value stored on ``SiteNotice`` rows.
+NOTICE_STYLES = {
+    # "اطلاع رسانی" — neutral informational banner
+    "info": {
+        "label": "اطلاع رسانی",
+        "bg": "#e3f2ec",
+        "text": "#1e7e34",
+    },
+    # "اعلان" — bold announcement banner
+    "announcement": {
+        "label": "اعلان",
+        "bg": "#fff4cc",
+        "text": "#856404",
+    },
+    # "راهنما" — helpful hint banner
+    "hint": {
+        "label": "راهنما",
+        "bg": "#d6ecf9",
+        "text": "#0c5460",
+    },
+}
+
 SEED_USERS_ENV_VARS = {
     "ADMIN_USER": "a.dastan@ashabeam.com",
     "ADMIN_PASS": "@Aa123456",
@@ -162,6 +189,7 @@ def register_template_globals(templates):
     template (shop, auth, admin) can use ``{{ theme }}`` / ``{{ site_info }}``."""
     templates.env.globals["theme"] = THEME
     templates.env.globals["site_info"] = SITE_INFO
+    templates.env.globals["notice_styles"] = NOTICE_STYLES
     if "short_id" not in templates.env.filters:
         templates.env.filters["short_id"] = _short_id
     return templates

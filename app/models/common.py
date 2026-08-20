@@ -184,3 +184,21 @@ class AdminParameter(Base, BaseEntityMixin):
 
     ConfirmOrderPN: Mapped[str] = mapped_column("ConfirmOrderPN", Text, nullable=False, default="")
     ConfrimOrderEm: Mapped[str] = mapped_column("ConfrimOrderEm", Text, nullable=False, default="")
+
+
+class SiteNotice(Base, BaseEntityMixin):
+    """A site-wide message shown as a banner below the site header.
+
+    Admin-managed. Each notice has a type (info / announcement / hint) that maps
+    to its own color style (see ``NOTICE_STYLES`` in site_config.py), an optional
+    start/end window, and a manual active flag so it can be shown or hidden
+    without deleting it.
+    """
+
+    __tablename__ = "SiteNotices"
+
+    message: Mapped[str] = mapped_column("Message", Text, nullable=False)
+    notice_type: Mapped[str] = mapped_column("NoticeType", String(32), nullable=False, default="Info")
+    start_date: Mapped[Optional[datetime]] = mapped_column("StartDate", DateTime(timezone=True), nullable=True)
+    end_date: Mapped[Optional[datetime]] = mapped_column("EndDate", DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column("IsActive", Boolean, nullable=False, default=True)

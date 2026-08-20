@@ -115,11 +115,13 @@ class SiteSettingsMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        from datetime import datetime, timezone
+
         from sqlalchemy import select
 
         from app.config.site_config import SITE_INFO, THEME
         from app.database import async_session_factory
-        from app.models.common import SiteSetting
+        from app.models.common import SiteNotice, SiteSetting
 
         path = request.url.path
         needs_settings = not any(
@@ -127,6 +129,7 @@ class SiteSettingsMiddleware(BaseHTTPMiddleware):
             for prefix in ("/static", "/media", "/api", "/docs", "/redoc", "/health")
         )
         site_settings = None
+        site_notices: list = []
         if needs_settings:
             try:
                 async with async_session_factory() as db:
@@ -134,10 +137,24 @@ class SiteSettingsMiddleware(BaseHTTPMiddleware):
                         select(SiteSetting).where(SiteSetting.is_removed == False).limit(1)
                     )
                     site_settings = result.scalar_one_or_none()
+                    now = datetime.now(timezone.utc)
+                    notice_result = await db.execute(
+                        select(SiteNotice)
+                        .where(
+                            SiteNotice.is_removed == False,
+                            SiteNotice.is_active == True,
+                            (SiteNotice.start_date.is_(None) | (SiteNotice.start_date <= now)),
+                            (SiteNotice.end_date.is_(None) | (SiteNotice.end_date >= now)),
+                        )
+                        .order_by(SiteNotice.insert_date.desc())
+                    )
+                    site_notices = notice_result.scalars().all()
             except Exception:
                 site_settings = None
+                site_notices = []
 
         request.state.site_settings = site_settings
+        request.state.site_notices = site_notices
         request.state.site_config = {"THEME": THEME, "SITE_INFO": SITE_INFO}
         response = await call_next(request)
         return response
