@@ -18,7 +18,8 @@
 #   docker rmi asha-shop-fastapi-migrator   # free ~600MB
 #   rm docker-compose.migrate.yml Dockerfile.migrate  # optional
 
-name: asha-shop
+# name: asha-shop
+version: "3.9"
 
 services:
   # Reuse the prod postgres definition via extension, but allow standalone use.
