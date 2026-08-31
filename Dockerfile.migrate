@@ -22,10 +22,12 @@ RUN echo "Types: deb\nURIs: http://mirror.aminidc.com/debian\nSuites: bookworm b
 #  - libpq-dev for psycopg2
 #  - tdsodbc/freetds for SQL Server (FreeTDS avoids packages.microsoft.com which is blocked in IR)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc g++ libpq-dev unixodbc-dev tdsodbc freetds-bin freetds-dev ca-certificates \
+        gcc g++ libpq-dev unixodbc unixodbc-dev tdsodbc freetds-bin freetds-dev ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
+    && ldconfig \
     && odbcinst -q -d 2>&1 | grep -q FreeTDS || echo "[FreeTDS]\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so" >> /etc/odbcinst.ini \
-    && cat /etc/odbcinst.ini
+    && cat /etc/odbcinst.ini \
+    && ls -l /usr/lib/x86_64-linux-gnu/libodbc* /usr/lib/x86_64-linux-gnu/odbc/* 2>&1 | head -n 20
 
 # Reuse prod requirements + add only migration extras (keeps prod requirements.txt lean)
 # pip pypi is also filtered in IR — use Runflare mirror
