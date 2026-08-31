@@ -54,3 +54,6 @@ tenacity==8.2.3
 jdatetime==4.1.0
 unicode-slugify==0.1.5
 itsdangerous==2.1.2
+
+# pydantic data migration
+pyodbc==5.1.0

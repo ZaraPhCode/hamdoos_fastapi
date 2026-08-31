@@ -83,7 +83,14 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = ""
     EMAIL_USE_TLS: bool = True
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {
+        # Support both local dev (.env in repo root) and VPS prod (/opt/.env).
+        # Files are loaded in order; later entries override earlier ones.
+        # `extra="ignore"` lets .env contain compose-only keys without error.
+        "env_file": (".env", "/opt/.env"),
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
 
 settings = Settings()
