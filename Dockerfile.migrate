@@ -10,34 +10,50 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-# IR firewall blocks deb.debian.org — switch to AminIDC mirror (Arvan 404 on /debian)
-# Docker registry mirror (Chabokan) does NOT affect apt; this is for Debian packages.
-RUN echo "Types: deb\nURIs: http://mirror.aminidc.com/debian\nSuites: bookworm bookworm-updates\nComponents: main\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg" > /etc/apt/sources.list.d/debian.sources && \
-    echo "Types: deb\nURIs: http://mirror.aminidc.com/debian-security\nSuites: bookworm-security\nComponents: main\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg" > /etc/apt/sources.list.d/debian-security.sources && \
-    echo "Types: deb\nURIs: http://mirror.aminidc.com/debian\nSuites: bookworm-backports\nComponents: main\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg" > /etc/apt/sources.list.d/debian-backports.sources 2>/dev/null || true && \
-    cat /etc/apt/sources.list.d/debian.sources && cat /etc/apt/sources.list.d/debian-security.sources
-
+# Debian mirrors — IR firewall blocks deb.debian.org, so use the AminIDC mirror.
+# IMPORTANT: AminIDC does NOT mirror a separate debian-security tree, so
+# `debian-security bookworm-security` returns 404 and silently breaks apt.
+# Everything we install lives in main, so only bookworm + bookworm-updates are
+# configured (fine for a one-off migration image).
+#
 # System deps:
 #  - gcc/g++ + unixodbc-dev for building pyodbc
 #  - libpq-dev for psycopg2
 #  - tdsodbc/freetds for SQL Server (FreeTDS avoids packages.microsoft.com which is blocked in IR)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc g++ libpq-dev unixodbc unixodbc-dev tdsodbc freetds-bin freetds-dev ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && ldconfig \
-    && odbcinst -q -d 2>&1 | grep -q FreeTDS || printf "[FreeTDS]\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\n" >> /etc/odbcinst.ini \
-    && cat /etc/odbcinst.ini \
-    && ls -l /usr/lib/x86_64-linux-gnu/libodbc* /usr/lib/x86_64-linux-gnu/odbc/* 2>&1 | head -n 20
+RUN set -eux; \
+    printf 'deb http://mirror.aminidc.com/debian bookworm main\ndeb http://mirror.aminidc.com/debian bookworm-updates main\n' \
+      > /etc/apt/sources.list.d/asha.list; \
+    rm -f /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian-security.sources; \
+    cat /etc/apt/sources.list.d/asha.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        gcc g++ libpq-dev unixodbc unixodbc-dev tdsodbc freetds-bin freetds-dev ca-certificates; \
+    rm -rf /var/lib/apt/lists/*; \
+    ldconfig; \
+    printf '[FreeTDS]\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\n' >> /etc/odbcinst.ini; \
+    cat /etc/odbcinst.ini; \
+    odbcinst -q -d; \
+    ls -l /usr/lib/x86_64-linux-gnu/libodbc* /usr/lib/x86_64-linux-gnu/odbc/*
 
-# Reuse prod requirements + add only migration extras (keeps prod requirements.txt lean)
-# pip pypi is also filtered in IR — try Runflare, fallback to Tsinghua/Aliyun
+# Reuse prod requirements (pyodbc is already in requirements.txt).
+# pip is also filtered in IR: Tsinghua/Aliyun are unreachable from this VPS
+# ([Errno 101] Network is unreachable) and AminIDC has no pypi mirror, so try
+# pypi.org first, then the CN mirrors as fallbacks. Fails loudly if none work.
 COPY requirements.txt .
-RUN pip install --no-cache-dir --index-url https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn -r requirements.txt \
-    || pip install --no-cache-dir --index-url https://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com -r requirements.txt \
-    || pip install --no-cache-dir -r requirements.txt; \
-    pip install --no-cache-dir --index-url https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn "pyodbc==5.1.0" \
-    || pip install --no-cache-dir --index-url https://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com "pyodbc==5.1.0" \
-    || pip install --no-cache-dir "pyodbc==5.1.0"
+RUN set -ux; \
+    _ok=0; \
+    for idx in "https://pypi.org/simple" \
+               "https://pypi.tuna.tsinghua.edu.cn/simple" \
+               "https://mirrors.aliyun.com/pypi/simple"; do \
+        echo "==> pip trying index: $idx"; \
+        if pip install --no-cache-dir --index-url "$idx" --timeout 30 -r requirements.txt \
+            && pip install --no-cache-dir --index-url "$idx" --timeout 30 "pyodbc==5.1.0"; then \
+            _ok=1; \
+            break; \
+        fi; \
+    done; \
+    test "$_ok" -eq 1; \
+    python -c "import pyodbc, psycopg2, fastapi, sqlalchemy, alembic; print('python deps OK; pyodbc', pyodbc.version)"
 
 # Copy project (needed for app/models for alembic + migrate script itself)
 COPY . .
