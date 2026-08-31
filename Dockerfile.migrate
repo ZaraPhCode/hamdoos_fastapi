@@ -25,16 +25,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gcc g++ libpq-dev unixodbc unixodbc-dev tdsodbc freetds-bin freetds-dev ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && ldconfig \
-    && odbcinst -q -d 2>&1 | grep -q FreeTDS || echo "[FreeTDS]\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so" >> /etc/odbcinst.ini \
+    && odbcinst -q -d 2>&1 | grep -q FreeTDS || printf "[FreeTDS]\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\n" >> /etc/odbcinst.ini \
     && cat /etc/odbcinst.ini \
-    && ls -l /usr/lib/x86_64-linux-gnu/libodbc* /usr/lib/x86_64-linux-gnu/odbc/* 2>&1 | head -n 20 \
-    && ldd /usr/local/lib/python3.12/site-packages/pyodbc*.so 2>&1 | head -n 20 || ldd /usr/local/lib/python3.12/site-packages/pyodbc.cpython*.so 2>&1 | head -n 20
+    && ls -l /usr/lib/x86_64-linux-gnu/libodbc* /usr/lib/x86_64-linux-gnu/odbc/* 2>&1 | head -n 20
 
 # Reuse prod requirements + add only migration extras (keeps prod requirements.txt lean)
-# pip pypi is also filtered in IR — use Runflare mirror
+# pip pypi is also filtered in IR — try Runflare, fallback to Tsinghua/Aliyun
 COPY requirements.txt .
-RUN pip install --no-cache-dir --index-url https://mirror-pypi.runflare.com/simple --trusted-host mirror-pypi.runflare.com -r requirements.txt \
-    && pip install --no-cache-dir --index-url https://mirror-pypi.runflare.com/simple --trusted-host mirror-pypi.runflare.com "pyodbc==5.1.0"
+RUN pip install --no-cache-dir --index-url https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn -r requirements.txt \
+    || pip install --no-cache-dir --index-url https://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com -r requirements.txt \
+    || pip install --no-cache-dir -r requirements.txt; \
+    pip install --no-cache-dir --index-url https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn "pyodbc==5.1.0" \
+    || pip install --no-cache-dir --index-url https://mirrors.aliyun.com/pypi/simple --trusted-host mirrors.aliyun.com "pyodbc==5.1.0" \
+    || pip install --no-cache-dir "pyodbc==5.1.0"
 
 # Copy project (needed for app/models for alembic + migrate script itself)
 COPY . .
