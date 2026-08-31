@@ -11,9 +11,11 @@ FROM python:3.12-slim-bookworm
 WORKDIR /app
 
 # IR firewall blocks deb.debian.org — switch to Arvan mirror before any apt-get
-RUN sed -i 's|http://deb.debian.org|https://mirror.arvancloud.ir/debian|g' /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources 2>/dev/null || true; \
-    sed -i 's|https://deb.debian.org|https://mirror.arvancloud.ir/debian|g' /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources 2>/dev/null || true; \
-    sed -i 's|deb.debian.org|mirror.arvancloud.ir/debian|g' /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources 2>/dev/null || true
+# Original URIs: http://deb.debian.org/debian and http://deb.debian.org/debian-security
+# Arvan hosts them as https://mirror.arvancloud.ir/debian and .../debian-security
+RUN sed -i 's|http://deb.debian.org|https://mirror.arvancloud.ir|g' /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources 2>/dev/null || true; \
+    sed -i 's|https://deb.debian.org|https://mirror.arvancloud.ir|g' /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources 2>/dev/null || true; \
+    cat /etc/apt/sources.list.d/debian.sources 2>/dev/null || cat /etc/apt/sources.list 2>/dev/null || true
 
 # System deps:
 #  - gcc/g++ + unixodbc-dev for building pyodbc
