@@ -108,6 +108,13 @@ if [[ -n "${PIP_INDEX:-}" ]]; then
   echo "[migrate] Using PIP_INDEX=$PIP_INDEX for pip install"
   BUILD_ARGS+=(--build-arg "PIP_INDEX=$PIP_INDEX")
 fi
+# --deps offline => install from ./wheels/ (pre-downloaded; no network at build).
+# Needs:  docker compose -f docker-compose.migrate.yml build --build-arg PYTHON_DEPS=offline migrator
+if [[ "${ARGS[*]:-}" == *"--deps offline"* ]]; then
+  echo "[migrate] Using pre-downloaded wheels (offline install) — expecting ./wheels/"
+  BUILD_ARGS+=(--build-arg "PYTHON_DEPS=offline")
+  ARGS=("${ARGS[@]/--deps/}"); ARGS=("${ARGS[@]/offline/}")
+fi
 $DC -f "$COMPOSE_MIG" build --no-cache "${BUILD_ARGS[@]}" migrator
 
 # --- 3. Create empty schema (alembic upgrade head) ---

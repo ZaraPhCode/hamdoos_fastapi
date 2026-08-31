@@ -36,46 +36,57 @@ RUN set -eux; \
     ls -l /usr/lib/x86_64-linux-gnu/libodbc* /usr/lib/x86_64-linux-gnu/odbc/*
 
 # Reuse prod requirements (pyodbc is already in requirements.txt).
-# PyPI is filtered from this VPS: pypi.org / Tsinghua / Aliyun all fail with
-# `Network is unreachable`. The VPS CAN reach mirror.chabokan.net (it is the
-# Docker registry mirror Docker already uses) and Chabokan also proxies PyPI,
-# so try it first; pypi.org and CN mirrors are fallbacks.
-#   Override with: --build-arg PIP_INDEX=https://<working-index>/simple
-# --retries 0 + --timeout fail unreachable hosts in seconds instead of letting
-# pip retry each of the 59 packages for hours.
+# PyPI access from this VPS is unreliable/blocked (intermittent "Network is
+# unreachable" / empty index), so this layer supports an OFFLINE mode using
+# pre-downloaded wheels:
+#   1) On internet-connected hardware:   pip download -r requirements.txt -d wheels/
+#      (add --platform/--only-binary=:all: if targeting a different arch than the builder)
+#   2) Rebuild with:  --build-arg PYTHON_DEPS=offline
+#      (docker save/load transfer works too)
+# When ONLINE is used, fail unreachable hosts in seconds instead of letting pip
+# retry each of the 59 packages for hours.
 ARG PIP_INDEX=""
+ARG PYTHON_DEPS="online"
 COPY requirements.txt .
+COPY wheels/*.whl /tmp/wheels/ 2>/dev/null || true
 RUN set -ux; \
-    _ok=0; \
-    if [ -n "$PIP_INDEX" ]; then \
-        echo "==> pip using configured index: $PIP_INDEX"; \
-        if pip install --no-cache-dir --index-url "$PIP_INDEX" --retries 0 --timeout 20 -r requirements.txt \
-            && pip install --no-cache-dir --index-url "$PIP_INDEX" --retries 0 --timeout 20 "pyodbc==5.1.0"; then \
-            _ok=1; \
-        fi; \
+    if [ "$PYTHON_DEPS" = "offline" ] || [ -d /tmp/wheels ]; then \
+        echo "==> [offline] installing requirements from /tmp/wheels"; \
+        pip install --no-cache-dir --no-index --find-links=/tmp/wheels -r requirements.txt; \
+        pip install --no-cache-dir --no-index --find-links=/tmp/wheels "pyodbc==5.1.0"; \
     else \
-        for idx in \
-                "https://mirror.chabokan.net/pypi/simple" \
-                "https://mirror.chabokan.net/repository/pypi/simple" \
-                "https://pypi.org/simple" \
-                "https://pypi.tuna.tsinghua.edu.cn/simple" \
-                "https://mirrors.aliyun.com/pypi/simple"; do \
-            echo "==> pip trying index: $idx"; \
-            if pip install --no-cache-dir --index-url "$idx" --retries 0 --timeout 20 -r requirements.txt \
-                && pip install --no-cache-dir --index-url "$idx" --retries 0 --timeout 20 "pyodbc==5.1.0"; then \
+        _ok=0; \
+        if [ -n "$PIP_INDEX" ]; then \
+            echo "==> pip using configured index: $PIP_INDEX"; \
+            if pip install --no-cache-dir --index-url "$PIP_INDEX" --retries 0 --timeout 20 -r requirements.txt \
+                && pip install --no-cache-dir --index-url "$PIP_INDEX" --retries 0 --timeout 20 "pyodbc==5.1.0"; then \
                 _ok=1; \
-                break; \
             fi; \
-        done; \
+        else \
+            for idx in \
+                    "https://pypi.org/simple" \
+                    "https://mirror.chabokan.net/pypi/simple" \
+                    "https://mirror.chabokan.net/repository/pypi/simple" \
+                    "https://pypi.tuna.tsinghua.edu.cn/simple" \
+                    "https://mirrors.aliyun.com/pypi/simple"; do \
+                echo "==> pip trying index: $idx"; \
+                if pip install --no-cache-dir --index-url "$idx" --retries 0 --timeout 20 -r requirements.txt \
+                    && pip install --no-cache-dir --index-url "$idx" --retries 0 --timeout 20 "pyodbc==5.1.0"; then \
+                    _ok=1; \
+                    break; \
+                fi; \
+            done; \
+        fi; \
+        test "$_ok" -eq 1 || { \
+            echo 'ERROR: no reachable PyPI index from this machine.' >&2; \
+            echo '  Either build offline with pre-downloaded wheels:' >&2; \
+            echo '    pip download -r requirements.txt -d wheels/   # on internet-connected machine' >&2; \
+            echo '    docker compose -f docker-compose.migrate.yml build --build-arg PYTHON_DEPS=offline migrator' >&2; \
+            echo '  OR build the image on an internet-connected machine and load it here:' >&2; \
+            echo '    docker save asha-shop-fastapi-migrator | gzip > mig.tar.gz   # on the builder' >&2; \
+            echo '    docker load < mig.tar.gz                                     # on the VPS' >&2; \
+            exit 1; }; \
     fi; \
-    test "$_ok" -eq 1 || { \
-        echo 'ERROR: no reachable PyPI index from this machine.' >&2; \
-        echo '  Find a working index, then rebuild with it:' >&2; \
-        echo '    docker compose -f docker-compose.migrate.yml build --build-arg PIP_INDEX=https://<index>/simple migrator' >&2; \
-        echo '  OR build on an internet-connected machine and transfer the image:' >&2; \
-        echo '    docker save asha-shop-fastapi-migrator | gzip > mig.tar.gz   # on the builder' >&2; \
-        echo '    scp mig.tar.gz <vps>: && docker load < mig.tar.gz            # on the VPS' >&2; \
-        exit 1; }; \
     python -c "import pyodbc, psycopg2, fastapi, sqlalchemy, alembic; print('python deps OK; pyodbc', pyodbc.version)"
 
 # Copy project (needed for app/models for alembic + migrate script itself)
