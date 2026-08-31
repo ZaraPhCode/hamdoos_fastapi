@@ -103,7 +103,12 @@ done
 
 # --- 2. Build migrator image (contains ODBC driver + pyodbc + alembic) ---
 echo "[migrate] Building migrator image (Dockerfile.migrate) — first build ~3-5 min ..."
-$DC -f "$COMPOSE_MIG" build --no-cache migrator
+BUILD_ARGS=()
+if [[ -n "${PIP_INDEX:-}" ]]; then
+  echo "[migrate] Using PIP_INDEX=$PIP_INDEX for pip install"
+  BUILD_ARGS+=(--build-arg "PIP_INDEX=$PIP_INDEX")
+fi
+$DC -f "$COMPOSE_MIG" build --no-cache "${BUILD_ARGS[@]}" migrator
 
 # --- 3. Create empty schema (alembic upgrade head) ---
 # Skip if caller only wants --set-admin-pass (schema already exists)
