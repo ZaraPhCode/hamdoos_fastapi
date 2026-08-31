@@ -20,18 +20,12 @@ RUN sed -i 's|http://deb.debian.org|https://mirror.arvancloud.ir|g' /etc/apt/sou
 # System deps:
 #  - gcc/g++ + unixodbc-dev for building pyodbc
 #  - libpq-dev for psycopg2
-#  - curl + gnupg for Microsoft apt repo
-#  - msodbcsql17: ODBC Driver 17 for SQL Server (matches MIG_SRC_DRIVER default)
+#  - tdsodbc/freetds for SQL Server (FreeTDS avoids packages.microsoft.com which is blocked in IR)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc g++ libpq-dev unixodbc-dev curl gnupg ca-certificates \
-    && mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg \
-    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
-    && apt-get purge -y curl gnupg \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+        gcc g++ libpq-dev unixodbc-dev tdsodbc freetds-bin freetds-dev ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && odbcinst -q -d 2>&1 | grep -q FreeTDS || echo "[FreeTDS]\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so" >> /etc/odbcinst.ini \
+    && cat /etc/odbcinst.ini
 
 # Reuse prod requirements + add only migration extras (keeps prod requirements.txt lean)
 COPY requirements.txt .

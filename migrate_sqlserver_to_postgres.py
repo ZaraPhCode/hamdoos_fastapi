@@ -47,13 +47,15 @@ def _env(key: str, default: str) -> str:
     return os.environ.get(key, default)
 
 
+_MIG_DRIVER_DEFAULT = "FreeTDS"  # VPS uses FreeTDS (no Microsoft repo); override to "ODBC Driver 17 for SQL Server" locally if installed
 SOURCE_DSN = (
-    f"DRIVER={_env('MIG_SRC_DRIVER', 'ODBC Driver 17 for SQL Server')};"
+    f"DRIVER={_env('MIG_SRC_DRIVER', _MIG_DRIVER_DEFAULT)};"
     f"SERVER={_env('MIG_SRC_HOST', '185.252.30.175,2022')};"
     f"DATABASE={_env('MIG_SRC_DATABASE', 'ashabeam_hamdoos')};"
     f"UID={_env('MIG_SRC_USER', 'asha_admin313')};"
     f"PWD={_env('MIG_SRC_PASSWORD', 'uS%1s0iq15~zJ260b3')};"
     "Encrypt=no;TrustServerCertificate=yes"
+    + (";TDS_Version=7.4" if _env('MIG_SRC_DRIVER', _MIG_DRIVER_DEFAULT) == "FreeTDS" else "")
 )
 SOURCE_SCHEMA = _env("MIG_SRC_SCHEMA", "asha_admin313")
 

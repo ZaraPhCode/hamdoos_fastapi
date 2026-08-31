@@ -64,9 +64,9 @@ services:
       # MIG_TARGET_DBNAME: ${POSTGRES_DB:-ashadb}
       # MIG_TARGET_USER: ${POSTGRES_USER:-ashauser}
       # MIG_TARGET_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}
-      # Source (SQL Server) — defaults match migrate_sqlserver_to_postgres.py:50,
-      # but override here if you rotated creds or use a different host/port.
-      MIG_SRC_DRIVER: ${MIG_SRC_DRIVER:-ODBC Driver 17 for SQL Server}
+      # Source (SQL Server) — FreeTDS avoids packages.microsoft.com (blocked in IR).
+      # For local dev with MS driver, set MIG_SRC_DRIVER="ODBC Driver 17 for SQL Server".
+      MIG_SRC_DRIVER: ${MIG_SRC_DRIVER:-FreeTDS}
       MIG_SRC_HOST: ${MIG_SRC_HOST:-185.252.30.175,2022}
       MIG_SRC_DATABASE: ${MIG_SRC_DATABASE:-ashabeam_hamdoos}
       MIG_SRC_USER: ${MIG_SRC_USER:-asha_admin313}
