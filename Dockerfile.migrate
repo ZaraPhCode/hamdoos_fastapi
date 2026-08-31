@@ -27,7 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ldconfig \
     && odbcinst -q -d 2>&1 | grep -q FreeTDS || echo "[FreeTDS]\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so" >> /etc/odbcinst.ini \
     && cat /etc/odbcinst.ini \
-    && ls -l /usr/lib/x86_64-linux-gnu/libodbc* /usr/lib/x86_64-linux-gnu/odbc/* 2>&1 | head -n 20
+    && ls -l /usr/lib/x86_64-linux-gnu/libodbc* /usr/lib/x86_64-linux-gnu/odbc/* 2>&1 | head -n 20 \
+    && ldd /usr/local/lib/python3.12/site-packages/pyodbc*.so 2>&1 | head -n 20 || ldd /usr/local/lib/python3.12/site-packages/pyodbc.cpython*.so 2>&1 | head -n 20
 
 # Reuse prod requirements + add only migration extras (keeps prod requirements.txt lean)
 # pip pypi is also filtered in IR — use Runflare mirror

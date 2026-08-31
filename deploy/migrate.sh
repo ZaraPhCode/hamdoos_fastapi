@@ -103,7 +103,7 @@ done
 
 # --- 2. Build migrator image (contains ODBC driver + pyodbc + alembic) ---
 echo "[migrate] Building migrator image (Dockerfile.migrate) — first build ~3-5 min ..."
-$DC -f "$COMPOSE_MIG" build migrator
+$DC -f "$COMPOSE_MIG" build --no-cache migrator
 
 # --- 3. Create empty schema (alembic upgrade head) ---
 # Skip if caller only wants --set-admin-pass (schema already exists)
