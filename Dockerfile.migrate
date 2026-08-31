@@ -48,9 +48,11 @@ RUN set -eux; \
 ARG PIP_INDEX=""
 ARG PYTHON_DEPS="online"
 COPY requirements.txt .
-COPY wheels/*.whl /tmp/wheels/ 2>/dev/null || true
+# wheels/ stays in the build context (wheels/.gitkeep) so this COPY always
+# succeeds; drop the real *.whl files in before an offline build.
+COPY wheels/ /tmp/wheels/
 RUN set -ux; \
-    if [ "$PYTHON_DEPS" = "offline" ] || [ -d /tmp/wheels ]; then \
+    if [ "$PYTHON_DEPS" = "offline" ]; then \
         echo "==> [offline] installing requirements from /tmp/wheels"; \
         pip install --no-cache-dir --no-index --find-links=/tmp/wheels -r requirements.txt; \
         pip install --no-cache-dir --no-index --find-links=/tmp/wheels "pyodbc==5.1.0"; \

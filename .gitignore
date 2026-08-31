@@ -47,7 +47,8 @@ Thumbs.db
 
 # Docker
 docker-data/
-wheels/
+wheels/*
+!wheels/.gitkeep
 
 # Logs
 *.log
