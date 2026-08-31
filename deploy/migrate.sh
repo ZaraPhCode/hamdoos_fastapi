@@ -52,9 +52,23 @@ fi
 if grep -q "replace-with-a-strong-secret" "$ENV_FILE" 2>/dev/null; then
   echo "[migrate] WARNING: SECRET_KEY in $ENV_FILE is default dev value — rotate."
 fi
-if [[ ! -r /opt/.env && -f /opt/.env ]]; then
-  echo "[migrate] WARNING: /opt/.env is not readable (check sudo chmod 600 /opt/.env && sudo chown \$USER /opt/.env or run script with sudo)."
+if [[ -f /opt/.env && ! -r /opt/.env ]]; then
+  echo "[migrate] /opt/.env is not readable by $USER (600 root:root). Fixing..."
+  # Make it readable for compose (which runs as $USER). Keep secrets off world-readable if possible.
+  sudo chown "$USER":"$USER" /opt/.env 2>/dev/null || sudo chmod 644 /opt/.env
+  echo "[migrate] Fixed permissions: $(ls -l /opt/.env)"
 fi
+# Detect docker compose command (v2 plugin vs standalone)
+if docker compose version >/dev/null 2>&1; then
+  DC="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+  DC="docker-compose"
+else
+  echo "[migrate] ERROR: neither 'docker compose' nor 'docker-compose' found. Install docker compose plugin:"
+  echo "  sudo apt-get update && sudo apt-get install -y docker-compose-plugin"
+  exit 1
+fi
+echo "[migrate] Using: $DC"
 
 # Default to --plan if no args (safe dry-run)
 ARGS=("$@")
@@ -71,7 +85,7 @@ fi
 
 # --- 1. Boot postgres ---
 echo "[migrate] Starting postgres (db) ..."
-docker compose -f "$COMPOSE_MIG" up -d db
+$DC -f "$COMPOSE_MIG" up -d db
 
 echo "[migrate] Waiting for postgres health ..."
 for i in $(seq 1 30); do
@@ -82,14 +96,14 @@ for i in $(seq 1 30); do
   sleep 2
   if [[ $i -eq 30 ]]; then
     echo "[migrate] ERROR: postgres did not become healthy in 60s"
-    docker compose -f "$COMPOSE_MIG" logs db | tail -n 80
+    $DC -f "$COMPOSE_MIG" logs db | tail -n 80
     exit 1
   fi
 done
 
 # --- 2. Build migrator image (contains ODBC driver + pyodbc + alembic) ---
 echo "[migrate] Building migrator image (Dockerfile.migrate) — first build ~3-5 min ..."
-docker compose -f "$COMPOSE_MIG" build migrator
+$DC -f "$COMPOSE_MIG" build migrator
 
 # --- 3. Create empty schema (alembic upgrade head) ---
 # Skip if caller only wants --set-admin-pass (schema already exists)
@@ -102,7 +116,7 @@ done
 
 if [[ "$SKIP_ALEMBIC" == "false" ]]; then
   echo "[migrate] Running alembic upgrade head (via migrator) ..."
-  docker compose -f "$COMPOSE_MIG" run --rm migrator sh -c "alembic upgrade head"
+  $DC -f "$COMPOSE_MIG" run --rm migrator sh -c "alembic upgrade head"
 else
   echo "[migrate] Skipping alembic (admin-pass mode) ..."
 fi
@@ -110,9 +124,9 @@ fi
 # --- 4. Run migrator ---
 echo "[migrate] Running migrator: ${ARGS[*]:-<full load>}"
 if [[ ${#ARGS[@]} -eq 0 ]]; then
-  docker compose -f "$COMPOSE_MIG" run --rm migrator
+  $DC -f "$COMPOSE_MIG" run --rm migrator
 else
-  docker compose -f "$COMPOSE_MIG" run --rm migrator "${ARGS[@]}"
+  $DC -f "$COMPOSE_MIG" run --rm migrator "${ARGS[@]}"
 fi
 
 echo ""
@@ -120,15 +134,15 @@ echo "[migrate] Done."
 if [[ " ${ARGS[*]} " == *" --plan "* ]]; then
   echo "[migrate] This was --plan (no writes). To actually migrate:"
   echo "  ./deploy/migrate.sh run"
-  echo "  # or: docker compose -f $COMPOSE_MIG run --rm migrator"
+  echo "  # or: $DC -f $COMPOSE_MIG run --rm migrator"
 else
   echo "[migrate] Next steps (if you just did a full load):"
   echo "  1. Re-hash admin (bcrypt — .NET hash incompatible):"
   echo "     ./deploy/migrate.sh --set-admin-pass 'NEW_STRONG_PASS' --admin-user 'a.dastan@ashabeam.com'"
   echo "     # or new email: --admin-user admin@yourdomain.com"
   echo "  2. Boot prod stack:"
-  echo "     docker compose -f $COMPOSE_PROD up -d --build"
-  echo "     docker compose -f $COMPOSE_PROD logs -f app"
+  echo "     $DC -f $COMPOSE_PROD up -d --build"
+  echo "     $DC -f $COMPOSE_PROD logs -f app"
   echo "  3. Verify:"
   echo "     docker exec asha-db psql -U \$POSTGRES_USER -d \$POSTGRES_DB -c 'select count(*) from \"Users\";'"
   echo "  4. Clean migrator (optional, frees ~600MB):"
