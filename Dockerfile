@@ -1,10 +1,12 @@
-FROM python:3.12-slim
+FROM python:3.12-slim-noble
 
 WORKDIR /app
 
-# Use Chabokan mirror for Debian packages (official repos blocked in Iran)
-RUN echo "deb https://mirror2.chabokan.net/debian trixie main" > /etc/apt/sources.list.d/chabokan.list \
-    && rm -f /etc/apt/sources.list.d/debian.sources
+# Use ParsVDS Ubuntu mirror (official repos blocked in Iran)
+RUN echo "deb http://ubuntu.parsvds.com/ubuntu noble main universe" > /etc/apt/sources.list.d/parsvds.list \
+    && echo "deb http://ubuntu.parsvds.com/ubuntu noble-updates main universe" >> /etc/apt/sources.list.d/parsvds.list \
+    && echo "deb http://ubuntu.parsvds.com/ubuntu noble-security main universe" >> /etc/apt/sources.list.d/parsvds.list \
+    && rm -f /etc/apt/sources.list.d/ubuntu.sources
 
 # Runtime libs needed by the whole stack:
 #  - gcc/libpq-dev: build deps for psycopg2/pyodbc if a wheel is unavailable
