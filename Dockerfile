@@ -10,7 +10,7 @@ RUN echo "deb https://mirror2.chabokan.net/debian bookworm main" > /etc/apt/sour
 #  - gcc/libpq-dev: build deps for psycopg2/pyodbc if a wheel is unavailable
 #  - unixodbc + tdsodbc + freetds: SQL Server access for the migrator
 #  - postgresql-client: pg_dump/pg_restore for backups
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends --allow-downgrades \
     libssl3=3.0.18-1~deb12u1 \
     gcc g++ libpq-dev libpq5 unixodbc unixodbc-dev tdsodbc freetds-bin freetds-dev \
     postgresql-client ca-certificates \
