@@ -14,6 +14,12 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Use Chabokan mirror for Debian packages (official repos blocked in Iran)
+RUN echo "deb https://mirror2.chabokan.net/debian trixie main" > /etc/apt/sources.list.d/debian.sources \
+    && echo "deb https://mirror2.chabokan.net/debian trixie-updates main" >> /etc/apt/sources.list.d/debian.sources \
+    && echo "deb https://mirror2.chabokan.net/debian-security trixie-security main" >> /etc/apt/sources.list.d/debian.sources \
+    && rm -f /etc/apt/sources.list.d/*.sources
+
 # Runtime libs needed by the whole stack:
 #  - gcc/libpq-dev: build deps for psycopg2/pyodbc if a wheel is unavailable
 #  - unixodbc + tdsodbc + freetds: SQL Server access for the migrator
