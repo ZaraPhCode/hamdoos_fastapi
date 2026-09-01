@@ -53,3 +53,8 @@ wheels/*
 # Logs
 *.log
 logs/
+
+# DB backups (local dumps)
+deploy/backup/*.dump
+backup/*.dump
+db_backup_*.dump

@@ -1,39 +1,28 @@
 # One-off migrator stack — extends the prod DB, adds a disposable migrator.
 #
-# This file is intentionally separate from deploy/docker-compose.prod.yml so
-# the ODBC/pyodbc layer never ships to production.
+# This file is intentionally separate from deploy/docker-compose.prod.yml.
+# Both use the SAME image as the prod app (`asha-shop-app:v1`, which has the
+# ODBC/FreeTDS stack baked in). On the VPS (Docker Hub + apt + pip accessible)
+# it is BUILT here, then used for the one-off migration:
 #
-# Fresh VPS usage (you have NOT built anything yet):
-#   1. cp deploy/.env.example .env  &&  edit it (see guide in deploy/migrate.sh)
-#   2. docker compose -f deploy/docker-compose.prod.yml up -d db
-#      # or: docker compose -f docker-compose.migrate.yml up -d db
-#   3. docker compose -f docker-compose.migrate.yml build migrator
+#   1. docker compose -f docker-compose.migrate.yml build migrator
+#   2. docker compose -f docker-compose.migrate.yml up -d db
+#   3. docker compose -f docker-compose.migrate.yml run --rm migrator sh -c "alembic upgrade head"
 #   4. docker compose -f docker-compose.migrate.yml run --rm migrator --plan
 #   5. docker compose -f docker-compose.migrate.yml run --rm migrator
 #   6. docker compose -f docker-compose.migrate.yml run --rm migrator --set-admin-pass "NEW_PASS" --admin-user "admin@yourdomain.com"
-#   7. docker compose -f deploy/docker-compose.prod.yml up -d app nginx
+#   7. docker compose -f deploy/docker-compose.prod.yml up -d --build
 #
 # After migration you can safely:
 #   docker compose -f docker-compose.migrate.yml down
-#   docker rmi asha-shop-fastapi-migrator   # free ~600MB
-#   rm docker-compose.migrate.yml Dockerfile.migrate  # optional
 
-# name: asha-shop
 version: "3.9"
 
 services:
-  # Reuse the prod postgres definition via extension, but allow standalone use.
-  # If you already run `deploy/docker-compose.prod.yml`, this just reuses the
-  # same volume/network (`postgres_data` + default). If you only use this file,
-  # it boots its own isolated DB for the migration run.
   db:
     image: postgres:16-alpine
     container_name: asha-db
     restart: unless-stopped
-    # environment:
-    #   POSTGRES_USER: ${POSTGRES_USER:-ashauser}
-    #   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}
-    #   POSTGRES_DB: ${POSTGRES_DB:-ashadb}
     env_file:
       - /opt/.env
     ports:
@@ -47,9 +36,10 @@ services:
       retries: 15
 
   migrator:
+    image: asha-shop-app:v1
     build:
       context: .
-      dockerfile: Dockerfile.migrate
+      dockerfile: Dockerfile
     container_name: asha-migrator
     depends_on:
       db:
@@ -61,23 +51,13 @@ services:
       # These override the script's fallback chain: MIG_TARGET_* > POSTGRES_*.
       MIG_TARGET_HOST: db
       MIG_TARGET_PORT: 5432
-      # MIG_TARGET_DBNAME: ${POSTGRES_DB:-ashadb}
-      # MIG_TARGET_USER: ${POSTGRES_USER:-ashauser}
-      # MIG_TARGET_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME_IN_PRODUCTION}
-      # Source (SQL Server) — FreeTDS avoids packages.microsoft.com (blocked in IR).
-      # For local dev with MS driver, set MIG_SRC_DRIVER="ODBC Driver 17 for SQL Server".
+      # Source (SQL Server) — READ-ONLY SELECT only (see the migration script).
+      # Credentials are NEVER hardcoded here. Set MIG_SRC_HOST / MIG_SRC_DATABASE /
+      # MIG_SRC_USER / MIG_SRC_PASSWORD / MIG_SRC_SCHEMA in /opt/.env (env_file
+      # injects them into the container; the script requires them).
       MIG_SRC_DRIVER: ${MIG_SRC_DRIVER:-FreeTDS}
-      MIG_SRC_HOST: ${MIG_SRC_HOST:-185.252.30.175,2022}
-      MIG_SRC_DATABASE: ${MIG_SRC_DATABASE:-ashabeam_hamdoos}
-      MIG_SRC_USER: ${MIG_SRC_USER:-asha_admin313}
-      MIG_SRC_PASSWORD: ${MIG_SRC_PASSWORD:-uS%1s0iq15~zJ260b3}
-      MIG_SRC_SCHEMA: ${MIG_SRC_SCHEMA:-asha_admin313}
-    # Keep script + alembic + models in sync with host checkout
-    volumes:
-      - ./migrate_sqlserver_to_postgres.py:/app/migrate_sqlserver_to_postgres.py:ro
-      - ./alembic:/app/alembic:ro
-      - ./app:/app/app:ro
-    # Default shows help; override per run with `run --rm migrator --plan`
+    # Default: run the migration (args are passed via `run --rm migrator --plan`, etc.)
+    entrypoint: ["python", "migrate_sqlserver_to_postgres.py"]
     command: ["--help"]
     restart: "no"
 

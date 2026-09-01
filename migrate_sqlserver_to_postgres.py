@@ -1,32 +1,31 @@
 """One-time data migration: SQL Server (asha-shop .NET production) -> PostgreSQL (asha-shop-fastapi).
 
-Reads tables from the source SQL Server (read-only) and inserts them into the
-target PostgreSQL database table-by-table, preserving UUIDs and enum ints.
+Reads tables from the source SQL Server (READ-ONLY — no writes, ever) and
+inserts them into the target PostgreSQL database table-by-table, preserving
+UUIDs and enum ints.
 
-Source schema on SQL Server is `asha_admin313` (matches appsettings.json
-connection string "Hamdoos"). Target is the FastAPI app's PostgreSQL `ashadb`.
-All connection settings can be overridden via environment variables so the
-script can be pointed at the deployed (VPS) database as well.
+Source schema + connection come from environment variables (MIG_SRC_*), e.g.
+the source DB used by the .NET host ("Hamdoos"). Target is the FastAPI app's
+PostgreSQL `ashadb`. All connection settings can be overridden via environment
+variables so the script can be pointed at the deployed (VPS) database as well.
 
 Usage:
     python migrate_sqlserver_to_postgres.py --plan              # analyze mapping, no writes
     python migrate_sqlserver_to_postgres.py                     # perform migration
     python migrate_sqlserver_to_postgres.py --set-admin-pass    # re-hash admin password only
 
-Deployment usage on a fresh VPS (after `alembic upgrade head` created the empty schema):
+Deployment usage on the VPS (after `alembic upgrade head` created the empty schema):
 
-    # from the VPS host or any machine with the ODBC driver + pyodbc:
-    $env:MIG_TARGET_HOST="localhost"
-    $env:MIG_TARGET_PORT="5432"
-    $env:MIG_TARGET_PASSWORD="<prod db password>"
-    python migrate_sqlserver_to_postgres.py
-    python migrate_sqlserver_to_postgres.py --set-admin-pass "@Aa123456"
+    # set MIG_SRC_* + POSTGRES_*  in /opt/.env (the migrator compose injects it)
+    docker compose -f docker-compose.migrate.yml run --rm migrator --plan
+    docker compose -f docker-compose.migrate.yml run --rm migrator
+    docker compose -f docker-compose.migrate.yml run --rm migrator --set-admin-pass "@Aa123456"
 
-Environment variables (all optional, defaults target the local docker db):
-    Source (SQL Server):   MIG_SRC_DRIVER, MIG_SRC_HOST, MIG_SRC_DATABASE,
-                           MIG_SRC_USER, MIG_SRC_PASSWORD, MIG_SRC_SCHEMA
-    Target (PostgreSQL):   MIG_TARGET_HOST, MIG_TARGET_PORT, MIG_TARGET_DBNAME,
-                           MIG_TARGET_USER, MIG_TARGET_PASSWORD
+Environment variables:
+    Source (SQL Server, REQUIRED): MIG_SRC_DRIVER, MIG_SRC_HOST, MIG_SRC_DATABASE,
+                                   MIG_SRC_USER, MIG_SRC_PASSWORD, MIG_SRC_SCHEMA
+    Target (PostgreSQL):           MIG_TARGET_HOST, MIG_TARGET_PORT, MIG_TARGET_DBNAME,
+                                   MIG_TARGET_USER, MIG_TARGET_PASSWORD
 """
 
 from __future__ import annotations
@@ -42,22 +41,44 @@ import pyodbc
 import psycopg2
 from psycopg2.extras import execute_values
 
-# ── Connection config (env-overridable, defaults target the local docker db) ──
-def _env(key: str, default: str) -> str:
+# ── Connection config (env-overridable; target defaults to the local compose db) ──
+# IMPORTANT (read-only): the source SQL Server connection is used for SELECTs
+# ONLY — the session is never autocommit and nothing is ever written to it.
+# All credentials come from the environment (never hardcoded in this file):
+#   MIG_SRC_DRIVER, MIG_SRC_HOST, MIG_SRC_DATABASE, MIG_SRC_USER,
+#   MIG_SRC_PASSWORD, MIG_SRC_SCHEMA   (set in /opt/.env on the VPS)
+def _env(key: str, default: str = "") -> str:
     return os.environ.get(key, default)
 
 
-_MIG_DRIVER_DEFAULT = "FreeTDS"  # VPS uses FreeTDS (no Microsoft repo); override to "ODBC Driver 17 for SQL Server" locally if installed
+def _require_env(key: str, description: str) -> str:
+    val = _env(key)
+    if not val:
+        print(
+            f"ERROR: environment variable {key} is required ({description}).\n"
+            "  Set MIG_SRC_HOST / MIG_SRC_DATABASE / MIG_SRC_USER /\n"
+            "  MIG_SRC_PASSWORD / MIG_SRC_SCHEMA in /opt/.env (see deploy/.env.example).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return val
+
+
+_MIG_DRIVER_DEFAULT = "FreeTDS"  # VPS uses FreeTDS (no Microsoft repo); override to "ODBC Driver 17 for SQL Server" if installed
+_MIG_DRIVER = _env("MIG_SRC_DRIVER", _MIG_DRIVER_DEFAULT)
+# Read-only: ApplicationIntent=ReadOnly is honored by the MS ODBC driver when
+# talking to an Always-On readable replica; FreeTDS ignores it.
 SOURCE_DSN = (
-    f"DRIVER={_env('MIG_SRC_DRIVER', _MIG_DRIVER_DEFAULT)};"
-    f"SERVER={_env('MIG_SRC_HOST', '185.252.30.175,2022')};"
-    f"DATABASE={_env('MIG_SRC_DATABASE', 'ashabeam_hamdoos')};"
-    f"UID={_env('MIG_SRC_USER', 'asha_admin313')};"
-    f"PWD={_env('MIG_SRC_PASSWORD', 'uS%1s0iq15~zJ260b3')};"
+    f"DRIVER={_MIG_DRIVER};"
+    f"SERVER={_require_env('MIG_SRC_HOST', 'SQL Server host[:port]')};"
+    f"DATABASE={_require_env('MIG_SRC_DATABASE', 'source database name')};"
+    f"UID={_require_env('MIG_SRC_USER', 'SQL login (read-only preferred)')};"
+    f"PWD={_require_env('MIG_SRC_PASSWORD', 'SQL login password')};"
     "Encrypt=no;TrustServerCertificate=yes"
-    + (";TDS_Version=7.4" if _env('MIG_SRC_DRIVER', _MIG_DRIVER_DEFAULT) == "FreeTDS" else "")
+    + (";TDS_Version=7.4" if _MIG_DRIVER == "FreeTDS" else "")
+    + (";ApplicationIntent=ReadOnly" if _MIG_DRIVER != "FreeTDS" else "")
 )
-SOURCE_SCHEMA = _env("MIG_SRC_SCHEMA", "asha_admin313")
+SOURCE_SCHEMA = _require_env("MIG_SRC_SCHEMA", "source schema name (e.g. dbo)")
 
 # Target (PostgreSQL): MIG_TARGET_* take precedence, then fall back to the
 # .env-driven POSTGRES_* values / DATABASE_URL used by the app itself.

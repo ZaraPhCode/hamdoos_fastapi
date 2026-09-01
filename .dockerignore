@@ -1,0 +1,47 @@
+# Local secrets / env
+.env
+.env.local
+.env.production
+.env.development
+/opt/.env
+
+# VCS
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE / OS
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.ipynb
+.DS_Store
+Thumbs.db
+
+# Uploads (only the dirs are created by the image; real files stay on the VPS)
+app/static/uploads/*
+!app/static/uploads/**/.gitkeep
+
+# Offline wheels / logs / backups / dumps
+wheels/
+logs/
+*.log
+deploy/backup/*.dump
+db_backup_*.dump
+
+# Docker
+docker-data/
