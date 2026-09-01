@@ -56,6 +56,8 @@ services:
       # MIG_SRC_USER / MIG_SRC_PASSWORD / MIG_SRC_SCHEMA in /opt/.env (env_file
       # injects them into the container; the script requires them).
       MIG_SRC_DRIVER: ${MIG_SRC_DRIVER:-FreeTDS}
+    volumes:
+      - ./alembic/versions:/app/alembic/versions
     # Default: run the migration (args are passed via `run --rm migrator --plan`, etc.)
     entrypoint: ["python", "migrate_sqlserver_to_postgres.py"]
     command: ["--help"]
