@@ -18,8 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends --allow-downgra
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
-    && pip install --no-cache-dir awscli
+RUN pip install --no-cache-dir -i https://package-mirror.liara.ir/repository/pypi/simple \
+    -r requirements.txt \
+    && pip install --no-cache-dir -i https://package-mirror.liara.ir/repository/pypi/simple awscli
 
 COPY . .
 
