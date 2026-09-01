@@ -4,8 +4,6 @@ WORKDIR /app
 
 # Use Chabokan mirror for Debian packages (official repos blocked in Iran)
 RUN echo "deb https://mirror2.chabokan.net/debian bookworm main" > /etc/apt/sources.list.d/chabokan.list \
-    && echo "deb https://mirror2.chabokan.net/debian bookworm-updates main" >> /etc/apt/sources.list.d/chabokan.list \
-    && echo "deb https://mirror2.chabokan.net/debian-security bookworm-security main" >> /etc/apt/sources.list.d/chabokan.list \
     && rm -f /etc/apt/sources.list.d/debian.sources
 
 # Runtime libs needed by the whole stack:
