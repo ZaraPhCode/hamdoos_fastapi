@@ -22,7 +22,7 @@ _db_url = app_settings.DATABASE_URL
 if _db_url.startswith("postgresql+asyncpg://"):
     _db_url = "postgresql+psycopg2://" + _db_url.split("://", 1)[1]
 
-config.set_main_option("sqlalchemy.url", _db_url)
+config.set_main_option("sqlalchemy.url", _db_url.replace("%", "%%"))
 
 target_metadata = Base.metadata
 

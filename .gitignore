@@ -39,6 +39,7 @@ app/static/uploads/receipts/*
 
 # Alembic
 alembic/versions/*.py
+!alembic/versions/61edc3afeb85_init_from_models.py
 !alembic/versions/.gitkeep
 
 # OS
