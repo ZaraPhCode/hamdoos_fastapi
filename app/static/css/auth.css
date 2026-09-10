@@ -212,8 +212,8 @@
 
 /* ── Captcha ── */
 .asha-captcha-img {
-  width: 100%;
-  max-width: 300px;
+  width: auto;
+  max-width: 100%;
   height: auto;
   border: 1px solid var(--t-border);
   border-radius: 0.65rem;
