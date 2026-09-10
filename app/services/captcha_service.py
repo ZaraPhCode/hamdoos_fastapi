@@ -36,35 +36,53 @@ class CaptchaModel:
     status: CaptchaStatus = CaptchaStatus.UNAVAILABLE
 
 
+def _load_captcha_font(size: int):
+    """Load a scaled TTF font, preferring the Vazir font bundled with the repo.
+
+    ``arial.ttf`` only exists on Windows dev machines — on the Linux image the
+    old code silently fell back to Pillow's tiny bitmap font, which is why the
+    digits rendered unreadably small in production.
+    """
+    from pathlib import Path
+
+    bundled = (
+        Path(__file__).resolve().parent.parent
+        / "static" / "fonts" / "fonts" / "Vazir.ttf"
+    )
+    for path in (str(bundled), "arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
+        try:
+            return ImageFont.truetype(path, size)
+        except Exception:
+            continue
+    return ImageFont.load_default()
+
+
 def _render_captcha_uri(code: int) -> str:
     """Render the numeric code into a noisy image and return a data URI."""
     text = str(code)
-    width, height = 150, 46
+    width, height = 300, 92
     image = Image.new("RGB", (width, height), (240, 240, 240))
     draw = ImageDraw.Draw(image)
-    try:
-        font = ImageFont.truetype("arial.ttf", 30)
-    except Exception:
-        font = ImageFont.load_default()
-    x = 10
+    font = _load_captcha_font(60)
+    x = 16
     for ch in text:
         draw.text(
-            (x, random.randint(3, 10)),
+            (x, random.randint(6, 20)),
             ch,
             fill=(random.randint(20, 90), random.randint(20, 90), random.randint(20, 90)),
             font=font,
         )
-        x += random.randint(24, 30)
-    for _ in range(6):
+        x += random.randint(46, 56)
+    for _ in range(8):
         draw.line(
             [
                 (random.randint(0, width), random.randint(0, height)),
                 (random.randint(0, width), random.randint(0, height)),
             ],
             fill=(random.randint(120, 200), random.randint(120, 200), random.randint(120, 200)),
-            width=1,
+            width=2,
         )
-    for _ in range(120):
+    for _ in range(300):
         draw.point(
             (random.randint(0, width), random.randint(0, height)),
             fill=(random.randint(80, 200), random.randint(80, 200), random.randint(80, 200)),
