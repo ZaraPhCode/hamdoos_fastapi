@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{% block title %}ورود | همدوس{% endblock %}</title>
+    <meta name="description" content="ورود به حساب کاربری فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس">
+    <link rel="icon" type="image/png" href="/static/ThemeLayout/img/laserFavicon.png">
+    <link rel="stylesheet" href="/static/ThemeLayout/vazirmatn.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/static/css/auth.css" type="text/css" media="all">
+    <style>
+        :root {
+            --asha-primary: {{ theme.primary if theme is defined and theme else '#00a693' }};
+            --asha-primary-hover: {{ theme.primary_hover if theme is defined and theme else '#298665' }};
+            --asha-announce: {{ notice_styles.announcement.text if notice_styles is defined and notice_styles else '#856404' }};
+            --asha-announce-bg: {{ notice_styles.announcement.bg if notice_styles is defined and notice_styles else '#fff4cc' }};
+            --asha-text: {{ theme.text_color if theme is defined and theme else '#333333' }};
+            --asha-body-bg: {{ theme.body_bg if theme is defined and theme else '#eef1f7' }};
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="asha-auth-body">
+<div class="asha-auth">
+    <aside class="asha-auth-brand" aria-hidden="true">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="orb-glow"></div>
+        <div class="asha-auth-brand-inner">
+            <div class="asha-auth-brand-head">
+                <span class="asha-auth-logo-badge"><img src="/static/ThemeLayout/img/logo.jpg" alt="همدوس"></span>
+                <div>
+                    <div class="asha-auth-brand-name">همدوس</div>
+                    <div class="asha-auth-brand-sub">Hamdoos Laser &amp; Optics</div>
+                </div>
+            </div>
+            <h2 class="asha-auth-brand-title">فروشگاه تخصصی لیزر، اپتیک و فوتونیک</h2>
+            <p class="asha-auth-brand-desc">وارد حساب کاربری خود شوید تا سفارش‌ها، علاقه‌مندی‌ها و خدمات پشتیبانی فنی را یکجا مدیریت کنید.</p>
+            <ul class="asha-auth-features">
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>ضمانت اصالت و سلامت کالا</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>پشتیبانی و مشاوره فنی تخصصی</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>ارسال سریع به سراسر کشور</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>پیگیری لحظه‌ای سفارش‌ها</li>
+            </ul>
+        </div>
+    </aside>
+    <main class="asha-auth-main">
+        <div class="asha-auth-cardwrap">
+            {% block content %}{% endblock %}
+            <p class="asha-support">نیاز به راهنمایی دارید؟ با <a href="tel:09018401833">۰۹۰۱۸۴۰۱۸۳۳</a> در تماس باشید.</p>
+        </div>
+    </main>
+</div>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

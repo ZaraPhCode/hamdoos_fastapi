@@ -1,88 +1,40 @@
-{% extends "shop/base.html" %}
-{% block title %}ثبت‌نام | آشا شاپ{% endblock %}
-{% block extra_head %}
-<style>
-    #wrapper { background-color: #fff; }
-</style>
-<link rel="stylesheet" href="/static/ThemeLayout/iverify-auth17.css" type="text/css" media="all">
-{% endblock %}
-{% block body_id %}module-iverify-authentication{% endblock %}
-{% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-full-width st-wrapper{% endblock %}
+{% extends "shop/auth_base.html" %}
+{% block title %}ثبت‌نام | همدوس{% endblock %}
 
 {% block content %}
-<div class="main-content">
-    <div class="container">
-        <div class="row">
-            <div id="center-column" class="center-column col-12">
-                <div class="center-wrapper">
-                    <section id="main" class="box-bg-title-body">
-                        <div class="title"></div>
-                        <div class="body">
-                            <section id="content" class="page-content">
-                                <div id="noSlide">
-                                    <script>
-                                        $('#submitpasswd').click(function () {
-                                            $('.setoptionalpasswd').show();
-                                            $(this).hide();
-                                        });
-                                    </script>
-                                    <style>
-                                        .setoptionalpasswd { display: none; }
-                                    </style>
-                                    <div class="row justify-center-verif" id="createacc">
-                                        <div class="col-xs-12 col-md-7">
-                                            {% if error %}<div class="alert alert-danger" id="account-creation_form_error">{{ error }}</div>{% endif %}
-                                            <form method="post" action="{{ url_for('shop_register') }}" id="account-creation_form" class="std box">
-                                                <input type="hidden" name="returnUrl" value="{{ return_url or '/' }}">
-                                                <div class="account_creation">
-                                                    <h3 class="page-subheading">ایجاد حساب کاربری</h3>
-                                                    <div class="row">
-                                                        <div class="required form-group col-md-6">
-                                                            <sup>*</sup>
-                                                            <label for="FirstName" class="control-label">نام</label>
-                                                            <input name="first_name" id="FirstName" type="text" class="form-control" value="{{ first_name or '' }}">
-                                                            {% if field_error %}<span class="text-danger">{{ field_error }}</span>{% endif %}
-                                                        </div>
-                                                        <div class="required form-group col-md-6">
-                                                            <sup>*</sup>
-                                                            <label for="LastName">نام خانوادگی</label>
-                                                            <input name="last_name" id="LastName" onkeyup="$(&#39;#lastname&#39;).val(this.value);" type="text" class="is_required validate form-control" data-validate="isName" value="{{ last_name or '' }}">
-                                                        </div>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-md-6 required form-group">
-                                                            <sup>*</sup>
-                                                            <label for="email">ایمیل</label>
-                                                            <input name="email" type="text" class="is_required validate form-control" data-validate="isEmail" id="email" required value="{{ email or '' }}">
-                                                        </div>
-                                                        <div class="col-md-6 form-group">
-                                                            <label>شماره موبایل</label>
-                                                            <input disabled="disabled" type="text" class="validate form-control" data-validate="isPhone" value="{{ phone_number or '' }}">
-                                                        </div>
-                                                        <div class="col-md-6 required password form-group">
-                                                            <sup>*</sup>
-                                                            <label for="passwd">رمز عبور</label>
-                                                            <input name="password" type="password" class="is_required validate form-control" data-validate="isPasswd" id="passwd">
-                                                            {% if password_error %}<span class="text-danger">{{ password_error }}</span>{% endif %}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="submit clearfix">
-                                                    <input name="phone" type="hidden" value="{{ phone_number or '' }}">
-                                                    <button type="submit" name="submitAccount" id="submitAccount" class="btn btn-success button">
-                                                        <span>تأیید و بازگشت به سایت<i class="icon-chevron-right right"></i></span>
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </div>
+<div class="asha-card">
+    <div class="asha-card-head">
+        <span class="asha-auth-logo-badge"><img src="/static/ThemeLayout/img/logo.jpg" alt="همدوس"></span>
+        <h1 class="asha-card-title">ایجاد حساب کاربری</h1>
+        <p class="asha-card-sub">شماره <b dir="ltr">{{ phone_number }}</b></p>
     </div>
+
+    {% if error %}<div class="asha-alert asha-alert-error">{{ error }}</div>{% endif %}
+    {% if field_error %}<div class="asha-alert asha-alert-error">{{ field_error }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('shop_register') }}">
+        <input type="hidden" name="returnUrl" value="{{ return_url or '/' }}">
+        <input type="hidden" name="phone" value="{{ phone_number or '' }}">
+        <div class="asha-field">
+            <label for="first_name">نام</label>
+            <input type="text" id="first_name" name="first_name" class="asha-input" value="{{ first_name or '' }}" autocomplete="given-name">
+        </div>
+        <div class="asha-field">
+            <label for="last_name">نام خانوادگی</label>
+            <input type="text" id="last_name" name="last_name" class="asha-input" value="{{ last_name or '' }}" autocomplete="family-name">
+        </div>
+        <div class="asha-field">
+            <label for="email">ایمیل</label>
+            <input type="email" id="email" name="email" class="asha-input asha-input-ltr" dir="ltr"
+                   placeholder="example@email.com" value="{{ email or '' }}" autocomplete="email">
+        </div>
+        <div class="asha-field">
+            <label for="password">رمز عبور</label>
+            <input type="password" id="password" name="password" class="asha-input asha-input-ltr" dir="ltr" autocomplete="new-password">
+            {% if password_error %}<p class="asha-error">{{ password_error }}</p>{% endif %}
+            <p class="asha-hint">حداقل ۶ کاراکتر شامل یک رقم، یک حرف بزرگ و یک حرف کوچک</p>
+        </div>
+        <button type="submit" class="asha-btn">تأیید و ادامه</button>
+    </form>
 </div>
 {% endblock %}

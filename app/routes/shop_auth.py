@@ -759,6 +759,105 @@ async def shop_refresh_captcha(request: Request, db: AsyncSession = Depends(get_
     return JSONResponse({"success": True, "url": cap.url})
 
 
+# ── JSON helpers for the tabbed /login page ──
+
+_FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹"
+_AR_DIGITS = "٠١٢٣٤٥٦٧٨٩"
+
+
+def _normalize_digits(value: object) -> str:
+    """Convert Persian/Arabic-Indic digits to Latin (mirrors asha-ai-app)."""
+    out: list[str] = []
+    for ch in str(value or ""):
+        if ch in _FA_DIGITS:
+            out.append(str(_FA_DIGITS.index(ch)))
+        elif ch in _AR_DIGITS:
+            out.append(str(_AR_DIGITS.index(ch)))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+@router.get("/auth/captcha", response_class=JSONResponse)
+async def shop_captcha_for_identifier(
+    request: Request,
+    identifier: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a fresh user-bound CAPTCHA for the password tab (no page reload)."""
+    value = _normalize_digits(identifier).strip()
+    detection = auth_flow.email_or_phone(value)
+    if detection is None:
+        return JSONResponse({"ok": False, "error": "شماره موبایل یا ایمیل وارد شده معتبر نیست"})
+    if detection == "phone":
+        user = await auth_flow.find_user_by_phone(db, value)
+    else:
+        user = await auth_flow.find_user_by_email(db, value)
+    if user is None:
+        return JSONResponse({"ok": False, "error": "حساب کاربری با مشخصات وارد شده وجود ندارد"})
+    if not user.phone_number_confirmed:
+        return JSONResponse({"ok": False, "error": "حساب شما هنوز تأیید نشده است؛ از ورود با رمز یکبار مصرف استفاده کنید"})
+    if await _captcha_disabled(db):
+        return JSONResponse({"ok": True, "disabled": True})
+    cap_url, cap_id = await _load_captcha(db, user.id, False)
+    await db.commit()
+    if not cap_url:
+        return JSONResponse({"ok": False, "error": "خطا در تولید کد امنیتی"})
+    return JSONResponse({"ok": True, "cap_url": cap_url, "cap_id": cap_id})
+
+
+@router.post("/auth/otp/send", response_class=JSONResponse)
+async def shop_otp_send(request: Request, db: AsyncSession = Depends(get_db)):
+    """Send a login OTP over SMS (no CAPTCHA by design) and return the timer."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    phone = _normalize_digits(body.get("phone")).strip()
+    if not PHONE_RE.match(phone or ""):
+        return JSONResponse({"ok": False, "error": "شماره موبایل باید ۱۱ رقم و با 09 شروع شود"})
+    user = await auth_flow.find_user_by_phone(db, phone)
+    if user is None:
+        return JSONResponse({"ok": False, "code": "not_found"})
+    sms_res = await auth_flow.send_verification_sms(db, phone, user)
+    await db.commit()
+    return JSONResponse({
+        "ok": True,
+        "timer": sms_res.get("timer", "-1:-1"),
+        "masked_phone": auth_flow.mask_phone(phone),
+        "need_confirm_phone": not user.phone_number_confirmed,
+    })
+
+
+@router.post("/auth/otp/verify", response_class=JSONResponse)
+async def shop_otp_verify(request: Request, db: AsyncSession = Depends(get_db)):
+    """Verify a login OTP, set the auth cookie and return the redirect target."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    phone = _normalize_digits(body.get("phone")).strip()
+    code = _normalize_digits(body.get("code")).strip()
+    return_url = body.get("return_url") or "/"
+    user = await auth_flow.find_user_by_phone(db, phone)
+    if user is None:
+        return JSONResponse({"ok": False, "error": "حساب کاربری یافت نشد"})
+    res = await auth_flow.verify_sms_code(db, user, phone, code)
+    if not res["ok"]:
+        return JSONResponse({"ok": False, "error": res["error"], "timer": res["timer"]})
+    if not user.phone_number_confirmed:
+        user.phone_number_confirmed = True
+        user.update_date = auth_flow.datetime.utcnow()
+        await db.commit()
+    response = JSONResponse({"ok": True, "redirect": _admin_target(return_url, user)})
+    await _set_auth_cookie(response, user)
+    return response
+
+
 # ── Logout ──
 
 @router.get("/auth/logout", response_class=HTMLResponse)
