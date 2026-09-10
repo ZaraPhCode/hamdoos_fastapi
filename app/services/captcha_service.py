@@ -57,32 +57,40 @@ def _load_captcha_font(size: int):
     return ImageFont.load_default()
 
 
+def _captcha_canvas_bg() -> tuple[int, int, int]:
+    """Canvas color from the theme (surface_dim) — no hardcoded colors."""
+    from app.config.site_config import THEME
+
+    hex_color = THEME.get("surface_dim", "#f1f5f4").lstrip("#")
+    return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+
+
 def _render_captcha_uri(code: int) -> str:
     """Render the numeric code into a noisy image and return a data URI."""
     text = str(code)
-    width, height = 300, 92
-    image = Image.new("RGB", (width, height), (240, 240, 240))
+    width, height = 150, 46
+    image = Image.new("RGB", (width, height), _captcha_canvas_bg())
     draw = ImageDraw.Draw(image)
-    font = _load_captcha_font(60)
-    x = 16
+    font = _load_captcha_font(30)
+    x = 10
     for ch in text:
         draw.text(
-            (x, random.randint(6, 20)),
+            (x, random.randint(3, 10)),
             ch,
             fill=(random.randint(20, 90), random.randint(20, 90), random.randint(20, 90)),
             font=font,
         )
-        x += random.randint(46, 56)
-    for _ in range(8):
+        x += random.randint(24, 30)
+    for _ in range(6):
         draw.line(
             [
                 (random.randint(0, width), random.randint(0, height)),
                 (random.randint(0, width), random.randint(0, height)),
             ],
             fill=(random.randint(120, 200), random.randint(120, 200), random.randint(120, 200)),
-            width=2,
+            width=1,
         )
-    for _ in range(300):
+    for _ in range(120):
         draw.point(
             (random.randint(0, width), random.randint(0, height)),
             fill=(random.randint(80, 200), random.randint(80, 200), random.randint(80, 200)),

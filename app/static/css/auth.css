@@ -1,14 +1,16 @@
 /* ── Hamdoos standalone auth pages ─────────────────────────────
    Split-screen auth (branding panel + centered card), ported from the
    asha-ai-app AuthLayout/Login visual system and recoloured with the
-   shop theme (site_config: primary / primary_hover / announcement).
+   shop theme. Every color comes from site_config.THEME / NOTICE_STYLES
+   via the --t-* variables set in auth_base.html — no hardcoded colors
+   in this file (translucency via color-mix on those same tokens).
    Vanilla CSS, RTL-first, 8px spacing rhythm. No shop header/footer. */
 
 .asha-auth-body {
   margin: 0;
   font-family: Vazirmatn, "IRANSans", Tahoma, sans-serif;
-  background: var(--asha-body-bg, #eef1f7);
-  color: var(--asha-text, #333333);
+  background: var(--t-body-bg);
+  color: var(--t-text);
 }
 
 .asha-auth {
@@ -25,13 +27,13 @@
   align-items: center;
   justify-content: center;
   padding: 2.5rem 1.5rem;
-  background: linear-gradient(135deg, var(--asha-primary, #00a693) 0%, var(--asha-primary-hover, #298665) 100%);
-  color: #fff;
+  background: linear-gradient(135deg, var(--t-primary) 0%, var(--t-primary-hover) 100%);
+  color: var(--t-surface);
 }
 .asha-auth-brand .orb {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--t-surface) 7%, transparent);
   pointer-events: none;
 }
 .asha-auth-brand .orb-1 { width: 18rem; height: 18rem; top: -6rem; right: -6rem; }
@@ -43,7 +45,7 @@
   width: 28rem; height: 28rem;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 244, 204, 0.22) 0%, rgba(255, 244, 204, 0) 65%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--t-announce-bg) 22%, transparent) 0%, transparent 65%);
   pointer-events: none;
 }
 .asha-auth-brand-inner { position: relative; z-index: 1; max-width: 26rem; text-align: right; }
@@ -51,19 +53,19 @@
 .asha-auth-logo-badge {
   width: 3rem; height: 3rem;
   border-radius: 0.9rem;
-  background: #fff;
+  background: var(--t-surface);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden; flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--t-shadow) 30%, transparent);
 }
 .asha-auth-logo-badge img { width: 100%; height: 100%; object-fit: contain; }
 .asha-auth-brand-name { font-size: 1.4rem; font-weight: 800; line-height: 1.4; }
-.asha-auth-brand-sub { font-size: 0.8rem; color: rgba(255, 255, 255, 0.72); }
+.asha-auth-brand-sub { font-size: 0.8rem; color: color-mix(in srgb, var(--t-surface) 72%, transparent); }
 .asha-auth-brand-title { font-size: 1.7rem; font-weight: 800; line-height: 1.7; margin: 0 0 0.5rem; }
-.asha-auth-brand-desc { font-size: 1rem; line-height: 2; color: rgba(255, 255, 255, 0.85); margin: 0 0 1.75rem; }
+.asha-auth-brand-desc { font-size: 1rem; line-height: 2; color: color-mix(in srgb, var(--t-surface) 85%, transparent); margin: 0 0 1.75rem; }
 .asha-auth-features { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
-.asha-auth-features li { display: flex; align-items: center; gap: 0.65rem; color: rgba(255, 255, 255, 0.9); font-size: 0.92rem; }
-.asha-auth-features svg { flex-shrink: 0; color: #fff4cc; }
+.asha-auth-features li { display: flex; align-items: center; gap: 0.65rem; color: color-mix(in srgb, var(--t-surface) 90%, transparent); font-size: 0.92rem; }
+.asha-auth-features svg { flex-shrink: 0; color: var(--t-announce-bg); }
 
 /* ── Form side ── */
 .asha-auth-main {
@@ -75,16 +77,16 @@
 }
 .asha-auth-cardwrap { width: 100%; max-width: 28rem; }
 .asha-card {
-  background: #fff;
-  border: 1px solid #e6ebf1;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border);
   border-radius: 1.1rem;
-  box-shadow: 0 12px 40px rgba(15, 60, 55, 0.1);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--t-shadow) 12%, transparent);
   padding: 2rem;
 }
 .asha-card-head { text-align: center; margin-bottom: 1.5rem; }
 .asha-card-head .asha-auth-logo-badge { width: 3rem; height: 3rem; margin: 0 auto 1rem; }
 .asha-card-title { font-size: 1.35rem; font-weight: 800; margin: 0 0 0.25rem; }
-.asha-card-sub { font-size: 0.88rem; color: #868686; margin: 0; }
+.asha-card-sub { font-size: 0.88rem; color: var(--t-muted); margin: 0; }
 
 /* ── Tabs (segmented) ── */
 .asha-tabs {
@@ -92,8 +94,8 @@
   gap: 0.25rem;
   padding: 0.25rem;
   margin-bottom: 1.5rem;
-  background: #f1f5f4;
-  border: 1px solid #e6ebf1;
+  background: var(--t-surface-dim);
+  border: 1px solid var(--t-border);
   border-radius: 0.8rem;
 }
 .asha-tab {
@@ -102,19 +104,19 @@
   border: 1px solid transparent;
   border-radius: 0.6rem;
   background: transparent;
-  color: #868686;
+  color: var(--t-muted);
   font-family: inherit;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
-.asha-tab:hover { color: #555; }
+.asha-tab:hover { color: var(--t-text-soft); }
 .asha-tab.active {
-  background: #fff;
-  color: #333;
-  border-color: #e6ebf1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--t-surface);
+  color: var(--t-text);
+  border-color: var(--t-border);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--t-shadow) 10%, transparent);
 }
 .asha-tabpane { display: none; }
 .asha-tabpane.active { display: block; }
@@ -125,29 +127,29 @@
   display: block;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #555;
+  color: var(--t-text-soft);
   margin-bottom: 0.4rem;
 }
 .asha-input {
   width: 100%;
   height: 2.9rem;
   padding: 0 0.9rem;
-  border: 1px solid #dbe1e8;
+  border: 1px solid var(--t-border);
   border-radius: 0.65rem;
   font-family: inherit;
   font-size: 0.95rem;
-  color: #333;
-  background: #fff;
+  color: var(--t-text);
+  background: var(--t-surface);
   box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.asha-input::placeholder { color: #a5adb6; }
+.asha-input::placeholder { color: var(--t-placeholder); }
 .asha-input:focus {
   outline: none;
-  border-color: var(--asha-primary, #00a693);
-  box-shadow: 0 0 0 3px rgba(0, 166, 147, 0.18);
+  border-color: var(--t-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-primary) 18%, transparent);
 }
-.asha-input.invalid { border-color: #d0121a; }
+.asha-input.invalid { border-color: var(--t-error); }
 .asha-input-ltr { direction: ltr; text-align: left; }
 .asha-input-code {
   direction: ltr;
@@ -157,8 +159,8 @@
   font-size: 1.15rem;
   font-weight: 600;
 }
-.asha-hint { font-size: 0.75rem; color: #868686; margin-top: 0.4rem; }
-.asha-error { font-size: 0.78rem; color: #d0121a; margin-top: 0.4rem; }
+.asha-hint { font-size: 0.75rem; color: var(--t-muted); margin-top: 0.4rem; }
+.asha-error { font-size: 0.78rem; color: var(--t-error-text); margin-top: 0.4rem; }
 .asha-alert {
   border-radius: 0.65rem;
   padding: 0.7rem 0.9rem;
@@ -166,16 +168,16 @@
   margin-bottom: 1rem;
   line-height: 1.9;
 }
-.asha-alert-error { background: #fdecec; border: 1px solid #f5c2c2; color: #b3121f; }
-.asha-alert-ok { background: #e3f2ec; border: 1px solid #bfe3d2; color: #1e7e34; }
+.asha-alert-error { background: var(--t-error-bg); border: 1px solid var(--t-error-border); color: var(--t-error-text); }
+.asha-alert-ok { background: var(--t-success-bg); border: 1px solid var(--t-success-border); color: var(--t-success-text); }
 .asha-notice {
   display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
   border-radius: 0.65rem;
   padding: 0.65rem 0.9rem;
   font-size: 0.82rem;
-  background: var(--asha-announce-bg, #fff4cc);
-  border: 1px solid #f0dfa8;
-  color: var(--asha-announce, #856404);
+  background: var(--t-announce-bg);
+  border: 1px solid var(--t-announce-border);
+  color: var(--t-announce);
   margin-bottom: 1rem;
   line-height: 1.9;
 }
@@ -192,17 +194,17 @@
   border: none;
   padding: 0.3rem;
   cursor: pointer;
-  color: #868686;
+  color: var(--t-muted);
   display: flex;
 }
-.asha-eye:hover { color: #555; }
+.asha-eye:hover { color: var(--t-text-soft); }
 .asha-row-between { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
 .asha-link {
   background: none; border: none; padding: 0;
   font-family: inherit;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--asha-primary, #00a693);
+  color: var(--t-primary);
   cursor: pointer;
   text-decoration: none;
 }
@@ -213,26 +215,26 @@
   width: 100%;
   max-width: 300px;
   height: auto;
-  border: 1px solid #dbe1e8;
+  border: 1px solid var(--t-border);
   border-radius: 0.65rem;
   cursor: pointer;
   display: block;
   margin-bottom: 0.6rem;
-  background: #f4f6f8;
+  background: var(--t-surface-dim);
 }
 .asha-captcha-row { display: flex; gap: 0.6rem; align-items: stretch; }
 .asha-captcha-row .asha-input { flex: 1; }
 .asha-refresh {
   flex-shrink: 0;
   width: 2.9rem;
-  border: 1px solid #dbe1e8;
+  border: 1px solid var(--t-border);
   border-radius: 0.65rem;
-  background: #f7f9fb;
-  color: var(--asha-primary, #00a693);
+  background: var(--t-surface-dim);
+  color: var(--t-primary);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-.asha-refresh:hover { border-color: var(--asha-primary, #00a693); }
+.asha-refresh:hover { border-color: var(--t-primary); }
 .asha-refresh:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Buttons ── */
@@ -241,36 +243,36 @@
   padding: 0.75rem 1rem;
   border: none;
   border-radius: 0.65rem;
-  background: var(--asha-primary, #00a693);
-  color: #fff;
+  background: var(--t-primary);
+  color: var(--t-surface);
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s;
 }
-.asha-btn:hover:not(:disabled) { background: var(--asha-primary-hover, #298665); }
+.asha-btn:hover:not(:disabled) { background: var(--t-primary-hover); }
 .asha-btn:disabled { opacity: 0.55; cursor: default; }
 .asha-btn-row { display: flex; gap: 0.6rem; }
 .asha-btn-row .asha-btn { flex: 1; }
 .asha-btn-secondary {
-  background: #fff;
-  color: var(--asha-primary, #00a693);
-  border: 1.5px solid var(--asha-primary, #00a693);
+  background: var(--t-surface);
+  color: var(--t-primary);
+  border: 1.5px solid var(--t-primary);
 }
-.asha-btn-secondary:hover:not(:disabled) { background: rgba(0, 166, 147, 0.08); }
-.asha-timer { font-size: 0.75rem; color: #868686; }
+.asha-btn-secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--t-primary) 8%, transparent); }
+.asha-timer { font-size: 0.75rem; color: var(--t-muted); }
 .asha-foot {
   text-align: center;
   font-size: 0.82rem;
-  color: #868686;
+  color: var(--t-muted);
   margin-top: 1.5rem;
 }
 .asha-support {
   text-align: center;
   font-size: 0.75rem;
   margin-top: 1rem;
-  color: var(--asha-announce, #856404);
+  color: var(--t-announce);
 }
 .asha-support a { color: inherit; font-weight: 700; }
 
@@ -278,7 +280,7 @@
   .asha-auth { flex-direction: row; }
   .asha-auth-brand { width: 46%; max-width: 38rem; padding: 4rem 3rem; }
   .asha-auth-main { padding: 2rem; }
-  .asha-card-head .asha-auth-logo-badge { display: none; }
+  .asha-auth-card-head .asha-auth-logo-badge { display: none; }
 }
 @media (max-width: 899px) {
   .asha-auth-brand { padding: 1.75rem 1.25rem 2rem; }
@@ -292,6 +294,6 @@
 }
 .asha-tab:focus-visible, .asha-btn:focus-visible, .asha-link:focus-visible,
 .asha-input:focus-visible, .asha-eye:focus-visible, .asha-refresh:focus-visible {
-  outline: 2px solid var(--asha-primary, #00a693);
+  outline: 2px solid var(--t-primary);
   outline-offset: 2px;
 }

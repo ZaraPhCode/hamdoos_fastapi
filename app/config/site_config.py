@@ -46,6 +46,32 @@ THEME = {
     # Hint / notification color (e.g. cart count badge) — warm orange-red to
     # stand out against the green/teal theme
     "hint_color": "#ff5722",
+    # ── Standalone auth pages (app/static/css/auth.css) ──
+    # Every color used by the login/OTP/password flows lives here; auth.css
+    # references them only as var(--t-...) with no hardcoded values.
+    # Card / input / overlay surfaces
+    "surface": "#ffffff",
+    # Sunken surfaces (tab track, icon buttons, image placeholder)
+    "surface_dim": "#f1f5f4",
+    # All auth borders (cards, inputs, tabs, captcha frame)
+    "border_soft": "#dbe1e8",
+    # Labels and secondary text lighter than body text
+    "text_soft": "#555555",
+    # Input placeholder text
+    "placeholder": "#a5adb6",
+    # Error states
+    "error": "#d0121a",
+    "error_text": "#b3121f",
+    "error_bg": "#fdecec",
+    "error_border": "#f5c2c2",
+    # Success states
+    "success_text": "#1e7e34",
+    "success_bg": "#e3f2ec",
+    "success_border": "#bfe3d2",
+    # Announcement notice border (bg/text come from NOTICE_STYLES)
+    "announce_border": "#f0dfa8",
+    # Shadow tone (used translucent via color-mix)
+    "shadow": "#0f3c37",
 }
 
 

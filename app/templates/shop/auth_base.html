@@ -10,12 +10,27 @@
     <link rel="stylesheet" href="/static/css/auth.css" type="text/css" media="all">
     <style>
         :root {
-            --asha-primary: {{ theme.primary if theme is defined and theme else '#00a693' }};
-            --asha-primary-hover: {{ theme.primary_hover if theme is defined and theme else '#298665' }};
-            --asha-announce: {{ notice_styles.announcement.text if notice_styles is defined and notice_styles else '#856404' }};
-            --asha-announce-bg: {{ notice_styles.announcement.bg if notice_styles is defined and notice_styles else '#fff4cc' }};
-            --asha-text: {{ theme.text_color if theme is defined and theme else '#333333' }};
-            --asha-body-bg: {{ theme.body_bg if theme is defined and theme else '#eef1f7' }};
+            --t-primary: {{ theme.primary }};
+            --t-primary-hover: {{ theme.primary_hover }};
+            --t-announce: {{ notice_styles.announcement.text }};
+            --t-announce-bg: {{ notice_styles.announcement.bg }};
+            --t-announce-border: {{ theme.announce_border }};
+            --t-text: {{ theme.text_color }};
+            --t-text-soft: {{ theme.text_soft }};
+            --t-muted: {{ theme.text_muted }};
+            --t-placeholder: {{ theme.placeholder }};
+            --t-body-bg: {{ theme.body_bg }};
+            --t-surface: {{ theme.surface }};
+            --t-surface-dim: {{ theme.surface_dim }};
+            --t-border: {{ theme.border_soft }};
+            --t-error: {{ theme.error }};
+            --t-error-text: {{ theme.error_text }};
+            --t-error-bg: {{ theme.error_bg }};
+            --t-error-border: {{ theme.error_border }};
+            --t-success-text: {{ theme.success_text }};
+            --t-success-bg: {{ theme.success_bg }};
+            --t-success-border: {{ theme.success_border }};
+            --t-shadow: {{ theme.shadow }};
         }
     </style>
     {% block extra_head %}{% endblock %}
