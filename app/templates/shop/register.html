@@ -1,40 +1,78 @@
-{% extends "shop/auth_base.html" %}
+{% extends "shop/base.html" %}
 {% block title %}ثبت‌نام | {{ site_brand.name }}{% endblock %}
-
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/auth.css" type="text/css" media="all">
+{% include "shop/_theme_vars.html" %}
+{% endblock %}
 {% block content %}
-<div class="asha-card">
-    <div class="asha-card-head">
-        <span class="asha-auth-logo-badge"><img src="{{ site_brand.logo_url }}" alt="{{ site_brand.name }}"></span>
-        <h1 class="asha-card-title">ایجاد حساب کاربری</h1>
-        <p class="asha-card-sub">شماره <b dir="ltr">{{ phone_number }}</b></p>
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="1" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/login">
+                    <span itemprop="name">ورود</span>
+                </a>
+                <meta itemprop="position" content="2">
+            </li>
+            <li class="breadcrumb-item active" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span itemprop="name">ثبت‌نام</span>
+                <meta itemprop="position" content="3">
+            </li>
+        </ol>
     </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div class="asha-auth asha-auth--embedded">
+            {% include "shop/_auth_brand_panel.html" %}
+            <main class="asha-auth-main">
+                <div class="asha-auth-cardwrap">
+                    <div class="asha-card">
+                        <div class="asha-card-head">
+                            <img class="asha-card-logo" src="{{ site_brand.logo_url }}" alt="{{ site_brand.name }}">
+                            <h1 class="asha-card-title">ایجاد حساب کاربری</h1>
+                            <p class="asha-card-sub">شماره <b dir="ltr">{{ phone_number }}</b></p>
+                        </div>
 
-    {% if error %}<div class="asha-alert asha-alert-error">{{ error }}</div>{% endif %}
-    {% if field_error %}<div class="asha-alert asha-alert-error">{{ field_error }}</div>{% endif %}
+                        {% if error %}<div class="asha-alert asha-alert-error">{{ error }}</div>{% endif %}
+                        {% if field_error %}<div class="asha-alert asha-alert-error">{{ field_error }}</div>{% endif %}
 
-    <form method="post" action="{{ url_for('shop_register') }}">
-        <input type="hidden" name="returnUrl" value="{{ return_url or '/' }}">
-        <input type="hidden" name="phone" value="{{ phone_number or '' }}">
-        <div class="asha-field">
-            <label for="first_name">نام</label>
-            <input type="text" id="first_name" name="first_name" class="asha-input" value="{{ first_name or '' }}" autocomplete="given-name">
+                        <form method="post" action="{{ url_for('shop_register') }}">
+                            <input type="hidden" name="returnUrl" value="{{ return_url or '/' }}">
+                            <input type="hidden" name="phone" value="{{ phone_number or '' }}">
+                            <div class="asha-field">
+                                <label for="first_name">نام</label>
+                                <input type="text" id="first_name" name="first_name" class="asha-input" value="{{ first_name or '' }}" autocomplete="given-name">
+                            </div>
+                            <div class="asha-field">
+                                <label for="last_name">نام خانوادگی</label>
+                                <input type="text" id="last_name" name="last_name" class="asha-input" value="{{ last_name or '' }}" autocomplete="family-name">
+                            </div>
+                            <div class="asha-field">
+                                <label for="email">ایمیل</label>
+                                <input type="email" id="email" name="email" class="asha-input asha-input-ltr" dir="ltr"
+                                       placeholder="example@email.com" value="{{ email or '' }}" autocomplete="email">
+                            </div>
+                            <div class="asha-field">
+                                <label for="password">رمز عبور</label>
+                                <input type="password" id="password" name="password" class="asha-input asha-input-ltr" dir="ltr" autocomplete="new-password">
+                                {% if password_error %}<p class="asha-error">{{ password_error }}</p>{% endif %}
+                                <p class="asha-hint">حداقل ۶ کاراکتر شامل یک رقم، یک حرف بزرگ و یک حرف کوچک</p>
+                            </div>
+                            <button type="submit" class="asha-btn">تأیید و ادامه</button>
+                        </form>
+                    </div>
+                    <p class="asha-support">نیاز به راهنمایی دارید؟ با <a href="{{ site_brand.support_phone_href }}">{{ site_brand.support_phone }}</a> در تماس باشید.</p>
+                </div>
+            </main>
         </div>
-        <div class="asha-field">
-            <label for="last_name">نام خانوادگی</label>
-            <input type="text" id="last_name" name="last_name" class="asha-input" value="{{ last_name or '' }}" autocomplete="family-name">
-        </div>
-        <div class="asha-field">
-            <label for="email">ایمیل</label>
-            <input type="email" id="email" name="email" class="asha-input asha-input-ltr" dir="ltr"
-                   placeholder="example@email.com" value="{{ email or '' }}" autocomplete="email">
-        </div>
-        <div class="asha-field">
-            <label for="password">رمز عبور</label>
-            <input type="password" id="password" name="password" class="asha-input asha-input-ltr" dir="ltr" autocomplete="new-password">
-            {% if password_error %}<p class="asha-error">{{ password_error }}</p>{% endif %}
-            <p class="asha-hint">حداقل ۶ کاراکتر شامل یک رقم، یک حرف بزرگ و یک حرف کوچک</p>
-        </div>
-        <button type="submit" class="asha-btn">تأیید و ادامه</button>
-    </form>
+    </div>
 </div>
 {% endblock %}
