@@ -1,10 +1,10 @@
 {% extends "shop/auth_base.html" %}
-{% block title %}تأیید ایمیل | همدوس{% endblock %}
+{% block title %}تأیید ایمیل | {{ site_brand.name }}{% endblock %}
 
 {% block content %}
 <div class="asha-card">
     <div class="asha-card-head">
-        <span class="asha-auth-logo-badge"><img src="/static/ThemeLayout/img/logo.jpg" alt="همدوس"></span>
+        <span class="asha-auth-logo-badge"><img src="{{ site_brand.logo_url }}" alt="{{ site_brand.name }}"></span>
         {% if success %}
         <h1 class="asha-card-title">ایمیل تأیید شد</h1>
         <p class="asha-card-sub">از این پس می‌توانید با ایمیل خود وارد شوید.</p>

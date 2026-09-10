@@ -1,10 +1,10 @@
 {% extends "shop/auth_base.html" %}
-{% block title %}تأیید شماره موبایل | همدوس{% endblock %}
+{% block title %}تأیید شماره موبایل | {{ site_brand.name }}{% endblock %}
 
 {% block content %}
 <div class="asha-card">
     <div class="asha-card-head">
-        <span class="asha-auth-logo-badge"><img src="/static/ThemeLayout/img/logo.jpg" alt="همدوس"></span>
+        <span class="asha-auth-logo-badge"><img src="{{ site_brand.logo_url }}" alt="{{ site_brand.name }}"></span>
         <h1 class="asha-card-title">تأیید شماره موبایل</h1>
         <p class="asha-card-sub">کد تأیید ۶ رقمی را وارد کنید</p>
     </div>

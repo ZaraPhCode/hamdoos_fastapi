@@ -108,6 +108,26 @@ SEED_USERS_ENV_VARS = {
 }
 
 
+# ── Brand identity (template sale: rebrand the whole storefront by editing
+# ── only this dict — no template or code changes needed) ──
+BRAND = {
+    # Shop display name (login titles, headers, welcome text)
+    "name": "همدوس",
+    # Latin tagline shown under the brand name
+    "tagline": "Hamdoos Laser & Optics",
+    # Branding-panel headline on the auth pages
+    "headline": "فروشگاه تخصصی لیزر، اپتیک و فوتونیک",
+    # Branding-panel description on the auth pages (generic wording)
+    "description": "وارد حساب کاربری خود شوید تا سفارش‌ها، علاقه‌مندی‌ها و خدمات پشتیبانی فنی را یکجا مدیریت کنید.",
+    # Support phone shown on the auth pages (display + tel: link)
+    "support_phone": "۰۹۰۱۸۴۰۱۸۳۳",
+    "support_phone_href": "tel:09018401833",
+    # Brand assets
+    "logo_url": "/static/ThemeLayout/img/logo.jpg",
+    "favicon_url": "/static/ThemeLayout/img/laserFavicon.png",
+}
+
+
 # ── 2 / 3 / 4. Site Information (fallback content) ──
 #
 # The footer modals, footer info block and the sidebar are normally fed from
@@ -215,6 +235,7 @@ def register_template_globals(templates):
     template (shop, auth, admin) can use ``{{ theme }}`` / ``{{ site_info }}``."""
     templates.env.globals["theme"] = THEME
     templates.env.globals["site_info"] = SITE_INFO
+    templates.env.globals["site_brand"] = BRAND
     templates.env.globals["notice_styles"] = NOTICE_STYLES
     if "short_id" not in templates.env.filters:
         templates.env.filters["short_id"] = _short_id

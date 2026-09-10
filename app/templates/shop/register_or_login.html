@@ -1,12 +1,12 @@
 {% extends "shop/auth_base.html" %}
-{% block title %}ورود | همدوس{% endblock %}
+{% block title %}ورود | {{ site_brand.name }}{% endblock %}
 
 {% block content %}
 <div class="asha-card">
     <div class="asha-card-head">
-        <span class="asha-auth-logo-badge"><img src="/static/ThemeLayout/img/logo.jpg" alt="همدوس"></span>
+        <span class="asha-auth-logo-badge"><img src="{{ site_brand.logo_url }}" alt="{{ site_brand.name }}"></span>
         <h1 class="asha-card-title">ورود</h1>
-        <p class="asha-card-sub">به فروشگاه همدوس خوش آمدید</p>
+        <p class="asha-card-sub">به فروشگاه {{ site_brand.name }} خوش آمدید</p>
     </div>
 
     {% if message %}<div class="asha-alert asha-alert-ok">{{ message }}</div>{% endif %}
