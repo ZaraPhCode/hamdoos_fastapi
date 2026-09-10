@@ -59,9 +59,9 @@
   box-shadow: 0 4px 14px color-mix(in srgb, var(--t-shadow) 30%, transparent);
 }
 .asha-auth-logo-badge img { width: 100%; height: 100%; object-fit: contain; }
-.asha-auth-brand-name { font-size: 1.4rem; font-weight: 800; line-height: 1.4; }
+.asha-auth-brand-name { font-size: 1.4rem; font-weight: 800; line-height: 1.4; color: var(--t-surface); }
 .asha-auth-brand-sub { font-size: 0.8rem; color: color-mix(in srgb, var(--t-surface) 72%, transparent); }
-.asha-auth-brand-title { font-size: 1.7rem; font-weight: 800; line-height: 1.7; margin: 0 0 0.5rem; }
+.asha-auth-brand-title { font-size: 1.7rem; font-weight: 800; line-height: 1.7; margin: 0 0 0.5rem; color: var(--t-surface); }
 .asha-auth-brand-desc { font-size: 1rem; line-height: 2; color: color-mix(in srgb, var(--t-surface) 85%, transparent); margin: 0 0 1.75rem; }
 .asha-auth-features { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
 .asha-auth-features li { display: flex; align-items: center; gap: 0.65rem; color: color-mix(in srgb, var(--t-surface) 90%, transparent); font-size: 0.92rem; }
@@ -85,7 +85,7 @@
 }
 .asha-card-head { text-align: center; margin-bottom: 1.5rem; }
 .asha-card-head .asha-auth-logo-badge { width: 3rem; height: 3rem; margin: 0 auto 1rem; }
-.asha-card-title { font-size: 1.35rem; font-weight: 800; margin: 0 0 0.25rem; }
+.asha-card-title { font-size: 1.35rem; font-weight: 800; margin: 0 0 0.25rem; color: var(--t-text); }
 .asha-card-sub { font-size: 0.88rem; color: var(--t-muted); margin: 0; }
 
 /* ── Tabs (segmented) ── */
