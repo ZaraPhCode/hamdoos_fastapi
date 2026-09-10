@@ -12,6 +12,7 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.config.settings import settings
 from app.api.v1.auth import router as auth_router
@@ -83,6 +84,11 @@ app = FastAPI(
     redoc_url="/redoc" if settings.DEBUG else None,
     lifespan=lifespan,
 )
+
+# Trust nginx (TLS terminator) forwarding headers so request.url / url_for
+# use the original https:// scheme instead of internal http://. Must be the
+# outermost middleware (added first) so it runs before anything else.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.add_middleware(
     CORSMiddleware,
