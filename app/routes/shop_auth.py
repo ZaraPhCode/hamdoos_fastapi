@@ -87,25 +87,6 @@ async def shop_register_or_login(
     })
 
 
-# ── TEMP PREVIEW: same login card inside the store header/footer layout ──
-# Visit /login-preview to compare with the standalone /login page.
-
-@router.get("/login-preview", response_class=HTMLResponse)
-async def shop_login_preview(
-    request: Request,
-    emailOrPhoneNumber: Optional[str] = None,
-    returnUrl: Optional[str] = None,
-    current_user: Optional[User] = Depends(get_optional_user_from_cookie),
-):
-    if current_user:
-        return RedirectResponse(url="/home")
-    return templates.TemplateResponse("shop/register_or_login_preview.html", {
-        "request": request,
-        "email_or_phone_number": emailOrPhoneNumber or "",
-        "return_url": returnUrl or "/",
-    })
-
-
 @router.post("/login", response_class=HTMLResponse)
 async def shop_register_or_login_submit(
     request: Request,

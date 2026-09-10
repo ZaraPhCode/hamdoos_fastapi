@@ -84,7 +84,7 @@
   padding: 2rem;
 }
 .asha-card-head { text-align: center; margin-bottom: 1.5rem; }
-.asha-card-head .asha-auth-logo-badge { width: 3rem; height: 3rem; margin: 0 auto 1rem; }
+.asha-card-logo { display: block; width: auto; max-width: 10rem; height: auto; max-height: 3.5rem; margin: 0 auto 1rem; }
 .asha-card-title { font-size: 1.35rem; font-weight: 800; margin: 0 0 0.25rem; color: var(--t-text); }
 .asha-card-sub { font-size: 0.88rem; color: var(--t-muted); margin: 0; }
 
