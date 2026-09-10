@@ -13,29 +13,7 @@
 </head>
 <body class="asha-auth-body">
 <div class="asha-auth">
-    <aside class="asha-auth-brand" aria-hidden="true">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
-        <div class="orb-glow"></div>
-        <div class="asha-auth-brand-inner">
-            <div class="asha-auth-brand-head">
-                <span class="asha-auth-logo-badge"><img src="{{ site_brand.logo_url }}" alt="{{ site_brand.name }}"></span>
-                <div>
-                    <div class="asha-auth-brand-name">{{ site_brand.name }}</div>
-                    <div class="asha-auth-brand-sub">{{ site_brand.tagline }}</div>
-                </div>
-            </div>
-            <h2 class="asha-auth-brand-title">{{ site_brand.headline }}</h2>
-            <p class="asha-auth-brand-desc">{{ site_brand.description }}</p>
-            <ul class="asha-auth-features">
-                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>ضمانت اصالت و سلامت کالا</li>
-                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>پشتیبانی و مشاوره فنی تخصصی</li>
-                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>ارسال سریع به سراسر کشور</li>
-                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>پیگیری لحظه‌ای سفارش‌ها</li>
-            </ul>
-        </div>
-    </aside>
+    {% include "shop/_auth_brand_panel.html" %}
     <main class="asha-auth-main">
         <div class="asha-auth-cardwrap">
             {% block content %}{% endblock %}

@@ -1,10 +1,14 @@
-{# TEMP PREVIEW ONLY — same login card/system inside the store header/footer layout.
-   Visit /login-preview to compare against the standalone /login page. #}
+{# TEMP PREVIEW ONLY — the whole /login content (banner panel + login form)
+   inside the store header/footer layout. Visit /login-preview to compare
+   against the standalone /login page. #}
 {% extends "shop/base.html" %}
 {% block title %}ورود | {{ site_brand.name }}{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="/static/css/auth.css" type="text/css" media="all">
 {% include "shop/_theme_vars.html" %}
+<style>
+    .asha-auth--embedded { min-height: auto; border: 1px solid var(--t-border); border-radius: 1.1rem; overflow: hidden; margin: 2rem 0 3rem; }
+</style>
 {% endblock %}
 {% block content %}
 <nav class="breadcrumb-wrapper">
@@ -26,8 +30,14 @@
 </nav>
 <div class="main-content">
     <div class="container">
-        <div style="max-width: 28rem; margin: 2rem auto;">
-            {% include "shop/_login_card.html" %}
+        <div class="asha-auth asha-auth--embedded">
+            {% include "shop/_auth_brand_panel.html" %}
+            <main class="asha-auth-main">
+                <div class="asha-auth-cardwrap">
+                    {% include "shop/_login_card.html" %}
+                    <p class="asha-support">نیاز به راهنمایی دارید؟ با <a href="{{ site_brand.support_phone_href }}">{{ site_brand.support_phone }}</a> در تماس باشید.</p>
+                </div>
+            </main>
         </div>
     </div>
 </div>

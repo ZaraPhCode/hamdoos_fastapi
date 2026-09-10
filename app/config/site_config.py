@@ -119,6 +119,13 @@ BRAND = {
     "headline": "فروشگاه تخصصی لیزر، اپتیک و فوتونیک",
     # Branding-panel description on the auth pages (generic wording)
     "description": "وارد حساب کاربری خود شوید تا سفارش‌ها، علاقه‌مندی‌ها و خدمات پشتیبانی فنی را یکجا مدیریت کنید.",
+    # Branding-panel checklist on the auth pages (generic wording; edit freely)
+    "features": [
+        "ضمانت اصالت و سلامت کالا",
+        "پشتیبانی و مشاوره فنی تخصصی",
+        "ارسال سریع به سراسر کشور",
+        "پیگیری لحظه‌ای سفارش‌ها",
+    ],
     # Support phone shown on the auth pages (display + tel: link)
     "support_phone": "۰۹۰۱۸۴۰۱۸۳۳",
     "support_phone_href": "tel:09018401833",
