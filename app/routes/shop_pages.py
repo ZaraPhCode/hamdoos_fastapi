@@ -1015,6 +1015,7 @@ async def orders_history_page(
         .options(
             selectinload(Order.order_products).selectinload(OrderProduct.product),
             selectinload(Order.order_status_records),
+            selectinload(Order.pay_method),
         )
         .where(
             Order.user_id == current_user.id,

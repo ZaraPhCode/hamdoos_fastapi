@@ -15,21 +15,26 @@
                     </div>
                 </div>
                 <div class="account-list">
+                    <style>
+                        .account-list ul li.active { background-color: {{ theme.surface_dim }}; }
+                        .account-list ul li.active a span { color: {{ theme.primary }}; font-weight: 600; }
+                        .account-list ul li.active a i { color: {{ theme.primary }}; }
+                    </style>
                     <ul class="linklist">
-                        <li><a href="/profile" title="داشبورد" rel="nofollow"><i class="fa fa-th-large"></i><span>داشبورد</span></a></li>
-                        <li><a href="/orders/unpaid" title="سفارش‌های پرداخت نشده" rel="nofollow"><i class="fa fa-hourglass-start"></i><span>سفارش‌های پرداخت نشده</span></a></li>
-                        <li><a href="/orders/history" title="تاریخچه سفارشات" rel="nofollow"><i class="fa fa-history"></i><span>تاریخچه سفارشات</span></a></li>
-                        <li><a href="/profile/tickets" title="تیکت‌های پشتیبانی" rel="nofollow"><i class="fa fa-headset"></i><span>تیکت‌های پشتیبانی</span></a></li>
-                        <li><a href="/profile/identity" title="اطلاعات هویتی" rel="nofollow"><i class="fa fa-credit-card"></i><span>اطلاعات هویتی</span></a></li>
-                        <li><a href="/profile/favorites" title="علاقه‌مندی‌ها" rel="nofollow"><i class="fa fa-heart"></i><span>علاقه‌مندی‌ها</span></a></li>
+                        <li class="{% if request.url.path == '/profile' %}active{% endif %}"><a href="/profile" title="داشبورد" rel="nofollow"><i class="fa fa-th-large"></i><span>داشبورد</span></a></li>
+                        <li class="{% if request.url.path == '/orders/unpaid' %}active{% endif %}"><a href="/orders/unpaid" title="سفارش‌های پرداخت نشده" rel="nofollow"><i class="fa fa-hourglass-start"></i><span>سفارش‌های پرداخت نشده</span></a></li>
+                        <li class="{% if request.url.path == '/orders/history' %}active{% endif %}"><a href="/orders/history" title="تاریخچه سفارشات" rel="nofollow"><i class="fa fa-history"></i><span>تاریخچه سفارشات</span></a></li>
+                        <li class="{% if request.url.path == '/profile/tickets' %}active{% endif %}"><a href="/profile/tickets" title="تیکت‌های پشتیبانی" rel="nofollow"><i class="fa fa-headset"></i><span>تیکت‌های پشتیبانی</span></a></li>
+                        <li class="{% if request.url.path == '/profile/identity' %}active{% endif %}"><a href="/profile/identity" title="اطلاعات هویتی" rel="nofollow"><i class="fa fa-credit-card"></i><span>اطلاعات هویتی</span></a></li>
+                        <li class="{% if request.url.path == '/profile/favorites' %}active{% endif %}"><a href="/profile/favorites" title="علاقه‌مندی‌ها" rel="nofollow"><i class="fa fa-heart"></i><span>علاقه‌مندی‌ها</span></a></li>
                         <li><a href="#" title="خریدهای من" rel="nofollow"><i class="fa fa-tag"></i><span>خریدهای من</span></a></li>
                         <li><a href="#" title="دیدگاه‌ها" rel="nofollow"><i class="fa fa-commenting"></i><span>دیدگاه‌ها</span></a></li>
-                        <li><a href="/profile/addresses" title="آدرس‌ها" rel="nofollow"><i class="fa fa-map-marker"></i><span>آدرس‌ها</span></a></li>
+                        <li class="{% if request.url.path == '/profile/addresses' %}active{% endif %}"><a href="/profile/addresses" title="آدرس‌ها" rel="nofollow"><i class="fa fa-map-marker"></i><span>آدرس‌ها</span></a></li>
                         <li><a href="#" title="پیگیری سفارشات" rel="nofollow"><i class="fa fa-search"></i><span>پیگیری سفارشات</span></a></li>
-                        <li><a href="/profile/register-receipt" title="ثبت فیش" rel="nofollow"><i class="fa fa-file-text-o"></i><span>ثبت فیش</span></a></li>
-                        <li><a href="/profile/bank-info" title="اطلاعات حساب بانکی" rel="nofollow"><i class="fa fa-university"></i><span>اطلاعات حساب بانکی</span></a></li>
-                        <li><a href="/profile/change-password" title="عملیات رمز عبور" rel="nofollow"><i class="fa fa-key"></i><span>عملیات رمز عبور</span></a></li>
-                        <li><a href="/profile/phone-numbers" title="شماره‌های شما" rel="nofollow"><i class="fa fa-address-card"></i><span>شماره‌های شما</span></a></li>
+                        <li class="{% if request.url.path == '/profile/register-receipt' %}active{% endif %}"><a href="/profile/register-receipt" title="ثبت فیش" rel="nofollow"><i class="fa fa-file-text-o"></i><span>ثبت فیش</span></a></li>
+                        <li class="{% if request.url.path == '/profile/bank-info' %}active{% endif %}"><a href="/profile/bank-info" title="اطلاعات حساب بانکی" rel="nofollow"><i class="fa fa-university"></i><span>اطلاعات حساب بانکی</span></a></li>
+                        <li class="{% if request.url.path == '/profile/change-password' %}active{% endif %}"><a href="/profile/change-password" title="عملیات رمز عبور" rel="nofollow"><i class="fa fa-key"></i><span>عملیات رمز عبور</span></a></li>
+                        <li class="{% if request.url.path == '/profile/phone-numbers' %}active{% endif %}"><a href="/profile/phone-numbers" title="شماره‌های شما" rel="nofollow"><i class="fa fa-address-card"></i><span>شماره‌های شما</span></a></li>
                     </ul>
                 </div>
                 <div class="footer">
