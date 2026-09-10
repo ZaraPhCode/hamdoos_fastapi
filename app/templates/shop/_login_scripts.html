@@ -29,6 +29,8 @@
             tabBtns[t].setAttribute("aria-selected", on ? "true" : "false");
             panes[t].classList.toggle("active", on);
         });
+        /* "no account? use mobile" hint belongs to the password tab only */
+        document.getElementById("login_alt_foot").hidden = (name !== "password");
         if (name === "password") loadCaptcha();
     }
     tabBtns.otp.addEventListener("click", function () { setTab("otp"); });
