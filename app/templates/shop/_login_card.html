@@ -1,0 +1,91 @@
+<div class="asha-card">
+    <div class="asha-card-head">
+        <span class="asha-auth-logo-badge"><img src="{{ site_brand.logo_url }}" alt="{{ site_brand.name }}"></span>
+        <h1 class="asha-card-title">ورود</h1>
+        <p class="asha-card-sub">به فروشگاه {{ site_brand.name }} خوش آمدید</p>
+    </div>
+
+    {% if message %}<div class="asha-alert asha-alert-ok">{{ message }}</div>{% endif %}
+
+    <div class="asha-tabs" role="tablist">
+        <button type="button" class="asha-tab active" id="tabbtn-otp" role="tab" aria-selected="true">ورود با رمز یکبار مصرف</button>
+        <button type="button" class="asha-tab" id="tabbtn-password" role="tab" aria-selected="false">ایمیل و رمز عبور</button>
+    </div>
+
+    <!-- ── OTP pane ── -->
+    <div class="asha-tabpane active" id="tabpane-otp" role="tabpanel">
+        <div id="otp-step-phone">
+            <div class="asha-field">
+                <label for="otp_phone">شماره موبایل</label>
+                <input type="tel" id="otp_phone" class="asha-input asha-input-ltr" placeholder="09xxxxxxxxx"
+                       dir="ltr" inputmode="numeric" maxlength="11" autocomplete="tel"
+                       value="{{ email_or_phone_number or '' }}">
+                <p class="asha-error" id="otp_phone_error" hidden></p>
+                <p class="asha-hint">کد تأیید ۶ رقمی به این شماره پیامک خواهد شد</p>
+            </div>
+            <button type="button" class="asha-btn" id="otp_send_btn">ارسال کد تایید</button>
+        </div>
+        <div id="otp-step-code" hidden>
+            <div class="asha-notice">
+                <span>کد به شماره <b dir="ltr" id="otp_sent_to"></b> ارسال شد</span>
+                <button type="button" class="asha-link" id="otp_edit_btn">ویرایش</button>
+            </div>
+            <div class="asha-field">
+                <label for="otp_code">کد تایید</label>
+                <input type="text" id="otp_code" class="asha-input asha-input-code" placeholder="─ ─ ─ ─ ─ ─"
+                       dir="ltr" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+                <p class="asha-error" id="otp_code_error" hidden></p>
+                <div class="asha-row-between">
+                    <span class="asha-timer" id="otp_timer"></span>
+                    <button type="button" class="asha-link" id="otp_resend_btn" hidden>ارسال مجدد کد</button>
+                </div>
+            </div>
+            <button type="button" class="asha-btn" id="otp_verify_btn">تایید و ورود</button>
+            <p class="asha-foot"><button type="button" class="asha-link" id="otp_back_btn">بازگشت و ویرایش شماره</button></p>
+        </div>
+    </div>
+
+    <!-- ── Password pane ── -->
+    <div class="asha-tabpane" id="tabpane-password" role="tabpanel">
+        {% if field_error %}<div class="asha-alert asha-alert-error">{{ field_error }}</div>{% endif %}
+        <form method="post" action="{{ url_for('shop_login') }}" id="pw_form" novalidate>
+            <input type="hidden" name="returnUrl" value="{{ return_url or '/' }}">
+            <div class="asha-field">
+                <label for="pw_identifier">ایمیل یا شماره موبایل</label>
+                <input type="text" id="pw_identifier" name="email_or_phone" class="asha-input asha-input-ltr"
+                       placeholder="example@email.com" dir="ltr" autocomplete="username"
+                       value="{{ email_or_phone_number or '' }}">
+                <p class="asha-error" id="pw_identifier_error" hidden></p>
+            </div>
+            <div class="asha-field">
+                <label for="pw_password">رمز عبور</label>
+                <div class="asha-passwrap">
+                    <input type="password" id="pw_password" name="password" class="asha-input asha-input-ltr"
+                           placeholder="••••••••" dir="ltr" autocomplete="current-password">
+                    <button type="button" class="asha-eye" id="pw_eye" aria-label="نمایش رمز عبور" tabindex="-1">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+                <div class="asha-row-between">
+                    <span></span>
+                    <a class="asha-link" id="pw_forgot" href="/auth/forgot-password">فراموشی رمز عبور</a>
+                </div>
+            </div>
+            <div class="asha-field" id="pw_captcha_wrap" hidden>
+                <label for="pw_captcha">کد امنیتی</label>
+                <img id="pw_capimg" class="asha-captcha-img" src="" alt="کد امنیتی">
+                <div class="asha-captcha-row">
+                    <input type="text" id="pw_captcha" name="captcha_code" class="asha-input asha-input-ltr"
+                           placeholder="کد داخل تصویر" dir="ltr" inputmode="numeric" autocomplete="off">
+                    <button type="button" class="asha-refresh" id="pw_caprefresh" title="تصویر جدید" aria-label="تصویر جدید">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-1.4-7.4L23 10"/></svg>
+                    </button>
+                </div>
+                <input type="hidden" name="cap_id" id="pw_capid" value="">
+            </div>
+            <button type="submit" class="asha-btn" id="pw_submit">ورود</button>
+        </form>
+    </div>
+
+    <p class="asha-foot">حساب کاربری ندارید؟ <button type="button" class="asha-link" id="goto_otp">با شماره موبایل وارد شوید</button></p>
+</div>

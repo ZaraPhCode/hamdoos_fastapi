@@ -1,0 +1,37 @@
+{# TEMP PREVIEW ONLY — same login card/system inside the store header/footer layout.
+   Visit /login-preview to compare against the standalone /login page. #}
+{% extends "shop/base.html" %}
+{% block title %}ورود | {{ site_brand.name }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/auth.css" type="text/css" media="all">
+{% include "shop/_theme_vars.html" %}
+{% endblock %}
+{% block content %}
+<nav class="breadcrumb-wrapper">
+    <div class="container">
+        <ol class="breadcrumb" data-depth="1" itemscope itemtype="https://schema.org/BreadcrumbList">
+            <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <a itemprop="item" href="/">
+                    <i class="fa fa-home home" aria-hidden="true"></i>
+                    <span itemprop="name">خانه</span>
+                </a>
+                <meta itemprop="position" content="1">
+            </li>
+            <li class="breadcrumb-item active" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                <span itemprop="name">ورود</span>
+                <meta itemprop="position" content="2">
+            </li>
+        </ol>
+    </div>
+</nav>
+<div class="main-content">
+    <div class="container">
+        <div style="max-width: 28rem; margin: 2rem auto;">
+            {% include "shop/_login_card.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+{% include "shop/_login_scripts.html" %}
+{% endblock %}

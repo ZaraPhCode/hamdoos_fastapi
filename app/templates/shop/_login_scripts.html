@@ -1,0 +1,213 @@
+<script>
+(function () {
+    "use strict";
+    var RETURN_URL = {{ (return_url or '/') | tojson }};
+
+    /* Persian/Arabic digits -> Latin (same as asha-ai-app normalizeDigits) */
+    var FA = "۰۱۲۳۴۵۶۷۸۹", AR = "٠١٢٣٤٥٦٧٨٩";
+    function norm(v) {
+        v = (v || "");
+        var out = "";
+        for (var i = 0; i < v.length; i++) {
+            var fi = FA.indexOf(v[i]), ai = AR.indexOf(v[i]);
+            out += fi !== -1 ? String(fi) : (ai !== -1 ? String(ai) : v[i]);
+        }
+        return out;
+    }
+    function showErr(el, msg) {
+        if (!msg) { el.hidden = true; el.textContent = ""; return; }
+        el.hidden = false; el.textContent = msg;
+    }
+
+    /* ── Tabs ── */
+    var tabBtns = { otp: document.getElementById("tabbtn-otp"), password: document.getElementById("tabbtn-password") };
+    var panes = { otp: document.getElementById("tabpane-otp"), password: document.getElementById("tabpane-password") };
+    function setTab(name) {
+        ["otp", "password"].forEach(function (t) {
+            var on = t === name;
+            tabBtns[t].classList.toggle("active", on);
+            tabBtns[t].setAttribute("aria-selected", on ? "true" : "false");
+            panes[t].classList.toggle("active", on);
+        });
+        if (name === "password") loadCaptcha();
+    }
+    tabBtns.otp.addEventListener("click", function () { setTab("otp"); });
+    tabBtns.password.addEventListener("click", function () { setTab("password"); });
+    document.getElementById("goto_otp").addEventListener("click", function () { setTab("otp"); });
+
+    /* ── OTP flow ── */
+    var phoneEl = document.getElementById("otp_phone"),
+        phoneErr = document.getElementById("otp_phone_error"),
+        sendBtn = document.getElementById("otp_send_btn"),
+        stepPhone = document.getElementById("otp-step-phone"),
+        stepCode = document.getElementById("otp-step-code"),
+        codeEl = document.getElementById("otp_code"),
+        codeErr = document.getElementById("otp_code_error"),
+        timerEl = document.getElementById("otp_timer"),
+        resendBtn = document.getElementById("otp_resend_btn"),
+        verifyBtn = document.getElementById("otp_verify_btn"),
+        timerId = null, cooldown = 0;
+
+    phoneEl.addEventListener("input", function () {
+        var d = norm(phoneEl.value).replace(/[^0-9]/g, "").slice(0, 11);
+        if (d !== phoneEl.value) phoneEl.value = d;
+        phoneEl.classList.remove("invalid");
+        showErr(phoneErr, "");
+    });
+    codeEl.addEventListener("input", function () {
+        var d = norm(codeEl.value).replace(/[^0-9]/g, "").slice(0, 6);
+        if (d !== codeEl.value) codeEl.value = d;
+        showErr(codeErr, "");
+    });
+
+    function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+    function startTimer(mmss) {
+        stopTimer();
+        var m;
+        if (!mmss || mmss === "-1:-1") { timerEl.textContent = ""; resendBtn.hidden = false; return; }
+        m = mmss.split(":");
+        cooldown = parseInt(m[0], 10) * 60 + parseInt(m[1], 10);
+        resendBtn.hidden = true;
+        var tick = function () {
+            if (cooldown <= 0) {
+                stopTimer(); timerEl.textContent = ""; resendBtn.hidden = false; return;
+            }
+            var mm = Math.floor(cooldown / 60), ss = cooldown % 60;
+            timerEl.textContent = "ارسال مجدد تا " + mm + ":" + (ss < 10 ? "0" + ss : ss) + " دیگر";
+            cooldown--;
+        };
+        tick();
+        timerId = setInterval(tick, 1000);
+    }
+    function gotoCodeStep(phone) {
+        document.getElementById("otp_sent_to").textContent = phone;
+        stepPhone.hidden = true; stepCode.hidden = false;
+        codeEl.value = ""; showErr(codeErr, ""); codeEl.focus();
+    }
+    function gotoPhoneStep() {
+        stopTimer(); stepCode.hidden = true; stepPhone.hidden = false; phoneEl.focus();
+    }
+
+    function otpSend() {
+        var digits = norm(phoneEl.value).replace(/[^0-9]/g, "");
+        if (!/^09\d{9}$/.test(digits)) {
+            phoneEl.classList.add("invalid");
+            showErr(phoneErr, "شماره موبایل باید ۱۱ رقم و با 09 شروع شود");
+            return;
+        }
+        sendBtn.disabled = true;
+        fetch("{{ url_for('shop_otp_send') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: digits, return_url: RETURN_URL })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            sendBtn.disabled = false;
+            if (!data.ok && data.code === "not_found") {
+                window.location.href = "/auth/register?phoneNumber=" + encodeURIComponent(digits);
+                return;
+            }
+            if (!data.ok) {
+                phoneEl.classList.add("invalid");
+                showErr(phoneErr, data.error || "خطایی رخ داد");
+                return;
+            }
+            gotoCodeStep(digits);
+            startTimer(data.timer);
+        }).catch(function () {
+            sendBtn.disabled = false;
+            showErr(phoneErr, "خطا در ارتباط با سرور");
+        });
+    }
+    function otpVerify() {
+        var digits = norm(phoneEl.value).replace(/[^0-9]/g, "");
+        var code = norm(codeEl.value).replace(/[^0-9]/g, "");
+        if (code.length !== 6) { showErr(codeErr, "کد تأیید باید ۶ رقم باشد"); return; }
+        verifyBtn.disabled = true;
+        fetch("{{ url_for('shop_otp_verify') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: digits, code: code, return_url: RETURN_URL })
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            verifyBtn.disabled = false;
+            if (!data.ok) {
+                showErr(codeErr, data.error || "کد وارد شده صحیح نیست");
+                if (data.timer) startTimer(data.timer);
+                return;
+            }
+            window.location.href = data.redirect || "/home";
+        }).catch(function () {
+            verifyBtn.disabled = false;
+            showErr(codeErr, "خطا در ارتباط با سرور");
+        });
+    }
+    sendBtn.addEventListener("click", otpSend);
+    phoneEl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); otpSend(); } });
+    verifyBtn.addEventListener("click", otpVerify);
+    codeEl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); otpVerify(); } });
+    resendBtn.addEventListener("click", otpSend);
+    document.getElementById("otp_edit_btn").addEventListener("click", gotoPhoneStep);
+    document.getElementById("otp_back_btn").addEventListener("click", gotoPhoneStep);
+
+    /* ── Password tab: captcha + forgot link follow the identifier ── */
+    var idEl = document.getElementById("pw_identifier"),
+        idErr = document.getElementById("pw_identifier_error"),
+        capWrap = document.getElementById("pw_captcha_wrap"),
+        capImg = document.getElementById("pw_capimg"),
+        capIdEl = document.getElementById("pw_capid"),
+        forgotEl = document.getElementById("pw_forgot"),
+        capTimer = null;
+
+    var eye = document.getElementById("pw_eye"),
+        pwInput = document.getElementById("pw_password");
+    eye.addEventListener("click", function () {
+        var show = pwInput.type === "password";
+        pwInput.type = show ? "text" : "password";
+        eye.setAttribute("aria-label", show ? "مخفی کردن رمز عبور" : "نمایش رمز عبور");
+    });
+
+    function syncForgot() {
+        var v = norm(idEl.value).trim();
+        forgotEl.href = "/auth/forgot-password" + (v ? "?value=" + encodeURIComponent(v) : "");
+    }
+    function loadCaptcha() {
+        var v = norm(idEl.value).trim();
+        syncForgot();
+        showErr(idErr, "");
+        if (!v) { capWrap.hidden = true; return; }
+        fetch("{{ url_for('shop_captcha_for_identifier') }}?identifier=" + encodeURIComponent(v))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (v !== norm(idEl.value).trim()) return;
+                if (!data.ok) { capWrap.hidden = true; showErr(idErr, data.error || ""); return; }
+                if (data.disabled) { capWrap.hidden = true; return; }
+                capImg.src = data.cap_url;
+                capIdEl.value = data.cap_id;
+                capWrap.hidden = false;
+            }).catch(function () { /* keep form usable; submit will surface errors */ });
+    }
+    var deb = null;
+    idEl.addEventListener("input", function () {
+        if (document.getElementById("pw_identifier").type !== "email") { /* keep latin digits tidy */ }
+        syncForgot();
+        clearTimeout(deb);
+        deb = setTimeout(loadCaptcha, 600);
+    });
+    document.getElementById("pw_caprefresh").addEventListener("click", function () {
+        if (!capIdEl.value) { loadCaptcha(); return; }
+        fetch("{{ url_for('shop_refresh_captcha') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: "id=" + encodeURIComponent(capIdEl.value)
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data.success) capImg.src = data.url;
+        });
+    });
+    capImg.addEventListener("click", function () { document.getElementById("pw_caprefresh").click(); });
+    document.getElementById("pw_form").addEventListener("submit", function () {
+        /* normalize digits so Persian/Arabic numerals validate server-side */
+        idEl.value = norm(idEl.value);
+        document.getElementById("pw_captcha").value = norm(document.getElementById("pw_captcha").value);
+    });
+    syncForgot();
+})();
+</script>
