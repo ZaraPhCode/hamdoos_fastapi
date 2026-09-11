@@ -262,10 +262,10 @@ def _parse_product_bool(value) -> bool:
 
 def _parse_product_uuid(form, key: str):
     raw = form.get(key)
-    if not raw:
+    if raw is None or str(raw).strip().lower() in ("", "none", "null"):
         return None
     try:
-        return uuid.UUID(str(raw))
+        return uuid.UUID(str(raw).strip())
     except (ValueError, AttributeError):
         raise ValueError("مقدار انتخاب‌شده معتبر نیست")
 
@@ -282,7 +282,7 @@ def _parse_product_form(form, default_purchase_date=None):
 
     def _num(key, default=0):
         raw = form.get(key)
-        if raw is None or str(raw).strip() == "":
+        if raw is None or str(raw).strip().lower() in ("", "none", "null"):
             return default
         try:
             return float(raw)
@@ -308,7 +308,7 @@ def _parse_product_form(form, default_purchase_date=None):
 
     taobao_raw = (form.get("taobao_choice_id") or "").strip() or None
     taobao_id = None
-    if taobao_raw:
+    if taobao_raw and taobao_raw.lower() not in ("none", "null"):
         try:
             taobao_id = uuid.UUID(taobao_raw)
         except ValueError:
