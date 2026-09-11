@@ -6,7 +6,24 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+# Valid Product.Status values — must match ProductStatusEnum in
+# app/models/enum_types.py (stored as int, exposed as str). Anything else
+# would fail at the DB layer with a 500, so reject it here with a 422/400.
+PRODUCT_STATUSES = {
+    "Unknown",
+    "InProduction",
+    "Importing",
+    "InStock",
+    "OutOfStock",
+    "OnDemand",
+    "Obsolete",
+}
+
+# Product.Type is a plain integer column: 0 = Product, 1 = Service.
+PRODUCT_TYPES = {"Product": 0, "Service": 1}
 
 
 # ── Category ──
@@ -253,11 +270,11 @@ class ProductCreate(BaseModel):
     delivery_day: Optional[int] = None
     points_from_purchases: int = 0
     status: Optional[str] = "OutOfStock"
-    type: Optional[str] = "Product"
-    default_variation: Optional[str] = None
-    taobao_choice_id: Optional[str] = None
+    type: Optional[int] = 0
+    default_variation: bool = False
+    taobao_choice_id: Optional[UUID] = None
     tax_unique_id: Optional[str] = None
-    purchase_date: Optional[str] = None
+    purchase_date: Optional[datetime] = None
     is_new: bool = False
     is_special: bool = False
     on_sale: bool = False
@@ -271,6 +288,30 @@ class ProductCreate(BaseModel):
     product_type_id: Optional[UUID] = None
     product_unit_id: Optional[UUID] = None
     currency_id: Optional[UUID] = None
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def _coerce_product_type(cls, v):
+        """Accept the legacy 'Product'/'Service' strings as 0/1 (int column)."""
+        if v is None or v == "":
+            return 0
+        if isinstance(v, bool):
+            return int(v)
+        if isinstance(v, int):
+            return v
+        s = str(v).strip()
+        if s in PRODUCT_TYPES:
+            return PRODUCT_TYPES[s]
+        return v  # let int validation raise a clean 422 for anything else
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _validate_product_status(cls, v):
+        if v is None or v == "":
+            return "OutOfStock"
+        if v not in PRODUCT_STATUSES:
+            raise ValueError(f"Invalid product status: {v}")
+        return v
 
 
 class ProductUpdate(ProductCreate):

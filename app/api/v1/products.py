@@ -134,7 +134,20 @@ async def create_product(
     current_user: User = Depends(require_any_role("Admin", "Product Manager", "Product Officer")),
     db: AsyncSession = Depends(get_db),
 ):
-    product = await product_service.create_product(db, request, current_user.id)
+    from sqlalchemy.exc import IntegrityError
+
+    try:
+        product = await product_service.create_product(db, request, current_user.id)
+        await db.commit()
+    except ValueError as e:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Product with the same name or part number already exists",
+        )
     return _build_detail_response(product)
 
 

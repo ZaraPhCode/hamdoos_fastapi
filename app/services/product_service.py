@@ -573,20 +573,101 @@ async def get_product_full_details(db: AsyncSession, product_id: uuid.UUID) -> O
 
 
 async def create_product(db: AsyncSession, request: ProductCreate, user_id: uuid.UUID) -> Product:
+    """Create a product with DB-compatible defaults.
+
+    The ``Products`` table marks most columns NOT NULL (matching the .NET
+    schema), while the API/form schemas keep them optional — fill every NOT
+    NULL column here so a valid create never fails with a NULL/500 error.
+    No database values are modified; only the new row is constructed.
+    """
+    from app.utils.common_works import generate_slug
+
+    data = request.model_dump(exclude_unset=True)
+
+    if data.get("category_id") is None:
+        raise ValueError("Category is required")
+
+    max_int_id = (await db.execute(select(func.max(Product.int_id)))).scalar() or 0
+    data.setdefault("int_id", max_int_id + 1)
+
+    name = (data.get("name") or "").strip()
+    if not name:
+        raise ValueError("Product name is required")
+    if not data.get("slug"):
+        data["slug"] = generate_slug(name)
+    if not data.get("part_number"):
+        data["part_number"] = f"AUTO-{data['int_id']}"
+
+    text_fields = (
+        "en_name", "en_slug", "model", "short_name", "introduction",
+        "short_description", "keywords", "meta_description",
+        "concatenated", "en_concatenated", "tax_unique_id",
+    )
+    for field in text_fields:
+        if data.get(field) is None:
+            data[field] = ""
+
+    numeric_fields = (
+        "price", "price_after_discount", "discount_amount",
+        "discount_percentage", "currency_price", "profit_rate",
+        "taxes_and_duties", "total_amount_plus_taxes", "vat_rate",
+    )
+    for field in numeric_fields:
+        if data.get(field) is None:
+            data[field] = 0
+
+    int_fields = (
+        "stock_quantity", "minimum_purchase", "max_number_of_purchases",
+        "order_point", "points_from_purchases", "views", "rate", "sale",
+        "delivery_day", "number_of_variations",
+    )
+    for field in int_fields:
+        if data.get(field) is None:
+            data[field] = 1 if field == "minimum_purchase" else 0
+
+    now = datetime.now(timezone.utc)
+    if data.get("release_date") is None:
+        data["release_date"] = now
+    if data.get("purchase_date") is None:
+        data["purchase_date"] = now
+    if not data.get("status"):
+        data["status"] = "OutOfStock"
+    if data.get("type") is None:
+        data["type"] = 0
+    if data.get("default_variation") is None:
+        data["default_variation"] = False
+
     product = Product(
         id=uuid.uuid4(),
-        **request.model_dump(exclude_unset=True),
+        **data,
         created_by_user_id=user_id,
-        insert_date=datetime.now(timezone.utc),
-        update_date=datetime.now(timezone.utc),
+        insert_date=now,
+        update_date=now,
     )
     db.add(product)
     await db.flush()
     return product
 
 
+# Columns that genuinely accept NULL on update — every other Product column
+# is NOT NULL (matches the .NET schema), so None values are skipped.
+_PRODUCT_NULLABLE_UPDATE_FIELDS = {
+    "max_price",
+    "short_name",
+    "brand_id",
+    "product_type_id",
+    "product_unit_id",
+    "currency_id",
+    "taobao_choice_id",
+}
+
+
 async def update_product(db: AsyncSession, product: Product, request: ProductUpdate) -> Product:
+    # Never write NULL into NOT NULL columns (explicit JSON/form nulls are
+    # ignored, except for genuinely nullable columns) — prevents DB 500s.
     for key, value in request.model_dump(exclude_unset=True).items():
+        if value is None and key not in _PRODUCT_NULLABLE_UPDATE_FIELDS:
+            continue
         setattr(product, key, value)
     product.update_date = datetime.now(timezone.utc)
     return product

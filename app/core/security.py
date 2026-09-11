@@ -17,7 +17,20 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    """Return True iff the plain password matches the stored bcrypt hash.
+
+    Passwords migrated from the legacy .NET Identity store are NOT bcrypt
+    hashes — passlib raises (``hash could not be identified``) for those.
+    A non-matching/legacy hash must be a plain ``False`` (wrong password),
+    never an unhandled 500. Those users can sign in via OTP or reset their
+    password, which re-hashes with bcrypt going forward.
+    """
+    try:
+        if not plain_password or not hashed_password:
+            return False
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 
 def hash_password(password: str) -> str:

@@ -22,6 +22,11 @@
 
     <form method="POST" action="{{ '/administration/products/' + product.id|string + '/edit' if product else '/administration/products/new' }}" class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="product-form">
         <input type="hidden" name="log" id="Log">
+        {% if form_error %}
+        <div class="lg:col-span-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-3 text-sm">
+            <i class="fas fa-exclamation-circle ml-2"></i>{{ form_error }}
+        </div>
+        {% endif %}
         <div class="lg:col-span-2 space-y-6">
             <!-- Basic info -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -41,9 +46,9 @@
                         <div><label class="form-label" for="status">وضعیت</label><select id="status" name="status" class="form-input">
                                 <option value="OutOfStock" {{ 'selected' if product and product.status == 'OutOfStock' else '' }}>ناموجود</option>
                                 <option value="InStock" {{ 'selected' if product and product.status == 'InStock' else '' }}>موجود در انبار</option>
-                                <option value="Ordering" {{ 'selected' if product and product.status == 'Ordering' else '' }}>در حال تامین</option>
-                                <option value="Importing" {{ 'selected' if product and product.status == 'Importing' else '' }}>در حال تولید</option>
-                                <option value="CustomSupply" {{ 'selected' if product and product.status == 'CustomSupply' else '' }}>تامین سفارشی</option>
+                                <option value="InProduction" {{ 'selected' if product and product.status == 'InProduction' else '' }}>در حال تولید</option>
+                                <option value="Importing" {{ 'selected' if product and product.status == 'Importing' else '' }}>در حال واردات</option>
+                                <option value="OnDemand" {{ 'selected' if product and product.status == 'OnDemand' else '' }}>تامین سفارشی</option>
                                 <option value="Obsolete" {{ 'selected' if product and product.status == 'Obsolete' else '' }}>منسوخ شده</option>
                         </select></div>
                         <div><label class="form-label" for="product_unit_id">واحد محصول</label><select id="product_unit_id" name="product_unit_id" class="form-input"><option value="">انتخاب</option>{% for pu in product_units %}<option value="{{ pu.id }}" {{ 'selected' if product and product.product_unit_id == pu.id else '' }}>{{ pu.name or pu.abbreviation }}</option>{% endfor %}</select></div>
@@ -144,8 +149,8 @@
                 <div class="p-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                         <div><label class="form-label" for="type">نوع</label><select id="type" name="type" class="form-input">
-                            <option value="Product" {{ 'selected' if product and product.type == 'Product' else '' }}>محصول</option>
-                            <option value="Service" {{ 'selected' if product and product.type == 'Service' else '' }}>خدمات</option>
+                            <option value="Product" {{ 'selected' if (not product) or product.type == 0 or product.type == 'Product' else '' }}>محصول</option>
+                            <option value="Service" {{ 'selected' if product and (product.type == 1 or product.type == 'Service') else '' }}>خدمات</option>
                         </select></div>
                         <div><label class="form-label" for="max_number_of_purchases">حداکثر تعداد خرید</label><input type="number" id="max_number_of_purchases" name="max_number_of_purchases" value="{{ product.max_number_of_purchases if product else 0 }}" min="0" class="form-input ltr-input" dir="ltr" placeholder="۰"></div>
                         <div><label class="form-label" for="tax_unique_id">شناسه یکتای مالیاتی</label><input type="text" id="tax_unique_id" name="tax_unique_id" value="{{ product.tax_unique_id if product else '' }}" class="form-input ltr-input" dir="ltr" placeholder="۱۳ رقمی"></div>

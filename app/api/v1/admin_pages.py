@@ -148,75 +148,29 @@ async def admin_product_create_submit(
     current_user: User = Depends(require_any_role("Admin", "Product Manager")),
     db: AsyncSession = Depends(get_db),
 ):
+    from sqlalchemy.exc import IntegrityError
+
     form = await request.form()
-    from app.schemas.product import ProductCreate
-    from app.services.product_service import create_product
-    import jdatetime
-
-    purchase_date_str = form.get("purchase_date") or ""
-    purchase_date = None
-    if purchase_date_str:
-        try:
-            parts = purchase_date_str.replace("/", "-").split("-")
-            purchase_date = jdatetime.date(int(parts[0]), int(parts[1]), int(parts[2])).togregorian()
-        except:
-            pass
-
-    data = ProductCreate(
-        name=(form.get("name") or "").strip(),
-        en_name=(form.get("en_name") or "").strip() or None,
-        slug=(form.get("slug") or "").strip() or None,
-        en_slug=(form.get("en_slug") or "").strip() or None,
-        part_number=(form.get("part_number") or "").strip() or None,
-        model=(form.get("model") or "").strip() or None,
-        short_description=form.get("short_description") or None,
-        introduction=form.get("introduction") or None,
-        keywords=(form.get("keywords") or "").strip() or None,
-        meta_description=form.get("meta_description") or None,
-        status=form.get("status") or "OutOfStock",
-        type=form.get("type") or "Product",
-        delivery_day=int(form.get("delivery_day") or 0) or None,
-        tax_unique_id=(form.get("tax_unique_id") or "").strip() or None,
-        taobao_choice_id=(form.get("taobao_choice_id") or "").strip() or None,
-        vat_rate=float(form.get("vat_rate") or 0) or None,
-        profit_rate=float(form.get("profit_rate") or 0) or None,
-        points_from_purchases=int(form.get("points_from_purchases") or 0),
-        max_number_of_purchases=int(form.get("max_number_of_purchases") or 0) or None,
-        default_variation=(form.get("default_variation") or "").strip() or None,
-        purchase_date=purchase_date,
-        price=float(form.get("price") or 0) or None,
-        stock_quantity=int(form.get("stock_quantity") or 0),
-        minimum_purchase=int(form.get("minimum_purchase") or 1),
-        category_id=uuid.UUID(form.get("category_id")) if form.get("category_id") else None,
-        brand_id=uuid.UUID(form.get("brand_id")) if form.get("brand_id") else None,
-        product_type_id=uuid.UUID(form.get("product_type_id")) if form.get("product_type_id") else None,
-        product_unit_id=uuid.UUID(form.get("product_unit_id")) if form.get("product_unit_id") else None,
-        currency_id=uuid.UUID(form.get("currency_id")) if form.get("currency_id") else None,
-        is_new=form.get("is_new") in ("1", "true", "on"),
-        is_special=form.get("is_special") in ("1", "true", "on"),
-        on_sale=form.get("on_sale") in ("1", "true", "on"),
-        suggested=form.get("suggested") in ("1", "true", "on"),
-        no_display=form.get("no_display") in ("1", "true", "on"),
-        is_bundle=form.get("is_bundle") in ("1", "true", "on"),
-        is_calibrated=form.get("is_calibrated") in ("1", "true", "on"),
-        restocked=form.get("restocked") in ("1", "true", "on"),
-    )
-    if not data.slug and data.name:
-        from app.utils.common_works import generate_slug
-        data.slug = generate_slug(data.name)
-    if not data.en_slug and data.en_name:
-        docstring = """<implementation of generate_slug>"""
-        from app.utils.common_works import generate_slug
-        data.en_slug = generate_slug(data.en_name)
-
-    product = await create_product(db, data, current_user.id)
-    log_text = form.get("log") or f"ایجاد محصول: {product.name}"
-    db.add(Log(
-        record_id=product.id, table_name="products",
-        description=log_text, created_by_user_id=current_user.id,
-        type="Create",
-    ))
-    await db.commit()
+    try:
+        data = _parse_product_form(form)
+        from app.services.product_service import create_product
+        product = await create_product(db, data, current_user.id)
+        log_text = form.get("log") or f"ایجاد محصول: {product.name}"
+        db.add(Log(
+            record_id=product.id, table_name="products",
+            description=log_text, created_by_user_id=current_user.id,
+            type="Create",
+        ))
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return await _product_form_error(
+            request, db, current_user, None, form,
+            "محصولی با همین نام یا شماره قطعه قبلاً ثبت شده است",
+        )
+    except ValueError as e:
+        await db.rollback()
+        return await _product_form_error(request, db, current_user, None, form, str(e))
     return RedirectResponse(url="/administration/products", status_code=303)
 
 
@@ -266,8 +220,7 @@ async def admin_product_edit_submit(
     db: AsyncSession = Depends(get_db),
 ):
     import uuid
-    import jdatetime
-    from app.schemas.product import ProductUpdate
+    from sqlalchemy.exc import IntegrityError
     from app.services.product_service import update_product
 
     pid = uuid.UUID(product_id)
@@ -276,17 +229,92 @@ async def admin_product_edit_submit(
         raise HTTPException(status_code=404, detail="Product not found")
 
     form = await request.form()
+    try:
+        data = _parse_product_form(form, default_purchase_date=product.purchase_date)
+        product = await update_product(db, product, data)
+        log_text = form.get("log") or f"ویرایش محصول: {product.name}"
+        db.add(Log(
+            record_id=product.id, table_name="products",
+            description=log_text, created_by_user_id=current_user.id,
+            type="Update",
+        ))
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return await _product_form_error(
+            request, db, current_user, product, form,
+            "محصولی با همین نام یا شماره قطعه قبلاً ثبت شده است",
+        )
+    except ValueError as e:
+        await db.rollback()
+        return await _product_form_error(request, db, current_user, product, form, str(e))
+    return RedirectResponse(url="/administration/products", status_code=303)
 
+
+# ── Product form parsing (types coerced to the DB schema) ──
+
+_PRODUCT_TYPE_MAP = {"Product": 0, "Service": 1}
+
+
+def _parse_product_bool(value) -> bool:
+    return value in ("1", "true", "on", "True")
+
+
+def _parse_product_uuid(form, key: str):
+    raw = form.get(key)
+    if not raw:
+        return None
+    try:
+        return uuid.UUID(str(raw))
+    except (ValueError, AttributeError):
+        raise ValueError("مقدار انتخاب‌شده معتبر نیست")
+
+
+def _parse_product_form(form, default_purchase_date=None):
+    """Build a ProductCreate/Update from the admin form, coerced to DB types.
+
+    Raises ValueError with a Persian message on any invalid input (including
+    pydantic ValidationError, which subclasses ValueError).
+    """
+    from datetime import datetime as _datetime
+    import jdatetime
+    from app.schemas.product import ProductCreate
+
+    def _num(key, default=0):
+        raw = form.get(key)
+        if raw is None or str(raw).strip() == "":
+            return default
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            raise ValueError("مقادیر عددی فرم معتبر نیست")
+
+    def _int(key, default=0):
+        return int(_num(key, default))
+
+    purchase_date = default_purchase_date
     purchase_date_str = form.get("purchase_date") or ""
-    purchase_date = product.purchase_date
     if purchase_date_str:
         try:
             parts = purchase_date_str.replace("/", "-").split("-")
-            purchase_date = jdatetime.date(int(parts[0]), int(parts[1]), int(parts[2])).togregorian()
+            d = jdatetime.date(int(parts[0]), int(parts[1]), int(parts[2])).togregorian()
+            purchase_date = _datetime(d.year, d.month, d.day)
         except Exception:
-            purchase_date = product.purchase_date
+            raise ValueError("تاریخ خرید معتبر نیست (نمونه: ۱۴۰۳/۰۱/۰۱)")
 
-    data = ProductUpdate(
+    type_raw = (form.get("type") or "Product").strip()
+    if type_raw not in _PRODUCT_TYPE_MAP:
+        raise ValueError("نوع محصول معتبر نیست")
+
+    taobao_raw = (form.get("taobao_choice_id") or "").strip() or None
+    taobao_id = None
+    if taobao_raw:
+        try:
+            taobao_id = uuid.UUID(taobao_raw)
+        except ValueError:
+            raise ValueError("شناسه تائوبائو باید یک UUID معتبر باشد")
+
+    data = ProductCreate(
         name=(form.get("name") or "").strip(),
         en_name=(form.get("en_name") or "").strip() or None,
         slug=(form.get("slug") or "").strip() or None,
@@ -297,33 +325,33 @@ async def admin_product_edit_submit(
         introduction=form.get("introduction") or None,
         keywords=(form.get("keywords") or "").strip() or None,
         meta_description=form.get("meta_description") or None,
-        status=form.get("status") or "OutOfStock",
-        type=form.get("type") or "Product",
-        delivery_day=int(form.get("delivery_day") or 0) or None,
+        status=(form.get("status") or "OutOfStock").strip(),
+        type=_PRODUCT_TYPE_MAP[type_raw],
+        delivery_day=_int("delivery_day", 0),
         tax_unique_id=(form.get("tax_unique_id") or "").strip() or None,
-        taobao_choice_id=(form.get("taobao_choice_id") or "").strip() or None,
-        vat_rate=float(form.get("vat_rate") or 0) or None,
-        profit_rate=float(form.get("profit_rate") or 0) or None,
-        points_from_purchases=int(form.get("points_from_purchases") or 0),
-        max_number_of_purchases=int(form.get("max_number_of_purchases") or 0) or None,
-        default_variation=(form.get("default_variation") or "").strip() or None,
+        taobao_choice_id=taobao_id,
+        vat_rate=_num("vat_rate", 0),
+        profit_rate=_num("profit_rate", 0),
+        points_from_purchases=_int("points_from_purchases", 0),
+        max_number_of_purchases=_int("max_number_of_purchases", 0),
+        default_variation=_parse_product_bool(form.get("default_variation")),
         purchase_date=purchase_date,
-        price=float(form.get("price") or 0) or None,
-        stock_quantity=int(form.get("stock_quantity") or 0),
-        minimum_purchase=int(form.get("minimum_purchase") or 1),
-        category_id=uuid.UUID(form.get("category_id")) if form.get("category_id") else None,
-        brand_id=uuid.UUID(form.get("brand_id")) if form.get("brand_id") else None,
-        product_type_id=uuid.UUID(form.get("product_type_id")) if form.get("product_type_id") else None,
-        product_unit_id=uuid.UUID(form.get("product_unit_id")) if form.get("product_unit_id") else None,
-        currency_id=uuid.UUID(form.get("currency_id")) if form.get("currency_id") else None,
-        is_new=form.get("is_new") in ("1", "true", "on"),
-        is_special=form.get("is_special") in ("1", "true", "on"),
-        on_sale=form.get("on_sale") in ("1", "true", "on"),
-        suggested=form.get("suggested") in ("1", "true", "on"),
-        no_display=form.get("no_display") in ("1", "true", "on"),
-        is_bundle=form.get("is_bundle") in ("1", "true", "on"),
-        is_calibrated=form.get("is_calibrated") in ("1", "true", "on"),
-        restocked=form.get("restocked") in ("1", "true", "on"),
+        price=_num("price", 0),
+        stock_quantity=_int("stock_quantity", 0),
+        minimum_purchase=_int("minimum_purchase", 1) or 1,
+        category_id=_parse_product_uuid(form, "category_id"),
+        brand_id=_parse_product_uuid(form, "brand_id"),
+        product_type_id=_parse_product_uuid(form, "product_type_id"),
+        product_unit_id=_parse_product_uuid(form, "product_unit_id"),
+        currency_id=_parse_product_uuid(form, "currency_id"),
+        is_new=_parse_product_bool(form.get("is_new")),
+        is_special=_parse_product_bool(form.get("is_special")),
+        on_sale=_parse_product_bool(form.get("on_sale")),
+        suggested=_parse_product_bool(form.get("suggested")),
+        no_display=_parse_product_bool(form.get("no_display")),
+        is_bundle=_parse_product_bool(form.get("is_bundle")),
+        is_calibrated=_parse_product_bool(form.get("is_calibrated")),
+        restocked=_parse_product_bool(form.get("restocked")),
     )
     if not data.slug and data.name:
         from app.utils.common_works import generate_slug
@@ -331,16 +359,31 @@ async def admin_product_edit_submit(
     if not data.en_slug and data.en_name:
         from app.utils.common_works import generate_slug
         data.en_slug = generate_slug(data.en_name)
+    return data
 
-    product = await update_product(db, product, data)
-    log_text = form.get("log") or f"ویرایش محصول: {product.name}"
-    db.add(Log(
-        record_id=product.id, table_name="products",
-        description=log_text, created_by_user_id=current_user.id,
-        type="Update",
-    ))
-    await db.commit()
-    return RedirectResponse(url="/administration/products", status_code=303)
+
+async def _product_form_lists(db: AsyncSession) -> dict:
+    """Dropdown data shared by the product create/edit form."""
+    tree = await product_service.get_admin_category_tree(db)
+    return {
+        "categories_tree": _flatten_category_options(tree),
+        "brands": await product_service.get_all_brands(db),
+        "product_types": (await db.execute(select(ProductType).where(ProductType.is_removed == False))).scalars().all(),
+        "product_units": (await db.execute(select(ProductUnit).where(ProductUnit.is_removed == False))).scalars().all(),
+        "currencies": (await db.execute(select(Currency).where(Currency.is_removed == False))).scalars().all(),
+        "suppliers": (await db.execute(select(Supplier).where(Supplier.is_removed == False))).scalars().all(),
+    }
+
+
+async def _product_form_error(request: Request, db: AsyncSession, current_user, product, form, message: str):
+    """Re-render the product form with a 400 status instead of a 500 page."""
+    lists = await _product_form_lists(db)
+    return templates.TemplateResponse("admin/product_form.html", {
+        "request": request, "current_user": current_user,
+        "product": product, **lists,
+        "purchase_date_str": form.get("purchase_date") or "",
+        "form_error": message,
+    }, status_code=400)
 
 
 def _normalize_media_url(url):
