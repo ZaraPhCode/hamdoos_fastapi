@@ -19,8 +19,9 @@ services:
       retries: 10
 
   app:
-    # Built on the VPS (Docker Hub + apt + pip accessible). Immutable image;
-    # code changes = git pull + `up -d --build`. Uploads persist on host.
+    # Code is bind-mounted from the git checkout, so `git pull` syncs the
+    # running app (restart/recreate the container to reload, no rebuild).
+    # A rebuild is only needed when requirements.txt / Dockerfile change.
     image: asha-shop-app:v1
     build:
       context: ..
@@ -35,7 +36,8 @@ services:
     env_file:
       - /opt/.env
     volumes:
-      - ../app/static/uploads:/app/app/static/uploads
+      - ../app:/app/app
+      - ../alembic:/app/alembic
     command: >
       sh -c "
         alembic upgrade head &&
