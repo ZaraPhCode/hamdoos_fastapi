@@ -1007,14 +1007,9 @@ async def admin_product_duplicate_submit(
         await db.rollback()
         return await _rerender(str(e))
 
-    # Copy the image files on disk to the new slug folder (best-effort, like
-    # .NET CopyFiles — never fails the request when files are remote/missing).
-    try:
-        full = await product_service.get_product_full_details(db, pid)
-        source_urls = [i.medium_image_url for i in (full.product_images or []) if i.medium_image_url]
-        product_service.copy_product_media_files(source_urls, duplicated.en_slug)
-    except Exception:
-        pass
+    # NOTE: media folder copying happens inside duplicate_product, which
+    # rewrites image/datasheet URLs only when the copy is verified. Nothing
+    # to do here afterwards.
     return RedirectResponse(url=f"/administration/products/{duplicated.id}/details", status_code=303)
 
 

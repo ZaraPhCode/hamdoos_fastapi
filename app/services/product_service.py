@@ -912,7 +912,12 @@ def _media_relative_path(url: Optional[str]) -> Optional[str]:
     """Convert a stored media URL to a path relative to the media root."""
     if not url:
         return None
-    normalized = url.replace("\\", "/").lstrip("/")
+    normalized = url.replace("\\", "/").strip()
+    if normalized.startswith(("http://", "https://", "//")):
+        return None
+    while normalized.startswith("~/"):
+        normalized = normalized[2:]
+    normalized = normalized.lstrip("/")
     lowered = normalized.lower()
     if lowered.startswith("media/"):
         normalized = normalized[len("media/"):]
@@ -926,10 +931,12 @@ def copy_product_media_files(source_urls: list[str], new_slug: str) -> bool:
 
     Mirrors .NET ProductsController.CopyFiles: the folder holding the source
     images (e.g. <root>/.../<oldSlug>/) is copied to <root>/.../<newSlug>/.
-    Best-effort: returns False (instead of raising) when nothing was copied,
-    e.g. files served remotely via MEDIA_BASE_URL. Checks /app/media first
-    (production volume mounted from the old .NET wwwroot/Media), then the
-    bundled app/static/Media copy.
+    Returns True only when the destination folder was verified to contain
+    files afterwards — callers must keep the ORIGINAL URLs when this returns
+    False (e.g. files served remotely via MEDIA_BASE_URL), otherwise the new
+    rows would point at a folder that exists nowhere and render as broken
+    images. Checks /app/media first (production volume mounted from the old
+    .NET wwwroot/Media), then the bundled app/static/Media copy.
     """
     import os
     import shutil
@@ -943,17 +950,23 @@ def copy_product_media_files(source_urls: list[str], new_slug: str) -> bool:
     src_rel_dir = os.path.dirname(rels[0])
     parent_rel = os.path.dirname(src_rel_dir)
     dest_rel_dir = f"{parent_rel}/{new_slug}" if parent_rel else new_slug
-    copied = False
     for root in ("/app/media", "app/static/Media"):
         src_abs = os.path.join(root, src_rel_dir)
         dest_abs = os.path.join(root, dest_rel_dir)
+        if os.path.abspath(src_abs) == os.path.abspath(dest_abs):
+            continue
         try:
-            if os.path.isdir(src_abs) and not os.path.abspath(src_abs) == os.path.abspath(dest_abs):
+            if os.path.isdir(src_abs):
                 shutil.copytree(src_abs, dest_abs, dirs_exist_ok=True)
-                copied = True
         except Exception:
             continue
-    return copied
+    for root in ("/app/media", "app/static/Media"):
+        try:
+            if os.path.isdir(os.path.join(root, dest_rel_dir)) and os.listdir(os.path.join(root, dest_rel_dir)):
+                return True
+        except Exception:
+            continue
+    return False
 
 
 async def duplicate_product(
@@ -1085,6 +1098,27 @@ async def duplicate_product(
         created_by_user_id=user_id, type="Create",
     ))
 
+    # Copy the media folders FIRST and rewrite URLs only when the copy is
+    # verified. If the files are served remotely (no local media tree), the
+    # copy is impossible — keep the original working URLs so the عکس column
+    # keeps rendering instead of pointing at a nonexistent folder.
+    _src_images = [
+        i for i in (source.product_images or [])
+        if not i.is_removed and (i.medium_image_url or i.small_image_url or i.large_image_url)
+    ]
+    _images_copied = copy_product_media_files(
+        [i.medium_image_url or i.small_image_url or i.large_image_url for i in _src_images],
+        en_slug,
+    ) if _src_images else False
+    _src_datasheets = [
+        i for i in (source.menu_datasheets or [])
+        if not i.is_removed and (i.file_url or i.complete_file_url)
+    ]
+    _datasheets_copied = copy_product_media_files(
+        [i.file_url or i.complete_file_url for i in _src_datasheets],
+        en_slug,
+    ) if _src_datasheets else False
+
     # Supplier links (mirrors CopySupplierProductsAsync).
     supplier_rows = (await db.execute(
         select(SupplierProduct).where(
@@ -1174,19 +1208,20 @@ async def duplicate_product(
                 created_by_user_id=user_id, type="Create",
             ))
 
-    # Product images (mirrors ProductImage.Duplicate URL rewriting).
+    # Product images (mirrors ProductImage.Duplicate URL rewriting — but only
+    # when the folder copy above succeeded; otherwise keep working URLs).
     for item in sorted(source.product_images or [], key=lambda x: x.picture_order or 0):
         if item.is_removed:
             continue
         image = ProductImage(
             id=uuid.uuid4(),
             product_id=new_id,
-            medium_image_url=rewrite_media_url(item.medium_image_url, en_slug),
-            small_image_url=rewrite_media_url(item.small_image_url, en_slug),
-            large_image_url=rewrite_media_url(item.large_image_url, en_slug),
-            small_image_large_url=rewrite_media_url(item.small_image_large_url, en_slug),
-            medium_image_large_url=rewrite_media_url(item.medium_image_large_url, en_slug),
-            large_image_large_url=rewrite_media_url(item.large_image_large_url, en_slug),
+            medium_image_url=rewrite_media_url(item.medium_image_url, en_slug) if _images_copied else item.medium_image_url,
+            small_image_url=rewrite_media_url(item.small_image_url, en_slug) if _images_copied else item.small_image_url,
+            large_image_url=rewrite_media_url(item.large_image_url, en_slug) if _images_copied else item.large_image_url,
+            small_image_large_url=rewrite_media_url(item.small_image_large_url, en_slug) if _images_copied else item.small_image_large_url,
+            medium_image_large_url=rewrite_media_url(item.medium_image_large_url, en_slug) if _images_copied else item.medium_image_large_url,
+            large_image_large_url=rewrite_media_url(item.large_image_large_url, en_slug) if _images_copied else item.large_image_large_url,
             title=item.title,
             description=item.description,
             display_photo=item.display_photo,
@@ -1244,7 +1279,7 @@ async def duplicate_product(
             created_by_user_id=user_id, type="Create",
         ))
 
-    # Datasheets (mirrors MenuDatasheet FileURL rewriting).
+    # Datasheets (mirrors MenuDatasheet FileURL rewriting — same copy guard).
     for item in source.menu_datasheets or []:
         if item.is_removed:
             continue
@@ -1252,8 +1287,8 @@ async def duplicate_product(
             id=uuid.uuid4(),
             product_id=new_id,
             type=item.type,
-            file_url=rewrite_media_url(item.file_url, en_slug),
-            complete_file_url=rewrite_media_url(item.complete_file_url, en_slug),
+            file_url=rewrite_media_url(item.file_url, en_slug) if _datasheets_copied else item.file_url,
+            complete_file_url=rewrite_media_url(item.complete_file_url, en_slug) if _datasheets_copied else item.complete_file_url,
             created_by_user_id=user_id,
             insert_date=now,
             update_date=now,
