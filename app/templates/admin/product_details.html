@@ -400,7 +400,12 @@
                                 <div class="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-gray-300"><i class="fas fa-image"></i></div>
                                 {% endif %}
                             </td>
-                            <td class="py-3 px-2 text-gray-700">{{ img.title or '—' }}</td>
+                            <td class="py-3 px-2 text-gray-700">
+                                {{ img.title or '—' }}
+                                {% if img.is_fallback %}
+                                <span class="badge bg-indigo-100 text-indigo-700 mr-1"><i class="fas fa-star mr-1"></i> تصویر شاخص</span>
+                                {% endif %}
+                            </td>
                             <td class="py-3 px-2">
                                 {% if img.display_photo %}
                                 <span class="badge bg-green-100 text-green-700"><i class="fas fa-check mr-1"></i> بله</span>
@@ -411,11 +416,19 @@
                             <td class="py-3 px-2 text-gray-600">{{ img.picture_order }}</td>
                             <td class="py-3 px-2">
                                 <div class="flex items-center justify-center gap-1.5">
+                                    {% if img.is_fallback %}
+                                    <form method="POST" action="/administration/products/{{ product.id }}/images/import-cover">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-100 text-green-700 text-xs font-medium hover:bg-green-200 transition-colors">
+                                            <i class="fas fa-plus"></i> ثبت در لیست تصاویر
+                                        </button>
+                                    </form>
+                                    {% else %}
                                     <form method="POST" action="/administration/products/{{ product.id }}/images/{{ img.id }}/delete" onsubmit="return confirm('آیا از حذف این عکس اطمینان دارید؟');">
                                         <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-100 text-red-700 text-xs font-medium hover:bg-red-200 transition-colors">
                                             <i class="fas fa-trash"></i> حذف
                                         </button>
                                     </form>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>

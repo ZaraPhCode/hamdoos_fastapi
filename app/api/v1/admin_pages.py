@@ -493,12 +493,41 @@ async def admin_product_details(
         })
 
     def _normalize_img(img):
-        from copy import copy
-        c = copy(img)
-        c.medium_image_url = _normalize_media_url(img.medium_image_url)
-        c.small_image_url = _normalize_media_url(img.small_image_url)
-        c.large_image_url = _normalize_media_url(img.large_image_url)
-        return c
+        from types import SimpleNamespace
+        return SimpleNamespace(
+            id=img.id,
+            medium_image_url=(
+                _normalize_media_url(img.medium_image_url)
+                or _normalize_media_url(img.small_image_url)
+                or _normalize_media_url(img.large_image_url)
+            ),
+            title=img.title,
+            display_photo=img.display_photo,
+            picture_order=img.picture_order,
+            is_fallback=False,
+        )
+
+    image_rows = [
+        _normalize_img(i)
+        for i in sorted(product.product_images or [], key=lambda x: x.picture_order or 0)
+        if not i.is_removed
+    ]
+    # Fallback: legacy products may only have the product-level cover image
+    # (Products.MediumImageURL) with no ProductImages rows. The products list
+    # and the storefront render that column, so surface it here as an
+    # informational row instead of an empty table.
+    if not image_rows and (product.medium_image_url or product.large_image_url or product.feature_image_url):
+        from types import SimpleNamespace
+        image_rows = [SimpleNamespace(
+            id=None,
+            medium_image_url=_normalize_media_url(
+                product.medium_image_url or product.large_image_url or product.feature_image_url
+            ),
+            title="تصویر شاخص محصول",
+            display_photo=True,
+            picture_order=0,
+            is_fallback=True,
+        )]
 
     return templates.TemplateResponse("admin/product_details.html", {
         "request": request, "current_user": current_user,
@@ -511,7 +540,7 @@ async def admin_product_details(
         "insert_date_fa": _to_fa_datetime(product.insert_date),
         "update_date_fa": _to_fa_datetime(product.update_date),
         "purchase_date_fa": _to_fa_date(product.purchase_date),
-        "product_images": [_normalize_img(i) for i in sorted(product.product_images, key=lambda x: x.picture_order or 0)],
+        "product_images": image_rows,
     })
 
 
@@ -556,6 +585,56 @@ async def admin_product_image_create(
         created_by_user_id=current_user.id, type="Create",
     ))
     await db.commit()
+    return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
+
+
+@router.post("/products/{product_id}/images/import-cover", response_class=HTMLResponse)
+async def admin_product_image_import_cover(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Register the product-level cover image as a ProductImages row.
+
+    Shown on the details page when a product has a cover image
+    (Products.MediumImageURL) but no ProductImages rows — one click
+    reconciles the details table with what the list/storefront shows.
+    """
+    import uuid
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    url = product.medium_image_url or product.large_image_url or product.feature_image_url
+    if not url:
+        raise HTTPException(status_code=400, detail="تصویر شاخصی برای این محصول ثبت نشده است")
+    existing = (await db.execute(
+        select(ProductImage).where(
+            ProductImage.product_id == pid, ProductImage.is_removed == False
+        )
+    )).scalars().all()
+    if not existing:
+        image = ProductImage(
+            id=uuid.uuid4(),
+            product_id=pid,
+            title=product.name,
+            medium_image_url=url,
+            small_image_url=url,
+            large_image_url=url,
+            display_photo=True,
+            picture_order=0,
+            created_by_user_id=current_user.id,
+            insert_date=datetime.now(timezone.utc),
+            update_date=datetime.now(timezone.utc),
+        )
+        db.add(image)
+        db.add(Log(
+            record_id=image.id, table_name="product_images",
+            description=f"ثبت تصویر شاخص در لیست تصاویر: {product.name}",
+            created_by_user_id=current_user.id, type="Create",
+        ))
+        await db.commit()
     return RedirectResponse(url=f"/administration/products/{product_id}/details", status_code=303)
 
 
