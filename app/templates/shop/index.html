@@ -2,6 +2,31 @@
 {% block title %}فروشگاه تخصصی لیزر، اپتیک و فوتونیک همدوس{% endblock %}
 {% block body_id %}index{% endblock %}
 {% block body_class %}lang-fa lang-rtl country-ir currency-irr layout-left-column page-index tax-display-enabled st-wrapper{% endblock %}
+{% block extra_head %}
+<style>
+    /* Tab-aware view-all button: compact, theme-colored, always in the tab row */
+    .home-tabs-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 8px; }
+    .home-tabs-bar .nav-tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; }
+    .home-tabs-viewall {
+        flex: 0 0 auto; width: auto; white-space: nowrap;
+        margin-inline-start: 12px; padding: 3px 14px;
+        font-size: 0.85rem; line-height: 1.9;
+        color: var(--c-primary); background-color: transparent;
+        border: 1px solid var(--c-primary); border-radius: 8px;
+        transition: background-color 0.2s, color 0.2s;
+    }
+    .home-tabs-viewall:hover { background-color: var(--c-primary); color: #ffffff; text-decoration: none; }
+    .home-tabs-viewall .material-icons { font-size: 1rem; vertical-align: middle; }
+    .home-tabs-viewall .short-text { display: none; }
+    @media (max-width: 767px) {
+        .home-tabs-bar { gap: 6px; }
+        .home-tabs-bar .nav-tabs .nav-item .nav-link { padding: 4px 8px; font-size: 0.78rem; white-space: nowrap; }
+        .home-tabs-viewall { padding: 2px 10px; font-size: 0.78rem; margin-inline-start: 6px; }
+        .home-tabs-viewall .full-text { display: none; }
+        .home-tabs-viewall .short-text { display: inline; }
+    }
+</style>
+{% endblock %}
 {% block content %}
 <nav class="breadcrumb-wrapper">
     <div class="container">
@@ -26,7 +51,7 @@
         <div class="container">
             <div class="block block_id_2 clearfix box-bg md-bottom">
                 <div class="aone-tabs">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="home-tabs-bar">
                     <ul class="nav nav-tabs">
                         {% if special_products %}
                         <li class="nav-item">
@@ -50,7 +75,7 @@
                         </li>
                         {% endif %}
                     </ul>
-                    <a id="homeTabsViewAll" class="btn btn-secondary" href="{% if special_products %}/discountProducts{% elif new_products %}/newProducts{% else %}/recentlyChargedProducts{% endif %}">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
+                    <a id="homeTabsViewAll" class="home-tabs-viewall" href="{% if special_products %}/discountProducts{% elif new_products %}/newProducts{% else %}/recentlyChargedProducts{% endif %}"><span class="full-text">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></span><span class="short-text">همه</span></a>
                     </div>
                     <div class="tab-content">
                         {% if special_products %}
