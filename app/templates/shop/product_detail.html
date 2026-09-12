@@ -759,6 +759,27 @@ function favRemoveFromAll() {
 }
 
 document.addEventListener('click', function(e) {
+    // Thumbnail -> main cover swap. (The bundled theme.js coverImage()
+    // only binds inside #product/#quickviewProduct; our container is
+    // #mainProduct, so wire it here.)
+    var thumb = e.target.closest ? e.target.closest('#js-zoom-gallery .js-thumb') : null;
+    if (thumb) {
+        e.preventDefault();
+        var gallery = thumb.closest('#js-zoom-gallery');
+        if (gallery) {
+            var selected = gallery.querySelectorAll('.js-thumb.selected');
+            for (var i = 0; i < selected.length; i++) selected[i].classList.remove('selected');
+        }
+        thumb.classList.add('selected');
+        var cover = document.querySelector('#mainProduct .js-qv-product-cover');
+        if (cover) {
+            var img = thumb.getAttribute('data-image');
+            var zoom = thumb.getAttribute('data-zoom-image');
+            if (img) cover.setAttribute('src', img);
+            if (zoom) cover.setAttribute('data-zoom-image', zoom);
+        }
+        return;
+    }
     var trigger = e.target.closest('.js-add-favorite');
     if (trigger) {
         e.preventDefault();

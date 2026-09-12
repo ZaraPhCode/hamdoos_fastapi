@@ -31,6 +31,7 @@ from app.services.cart_cookie_service import (
 )
 from app.schemas.product import ProductSearchParams
 from app.utils.persian_tools import normalize_image_url, price_to_string
+from app.config.settings import settings
 from app.config.site_config import register_template_globals
 
 templates = register_template_globals(Jinja2Templates(directory="app/templates"))
@@ -2951,6 +2952,11 @@ async def product_datasheet_download(
             file_path = candidate
             break
     if not file_path:
+        # The VPS only holds a partial Media copy — fall back to the origin
+        # that still hosts the full library (same pattern as /media).
+        base = (settings.MEDIA_BASE_URL or "").rstrip("/")
+        if base:
+            return RedirectResponse(url=f"{base}/Media/{rel}", status_code=302)
         return HTMLResponse("File not found", status_code=404)
 
     filename = os.path.basename(file_path)
