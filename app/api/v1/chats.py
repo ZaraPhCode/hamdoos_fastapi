@@ -49,7 +49,7 @@ async def get_chat(
     chat = await support_service.get_chat_by_id(db, cid)
     if not chat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
-    if chat.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
+    if chat.user_id != current_user.id and "Admin" not in current_user.active_role_names:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your chat")
     return support_service.build_chat_response(chat)
 
@@ -68,7 +68,7 @@ async def send_message(
     chat = await support_service.get_chat_by_id(db, cid)
     if not chat:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
-    if chat.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
+    if chat.user_id != current_user.id and "Admin" not in current_user.active_role_names:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your chat")
     msg = await support_service.send_chat_message(db, cid, request.message, current_user.id)
     return support_service.build_chat_response(chat)

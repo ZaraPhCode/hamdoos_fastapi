@@ -105,8 +105,7 @@ def require_role(role_name: str):
     """Dependency factory: require a specific role."""
 
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        user_role_names = {ur.role.name for ur in current_user.roles}
-        if role_name not in user_role_names:
+        if role_name not in current_user.active_role_names:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires role: {role_name}",
@@ -120,8 +119,7 @@ def require_any_role(*role_names: str):
     """Dependency factory: require at least one of the given roles."""
 
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        user_role_names = {ur.role.name for ur in current_user.roles}
-        if not user_role_names.intersection(role_names):
+        if not current_user.active_role_names.intersection(role_names):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires one of roles: {', '.join(role_names)}",
@@ -162,8 +160,7 @@ async def get_optional_user_from_cookie(
 async def get_admin_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    user_role_names = {ur.role.name for ur in current_user.roles}
-    if "Admin" not in user_role_names:
+    if "Admin" not in current_user.active_role_names:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",

@@ -48,7 +48,7 @@ async def get_invoice(
     invoice = await invoice_service.get_invoice_by_id(db, iid)
     if not invoice:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
-    if invoice.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
+    if invoice.user_id != current_user.id and "Admin" not in current_user.active_role_names:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your invoice")
     return invoice_service.build_invoice_response(invoice)
 

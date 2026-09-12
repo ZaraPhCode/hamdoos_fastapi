@@ -67,7 +67,7 @@ def _build_user_response(user: User) -> UserResponse:
         gender=user.gender,
         is_phone_confirmed=user.phone_number_confirmed,
         is_email_confirmed=user.email_confirmed,
-        roles=[ur.role.name for ur in user.roles],
+        roles=sorted(user.active_role_names),
     )
 
 

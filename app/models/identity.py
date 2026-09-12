@@ -59,6 +59,20 @@ class User(Base, BaseEntityMixin):
         return f"{self.first_name or ''} {self.last_name or ''}".strip()
 
     @property
+    def active_role_names(self) -> set[str]:
+        """Names of roles effectively granted to the user.
+
+        Soft-deleted associations (UserRole.is_removed) and soft-deleted
+        roles (Role.is_removed) are excluded, so deleting a role instantly
+        revokes it everywhere — listings, auth checks, redirects.
+        """
+        return {
+            ur.role.name
+            for ur in (self.roles or [])
+            if not ur.is_removed and ur.role is not None and not ur.role.is_removed
+        }
+
+    @property
     def is_authenticated(self) -> bool:
         return True
 

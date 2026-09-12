@@ -48,7 +48,7 @@ async def get_order(
     order = await order_service.get_order_by_id(db, oid)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    if order.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
+    if order.user_id != current_user.id and "Admin" not in current_user.active_role_names:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your order")
     return order_service.build_order_response(order)
 

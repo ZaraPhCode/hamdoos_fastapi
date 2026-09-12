@@ -55,7 +55,7 @@ async def export_order_pdf(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid order ID")
     order = await order_service.get_order_by_id(db, oid)
-    if not order or (order.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}):
+    if not order or (order.user_id != current_user.id and "Admin" not in current_user.active_role_names):
         raise HTTPException(status_code=404, detail="Order not found")
     data = order_service.build_order_response(order)
     pdf = generate_invoice_pdf(data)

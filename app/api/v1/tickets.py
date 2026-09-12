@@ -58,7 +58,7 @@ async def get_ticket(
     ticket = await support_service.get_ticket_by_id(db, tid)
     if not ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
-    if ticket.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
+    if ticket.user_id != current_user.id and "Admin" not in current_user.active_role_names:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your ticket")
     return support_service.build_ticket_response(ticket)
 
@@ -77,7 +77,7 @@ async def reply_to_ticket(
     ticket = await support_service.get_ticket_by_id(db, tid)
     if not ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
-    if ticket.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
+    if ticket.user_id != current_user.id and "Admin" not in current_user.active_role_names:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your ticket")
     msg = await support_service.reply_to_ticket(db, ticket, request.message, current_user.id, is_admin=request.is_admin)
     await db.commit()
@@ -98,7 +98,7 @@ async def close_ticket(
     ticket = await support_service.get_ticket_by_id(db, tid)
     if not ticket:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
-    if ticket.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}:
+    if ticket.user_id != current_user.id and "Admin" not in current_user.active_role_names:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your ticket")
     await support_service.close_ticket(db, ticket)
     await db.commit()

@@ -1054,7 +1054,7 @@ async def order_detail_page(order_id: str, request: Request, current_user: User 
         order = await order_service.get_admin_order_detail(db, oid)
     except ValueError:
         return HTMLResponse("Order not found", status_code=404)
-    if not order or (order.user_id != current_user.id and "Admin" not in {ur.role.name for ur in current_user.roles}):
+    if not order or (order.user_id != current_user.id and "Admin" not in current_user.active_role_names):
         return HTMLResponse("Order not found", status_code=404)
     cc = await _get_cart_context(request, db)
     detail = order_service.build_admin_order_response(order)

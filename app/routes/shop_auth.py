@@ -58,7 +58,7 @@ async def _set_auth_cookie(response, user) -> None:
 
 
 def _admin_target(next_url: str, user: User) -> str:
-    user_roles = {ur.role.name for ur in user.roles}
+    user_roles = user.active_role_names
     if next_url and next_url.startswith("/"):
         if next_url.startswith("/administration"):
             if user_roles.intersection(ADMIN_ROLES):

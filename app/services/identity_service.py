@@ -404,14 +404,28 @@ async def soft_delete_role_claim(db: AsyncSession, rc: RoleClaim, current_user_i
 # ── User Roles ──
 
 async def get_user_roles_with_relations(db: AsyncSession, page: int = 1, page_size: int = 50):
+    # Hide associations whose user or role was deleted — no DB changes needed.
     query = (
         select(UserRole)
+        .join(UserRole.role)
+        .join(UserRole.user)
         .options(selectinload(UserRole.user), selectinload(UserRole.role))
-        .where(UserRole.is_removed == False)
+        .where(
+            UserRole.is_removed == False,
+            Role.is_removed == False,
+            User.is_removed == False,
+        )
         .order_by(UserRole.insert_date.desc())
     )
     total = (await db.execute(
-        select(func.count(UserRole.id)).where(UserRole.is_removed == False)
+        select(func.count(UserRole.id))
+        .join(UserRole.role)
+        .join(UserRole.user)
+        .where(
+            UserRole.is_removed == False,
+            Role.is_removed == False,
+            User.is_removed == False,
+        )
     )).scalar() or 0
     items = (await db.execute(
         query.offset((page - 1) * page_size).limit(page_size)
@@ -422,8 +436,15 @@ async def get_user_roles_with_relations(db: AsyncSession, page: int = 1, page_si
 async def get_user_role_by_id(db: AsyncSession, ur_id: uuid.UUID) -> Optional[UserRole]:
     result = await db.execute(
         select(UserRole)
+        .join(UserRole.role)
+        .join(UserRole.user)
         .options(selectinload(UserRole.user), selectinload(UserRole.role))
-        .where(UserRole.id == ur_id, UserRole.is_removed == False)
+        .where(
+            UserRole.id == ur_id,
+            UserRole.is_removed == False,
+            Role.is_removed == False,
+            User.is_removed == False,
+        )
     )
     return result.unique().scalar_one_or_none()
 
