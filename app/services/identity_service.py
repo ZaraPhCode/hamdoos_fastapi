@@ -245,8 +245,26 @@ async def update_role(db: AsyncSession, role: Role, form_data: dict, current_use
 
 async def soft_delete_role(db: AsyncSession, role: Role, current_user_id: uuid.UUID) -> None:
     name = role.name
+    now = datetime.now(timezone.utc)
     role.is_removed = True
-    role.update_date = datetime.now(timezone.utc)
+    role.update_date = now
+
+    # Cascade: remove the role from all associated users (and its claims),
+    # otherwise deleted roles keep showing up on users/user-roles pages.
+    user_roles = (await db.execute(
+        select(UserRole).where(UserRole.role_id == role.id, UserRole.is_removed == False)
+    )).scalars().all()
+    for ur in user_roles:
+        ur.is_removed = True
+        ur.update_date = now
+
+    role_claims = (await db.execute(
+        select(RoleClaim).where(RoleClaim.role_id == role.id, RoleClaim.is_removed == False)
+    )).scalars().all()
+    for rc in role_claims:
+        rc.is_removed = True
+        rc.update_date = now
+
     await db.flush()
 
     db.add(Log(
