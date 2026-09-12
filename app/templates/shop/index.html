@@ -18,11 +18,11 @@
     .home-tabs-viewall:hover { background-color: var(--c-primary); color: #ffffff; text-decoration: none; }
     .home-tabs-viewall .material-icons { font-size: 1rem; vertical-align: middle; }
     .home-tabs-viewall .short-text { display: none; }
-    /* Desktop: the slick `<`/`>` arrows float above the slider (top:-50px,
-       one pinned at each end of this header row). Inset the button clear of
-       the corner arrow so it sits BESIDE it instead of underneath it. */
+    /* Desktop: both slick `<`/`>` arrows sit together at the top-left of the
+       slider, overlaying this header row. Keep the button clear of the whole
+       ~110px arrows cluster so it sits BESIDE them, never underneath. */
     @media (min-width: 992px) {
-        .home-tabs-viewall { margin-left: 46px; }
+        .home-tabs-viewall { margin-left: 122px; }
     }
     @media (max-width: 767px) {
         .home-tabs-bar { gap: 6px; }
