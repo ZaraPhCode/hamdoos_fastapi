@@ -86,6 +86,94 @@ services:
       retries: 3
       start_period: 30s
 
+  # ── Mailu 2.0 mail server for hamdoos.ir ──
+  # Web UI (admin + webmail) is served through asha-nginx
+  # (mail.hamdoos.ir → front:80); mail ports are published directly.
+  # Service names are stock Mailu names — internal configs resolve them.
+  # Secrets live in VPS-only /opt/mailu.env (NOT in git).
+  # Data lives in VPS-only /opt/mailu (bind mounts, survives rebuilds).
+  redis:
+    image: redis:alpine
+    container_name: mailu-redis
+    restart: unless-stopped
+    volumes:
+      - /opt/mailu/redis:/data
+
+  front:
+    image: ghcr.io/mailu/nginx:2.0
+    container_name: mailu-front
+    restart: unless-stopped
+    env_file:
+      - /opt/mailu.env
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+      - "127.0.0.1:8080:80"
+    volumes:
+      - /opt/mailu/certs:/certs
+    depends_on:
+      - redis
+
+  admin:
+    image: ghcr.io/mailu/admin:2.0
+    container_name: mailu-admin
+    restart: unless-stopped
+    env_file:
+      - /opt/mailu.env
+    volumes:
+      - /opt/mailu/data:/data
+      - /opt/mailu/dkim:/dkim
+    depends_on:
+      - redis
+
+  imap:
+    image: ghcr.io/mailu/dovecot:2.0
+    container_name: mailu-imap
+    restart: unless-stopped
+    env_file:
+      - /opt/mailu.env
+    volumes:
+      - /opt/mailu/mail:/mail
+    depends_on:
+      - front
+
+  smtp:
+    image: ghcr.io/mailu/postfix:2.0
+    container_name: mailu-postfix
+    restart: unless-stopped
+    env_file:
+      - /opt/mailu.env
+    volumes:
+      - /opt/mailu/mailqueue:/queue
+    depends_on:
+      - front
+
+  antispam:
+    image: ghcr.io/mailu/rspamd:2.0
+    container_name: mailu-antispam
+    hostname: antispam
+    restart: unless-stopped
+    env_file:
+      - /opt/mailu.env
+    volumes:
+      - /opt/mailu/filter:/var/lib/rspamd
+    depends_on:
+      - front
+      - redis
+
+  webmail:
+    image: ghcr.io/mailu/webmail:2.0
+    container_name: mailu-webmail
+    restart: unless-stopped
+    env_file:
+      - /opt/mailu.env
+    volumes:
+      - /opt/mailu/webmail:/data
+    depends_on:
+      - front
+
 volumes:
   postgres_data:
     name: asha_postgres_data
