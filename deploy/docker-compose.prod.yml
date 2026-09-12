@@ -109,6 +109,8 @@ services:
     restart: unless-stopped
     env_file:
       - /opt/mailu.env
+    volumes:
+      - ./mailu/unbound.conf:/unbound.conf:ro
     networks:
       default:
         ipv4_address: 172.19.0.53
