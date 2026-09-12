@@ -1,0 +1,106 @@
+{% extends "admin/base.html" %}
+{% block title %}تکثیر محصول{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 border-r-4 border-indigo-500">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-2xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-copy"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">تکثیر محصول</h1>
+                    <p class="text-sm text-gray-500 mt-0.5">ایجاد کپی از «{{ product.name }}» با مشخصات فنی، تصاویر، تامین‌کنندگان و لینک‌های مشابه/مرتبط</p>
+                </div>
+            </div>
+            <a href="/administration/products/{{ product.id }}/details" class="btn-secondary flex items-center gap-2">
+                <i class="fas fa-arrow-right"></i> بازگشت به جزئیات
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-200 px-6 py-4">
+            <h2 class="font-semibold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-pen text-indigo-500"></i> مشخصات محصول جدید
+            </h2>
+            <p class="text-xs text-gray-500 mt-1">سایر مشخصات (قیمت، موجودی، دسته‌بندی، جدول فنی، تصاویر و ...) دقیقاً از محصول اصلی کپی می‌شود.</p>
+        </div>
+        <form method="POST" action="/administration/products/{{ product.id }}/duplicate" class="p-6 space-y-5">
+            {% if form_error %}
+            <div class="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 flex items-center gap-2">
+                <i class="fas fa-exclamation-circle"></i> {{ form_error }}
+            </div>
+            {% endif %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="form-label">نام <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" value="{{ product.name or '' }}" required class="form-input" id="dup-name">
+                </div>
+                <div>
+                    <label class="form-label">نام انگلیسی <span class="text-red-500">*</span></label>
+                    <input type="text" name="en_name" value="{{ product.en_name or '' }}" required class="form-input" dir="ltr" id="dup-en-name">
+                </div>
+                <div>
+                    <label class="form-label">شماره قطعه <span class="text-red-500">*</span></label>
+                    <input type="text" name="part_number" value="{{ product.part_number or '' }}" required class="form-input" dir="ltr">
+                </div>
+                <div>
+                    <label class="form-label">اسلاگ <span class="text-red-500">*</span></label>
+                    <input type="text" name="slug" value="{{ product.slug or '' }}" required class="form-input" dir="ltr" id="dup-slug">
+                </div>
+                <div>
+                    <label class="form-label">اسلاگ انگلیسی <span class="text-red-500">*</span></label>
+                    <input type="text" name="en_slug" value="{{ product.en_slug or '' }}" required class="form-input" dir="ltr" id="dup-en-slug">
+                </div>
+                <div>
+                    <label class="form-label">کلید واژه‌ها</label>
+                    <input type="text" name="keywords" value="{{ product.keywords or '' }}" class="form-input" id="dup-keywords">
+                </div>
+            </div>
+            <div class="rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 flex items-start gap-2">
+                <i class="fas fa-info-circle mt-0.5"></i>
+                <span>پس از تکثیر به صفحه جزئیات محصول جدید هدایت می‌شوید. پوشه تصاویر نیز با نام اسلاگ انگلیسی جدید کپی می‌شود.</span>
+            </div>
+            <div class="flex items-center gap-3 justify-end pt-2 border-t border-gray-100">
+                <a href="/administration/products/{{ product.id }}/details" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">انصراف</a>
+                <a href="/administration/products" class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+                    <i class="fas fa-list"></i> بازگشت به لیست
+                </a>
+                <button type="submit" class="inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors">
+                    <i class="fas fa-copy"></i> ایجاد کپی
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    function slugify(text) {
+        return (text || '').toString().trim().toLowerCase()
+            .replace(/[\s_]+/g, '-')
+            .replace(/[^\u0600-\u06FFa-z0-9-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+    }
+    var nameEl = document.getElementById('dup-name');
+    var slugEl = document.getElementById('dup-slug');
+    var enNameEl = document.getElementById('dup-en-name');
+    var enSlugEl = document.getElementById('dup-en-slug');
+    var kwEl = document.getElementById('dup-keywords');
+    if (nameEl && slugEl) {
+        nameEl.addEventListener('input', function () {
+            slugEl.value = slugify(nameEl.value);
+            if (kwEl && !kwEl.value) kwEl.value = nameEl.value;
+        });
+    }
+    if (enNameEl && enSlugEl) {
+        enNameEl.addEventListener('input', function () {
+            enSlugEl.value = slugify(enNameEl.value);
+        });
+    }
+})();
+</script>
+{% endblock %}

@@ -15,7 +15,7 @@ from app.models.product import (
     Product, Category, Brand, ProductType, ProductUnit,
     Variety, ProductVariety, CategoryOption,
     Tag, ProductTag, RelatedProduct, SimilarProduct,
-    PriceHistory,
+    PriceHistory, ProductImage, MenuDatasheet,
 )
 from app.models.product_features import (
     TechnicalFeature, TechnicalFeatureValue, CategoryTechnicalFeature,
@@ -876,3 +876,394 @@ async def get_best_selling_products(db: AsyncSession, limit: int = 10) -> list[P
     )
     result = await db.execute(stmt)
     return list(result.unique().scalars().all())
+
+
+# ── Product duplication (تکثیر کردن) ──
+# Mirrors ASHA.Shop.Presentation/Areas/Administration/Controllers/Products/
+# ProductsController.Duplicate (GET + POST) in the original .NET app:
+# the admin edits Name/EnName/PartNumber/Slug/EnSlug/Keywords for the copy,
+# every other scalar is cloned from the source product, then supplier links,
+# technical tables + feature values, images, similar/related links and
+# datasheets are deep-copied (media URLs rewritten to the new EnSlug folder
+# and the image files copied on disk).
+
+_DUPLICATE_REQUIRED_FIELDS = ("name", "en_name", "part_number", "slug", "en_slug")
+
+
+def rewrite_media_url(old_url: Optional[str], new_slug: str) -> Optional[str]:
+    """Rewrite a media URL to the new slug folder — mirrors .NET ProductImage.Duplicate.
+
+    .NET: FileURL.Substring(0, secondIndex + 1) + newEnSlug + FileURL.Substring(firstIndex)
+    where firstIndex = last '/' and secondIndex = second-last '/'.
+    """
+    if not old_url or not new_slug:
+        return old_url
+    normalized = old_url.replace("\\", "/")
+    first = normalized.rfind("/")
+    if first <= 0:
+        return old_url
+    second = normalized.rfind("/", 0, first)
+    if second < 0:
+        return old_url
+    return normalized[: second + 1] + new_slug + normalized[first:]
+
+
+def _media_relative_path(url: Optional[str]) -> Optional[str]:
+    """Convert a stored media URL to a path relative to the media root."""
+    if not url:
+        return None
+    normalized = url.replace("\\", "/").lstrip("/")
+    lowered = normalized.lower()
+    if lowered.startswith("media/"):
+        normalized = normalized[len("media/"):]
+    if not normalized:
+        return None
+    return normalized
+
+
+def copy_product_media_files(source_urls: list[str], new_slug: str) -> bool:
+    """Copy the source product's media folder to the new slug folder.
+
+    Mirrors .NET ProductsController.CopyFiles: the folder holding the source
+    images (e.g. <root>/.../<oldSlug>/) is copied to <root>/.../<newSlug>/.
+    Best-effort: returns False (instead of raising) when nothing was copied,
+    e.g. files served remotely via MEDIA_BASE_URL. Checks /app/media first
+    (production volume mounted from the old .NET wwwroot/Media), then the
+    bundled app/static/Media copy.
+    """
+    import os
+    import shutil
+
+    if not source_urls or not new_slug:
+        return False
+    rels = [_media_relative_path(u) for u in source_urls]
+    rels = [r for r in rels if r and "/" in r]
+    if not rels:
+        return False
+    src_rel_dir = os.path.dirname(rels[0])
+    parent_rel = os.path.dirname(src_rel_dir)
+    dest_rel_dir = f"{parent_rel}/{new_slug}" if parent_rel else new_slug
+    copied = False
+    for root in ("/app/media", "app/static/Media"):
+        src_abs = os.path.join(root, src_rel_dir)
+        dest_abs = os.path.join(root, dest_rel_dir)
+        try:
+            if os.path.isdir(src_abs) and not os.path.abspath(src_abs) == os.path.abspath(dest_abs):
+                shutil.copytree(src_abs, dest_abs, dirs_exist_ok=True)
+                copied = True
+        except Exception:
+            continue
+    return copied
+
+
+async def duplicate_product(
+    db: AsyncSession,
+    source_id: uuid.UUID,
+    *,
+    name: str,
+    en_name: str,
+    part_number: str,
+    slug: str,
+    en_slug: str,
+    keywords: str = "",
+    user_id: Optional[uuid.UUID] = None,
+) -> Product:
+    """Deep-copy a product and its sub-resources — mirrors .NET Duplicate POST.
+
+    Raises ValueError with a Persian message when the new Name/EnName/
+    PartNumber collides with an existing product (same checks as .NET).
+    """
+    from app.models.common import Log
+
+    source = await get_product_full_details(db, source_id)
+    if source is None:
+        raise ValueError("محصول یافت نشد")
+
+    name = (name or "").strip()
+    en_name = (en_name or "").strip()
+    part_number = (part_number or "").strip()
+    slug = (slug or "").strip()
+    en_slug = (en_slug or "").strip()
+    keywords = (keywords or "").strip()
+    if not name or not en_name or not part_number or not slug or not en_slug:
+        raise ValueError("نام، نام انگلیسی، شماره قطعه، اسلاگ و اسلاگ انگلیسی الزامی هستند")
+
+    for field, value, msg in (
+        ("part_number", part_number, "شماره قطعه تکراری است"),
+        ("name", name, "نام تکراری است"),
+        ("en_name", en_name, "نام انگلیسی تکراری است"),
+    ):
+        exists = await db.execute(
+            select(Product.id).where(
+                getattr(Product, field) == value, Product.is_removed == False
+            )
+        )
+        if exists.scalar_one_or_none() is not None:
+            raise ValueError(msg)
+
+    max_int_id = (await db.execute(select(func.max(Product.int_id)))).scalar() or 0
+    now = datetime.now(timezone.utc)
+    new_id = uuid.uuid4()
+
+    duplicated = Product(
+        id=new_id,
+        int_id=max_int_id + 1,
+        # Six fields edited by the admin on the Duplicate form:
+        name=name,
+        en_name=en_name,
+        part_number=part_number,
+        slug=slug,
+        en_slug=en_slug,
+        keywords=keywords or source.keywords or "",
+        # Everything else cloned from the source (mirrors .NET Product.Duplicate,
+        # plus carry-over of remaining NOT NULL columns so the row stays valid):
+        short_name=source.short_name,
+        model=source.model or "",
+        introduction=source.introduction or "",
+        short_description=source.short_description or "",
+        meta_description=source.meta_description or "",
+        concatenated=source.concatenated or "",
+        en_concatenated=source.en_concatenated or "",
+        price=source.price or 0,
+        max_price=source.max_price,
+        price_after_discount=source.price_after_discount or 0,
+        discount_amount=source.discount_amount or 0,
+        discount_percentage=source.discount_percentage or 0,
+        currency_price=source.currency_price or 0,
+        profit_rate=source.profit_rate or 0,
+        taxes_and_duties=source.taxes_and_duties or 0,
+        total_amount_plus_taxes=source.total_amount_plus_taxes or 0,
+        vat_rate=source.vat_rate or 0,
+        stock_quantity=source.stock_quantity or 0,
+        stock_supply_date=source.stock_supply_date,
+        minimum_purchase=source.minimum_purchase or 1,
+        max_number_of_purchases=source.max_number_of_purchases or 0,
+        order_point=source.order_point or 0,
+        points_from_purchases=source.points_from_purchases or 0,
+        views=0,
+        rate=source.rate or 0,
+        sale=0,
+        release_date=source.release_date or now,
+        purchase_date=source.purchase_date or now,
+        status=source.status,
+        type=source.type,
+        default_variation=source.default_variation,
+        taobao_choice_id=source.taobao_choice_id,
+        delivery_day=source.delivery_day or 0,
+        number_of_variations=0,
+        restocked=source.restocked,
+        is_bundle=source.is_bundle,
+        is_calibrated=source.is_calibrated,
+        is_new=source.is_new,
+        is_special=source.is_special,
+        on_sale=source.on_sale,
+        suggested=source.suggested,
+        no_display=source.no_display,
+        automatic_price_calculation=source.automatic_price_calculation,
+        tax_unique_id=source.tax_unique_id or "",
+        image_id=None,
+        image_description=source.image_description,
+        image_title=source.image_title,
+        medium_image_url=source.medium_image_url,
+        medium_image_large_url=source.medium_image_large_url,
+        large_image_url=source.large_image_url,
+        feature_image_url=source.feature_image_url,
+        category_id=source.category_id,
+        brand_id=source.brand_id,
+        product_type_id=source.product_type_id,
+        product_unit_id=source.product_unit_id,
+        currency_id=source.currency_id,
+        created_by_user_id=user_id,
+        insert_date=now,
+        update_date=now,
+    )
+    db.add(duplicated)
+    await db.flush()
+    db.add(Log(
+        record_id=duplicated.id, table_name="products",
+        description=f"تکثیر محصول {source.name} به {duplicated.name}",
+        created_by_user_id=user_id, type="Create",
+    ))
+
+    # Supplier links (mirrors CopySupplierProductsAsync).
+    supplier_rows = (await db.execute(
+        select(SupplierProduct).where(
+            SupplierProduct.product_id == source.id,
+            SupplierProduct.is_removed == False,
+        )
+    )).scalars().all()
+    for item in supplier_rows:
+        sup = SupplierProduct(
+            id=uuid.uuid4(),
+            supplier_id=item.supplier_id,
+            product_id=new_id,
+            link=item.link,
+            created_by_user_id=user_id,
+            insert_date=now,
+            update_date=now,
+        )
+        db.add(sup)
+        await db.flush()
+        db.add(Log(
+            record_id=sup.id, table_name="supplier_products",
+            description=f"تکثیر تامین‌کننده محصول: {duplicated.name}",
+            created_by_user_id=user_id, type="Create",
+        ))
+
+    # Technical tables + feature values.
+    table_rows = (await db.execute(
+        select(TechnicalTableProduct)
+        .options(selectinload(TechnicalTableProduct.technical_feature_values))
+        .where(
+            TechnicalTableProduct.product_id == source.id,
+            TechnicalTableProduct.is_removed == False,
+        )
+    )).scalars().all()
+    for item in table_rows:
+        table_product = TechnicalTableProduct(
+            id=uuid.uuid4(),
+            technical_table_id=item.technical_table_id,
+            product_id=new_id,
+            created_by_user_id=user_id,
+            insert_date=now,
+            update_date=now,
+        )
+        db.add(table_product)
+        await db.flush()
+        db.add(Log(
+            record_id=table_product.id, table_name="technical_table_products",
+            description=f"تکثیر جدول فنی محصول: {duplicated.name}",
+            created_by_user_id=user_id, type="Create",
+        ))
+        for v in item.technical_feature_values:
+            if v.is_removed:
+                continue
+            value = TechnicalFeatureValue(
+                id=uuid.uuid4(),
+                technical_feature_id=v.technical_feature_id,
+                category_technical_feature_id=v.category_technical_feature_id,
+                technical_table_product_id=table_product.id,
+                technical_feature_enum_id=v.technical_feature_enum_id,
+                technical_feature_enum1_id=v.technical_feature_enum1_id,
+                min_value=v.min_value,
+                max_value=v.max_value,
+                min_unit=v.min_unit,
+                max_unit=v.max_unit,
+                x_value=v.x_value,
+                x_unit=v.x_unit,
+                y_value=v.y_value,
+                y_unit=v.y_unit,
+                z_value=v.z_value,
+                z_unit=v.z_unit,
+                d_value=v.d_value,
+                unit=v.unit,
+                s_value=v.s_value,
+                e_value=v.e_value,
+                e_value1=v.e_value1,
+                b_value=v.b_value,
+                general_feature=v.general_feature,
+                created_by_user_id=user_id,
+                insert_date=now,
+                update_date=now,
+            )
+            db.add(value)
+            await db.flush()
+            db.add(Log(
+                record_id=value.id, table_name="technical_feature_values",
+                description=f"تکثیر مقدار ویژگی فنی محصول: {duplicated.name}",
+                created_by_user_id=user_id, type="Create",
+            ))
+
+    # Product images (mirrors ProductImage.Duplicate URL rewriting).
+    for item in sorted(source.product_images or [], key=lambda x: x.picture_order or 0):
+        if item.is_removed:
+            continue
+        image = ProductImage(
+            id=uuid.uuid4(),
+            product_id=new_id,
+            medium_image_url=rewrite_media_url(item.medium_image_url, en_slug),
+            small_image_url=rewrite_media_url(item.small_image_url, en_slug),
+            large_image_url=rewrite_media_url(item.large_image_url, en_slug),
+            small_image_large_url=rewrite_media_url(item.small_image_large_url, en_slug),
+            medium_image_large_url=rewrite_media_url(item.medium_image_large_url, en_slug),
+            large_image_large_url=rewrite_media_url(item.large_image_large_url, en_slug),
+            title=item.title,
+            description=item.description,
+            display_photo=item.display_photo,
+            picture_order=item.picture_order or 0,
+            scale=item.scale or 0,
+            created_by_user_id=user_id,
+            insert_date=now,
+            update_date=now,
+        )
+        db.add(image)
+        await db.flush()
+        db.add(Log(
+            record_id=image.id, table_name="product_images",
+            description=f"تکثیر عکس محصول: {duplicated.name}",
+            created_by_user_id=user_id, type="Create",
+        ))
+
+    # Similar / related links.
+    for item in source.similar_products or []:
+        if item.is_removed:
+            continue
+        similar = SimilarProduct(
+            id=uuid.uuid4(),
+            product_id=new_id,
+            similar_product_id=item.similar_product_id,
+            feature_image_url=item.feature_image_url,
+            created_by_user_id=user_id,
+            insert_date=now,
+            update_date=now,
+        )
+        db.add(similar)
+        await db.flush()
+        db.add(Log(
+            record_id=similar.id, table_name="similar_products",
+            description=f"تکثیر محصول مشابه: {duplicated.name}",
+            created_by_user_id=user_id, type="Create",
+        ))
+    for item in source.related_products or []:
+        if item.is_removed:
+            continue
+        related = RelatedProduct(
+            id=uuid.uuid4(),
+            product_id=new_id,
+            relate_product_id=item.relate_product_id,
+            feature_image_url=item.feature_image_url,
+            created_by_user_id=user_id,
+            insert_date=now,
+            update_date=now,
+        )
+        db.add(related)
+        await db.flush()
+        db.add(Log(
+            record_id=related.id, table_name="related_products",
+            description=f"تکثیر محصول مرتبط: {duplicated.name}",
+            created_by_user_id=user_id, type="Create",
+        ))
+
+    # Datasheets (mirrors MenuDatasheet FileURL rewriting).
+    for item in source.menu_datasheets or []:
+        if item.is_removed:
+            continue
+        datasheet = MenuDatasheet(
+            id=uuid.uuid4(),
+            product_id=new_id,
+            type=item.type,
+            file_url=rewrite_media_url(item.file_url, en_slug),
+            complete_file_url=rewrite_media_url(item.complete_file_url, en_slug),
+            created_by_user_id=user_id,
+            insert_date=now,
+            update_date=now,
+        )
+        db.add(datasheet)
+        await db.flush()
+        db.add(Log(
+            record_id=datasheet.id, table_name="menu_datasheets",
+            description=f"تکثیر برگه اطلاعات محصول: {duplicated.name}",
+            created_by_user_id=user_id, type="Create",
+        ))
+
+    return duplicated

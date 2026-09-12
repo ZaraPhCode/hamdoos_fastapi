@@ -842,6 +842,103 @@ async def admin_product_delete_confirm(
     return RedirectResponse(url="/administration/products", status_code=303)
 
 
+# ── Product duplication (تکثیر کردن) ──
+# Mirrors the .NET Administration/Products Duplicate GET + POST endpoints:
+# GET shows the 6-field form (Name/EnName/PartNumber/Slug/EnSlug/Keywords),
+# POST deep-copies the product with all sub-resources and redirects to the
+# new product's details page.
+
+@router.get("/products/{product_id}/duplicate", response_class=HTMLResponse)
+async def admin_product_duplicate(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return templates.TemplateResponse("admin/product_duplicate.html", {
+        "request": request, "current_user": current_user, "product": product,
+        "form_error": None,
+    })
+
+
+@router.post("/products/{product_id}/duplicate", response_class=HTMLResponse)
+async def admin_product_duplicate_submit(
+    request: Request,
+    product_id: str,
+    current_user: User = Depends(require_any_role("Admin", "Product Manager")),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy.exc import IntegrityError
+
+    pid = uuid.UUID(product_id)
+    product = await product_service.get_product_by_id(db, pid)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    form = await request.form()
+
+    def _field(key: str) -> str:
+        return ((form.get(key) or "").strip())
+
+    _name = _field("name")
+    _en_name = _field("en_name")
+    payload = {
+        "name": _name,
+        "en_name": _en_name,
+        "part_number": _field("part_number"),
+        "slug": _field("slug") or (generate_slug(_name) if _name else ""),
+        "en_slug": _field("en_slug") or (generate_slug(_en_name) if _en_name else ""),
+        "keywords": _field("keywords"),
+    }
+
+    async def _rerender(message: str, status: int = 400):
+        # Re-render the form preserving user input, like the .NET view does
+        # when ModelState is invalid.
+        product.name = payload["name"] or product.name
+        product.en_name = payload["en_name"] or product.en_name
+        product.part_number = payload["part_number"] or product.part_number
+        product.slug = payload["slug"] or product.slug
+        product.en_slug = payload["en_slug"] or product.en_slug
+        product.keywords = payload["keywords"] or product.keywords
+        return templates.TemplateResponse("admin/product_duplicate.html", {
+            "request": request, "current_user": current_user, "product": product,
+            "form_error": message,
+        }, status_code=status)
+
+    if not payload["name"] or not payload["part_number"]:
+        return await _rerender("نام و شماره قطعه الزامی هستند")
+    try:
+        duplicated = await product_service.duplicate_product(
+            db, pid, **payload, user_id=current_user.id,
+        )
+        # Keep the category counter consistent (mirrors .NET AddProductCountAsync
+        # for the product's own category; FastAPI delete decrements the same).
+        category = await product_service.get_category_by_id(db, duplicated.category_id)
+        if category is not None:
+            category.product_count = (category.product_count or 0) + 1
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return await _rerender("محصولی با همین نام، نام انگلیسی یا شماره قطعه قبلاً ثبت شده است")
+    except ValueError as e:
+        await db.rollback()
+        return await _rerender(str(e))
+
+    # Copy the image files on disk to the new slug folder (best-effort, like
+    # .NET CopyFiles — never fails the request when files are remote/missing).
+    try:
+        full = await product_service.get_product_full_details(db, pid)
+        source_urls = [i.medium_image_url for i in (full.product_images or []) if i.medium_image_url]
+        product_service.copy_product_media_files(source_urls, duplicated.en_slug)
+    except Exception:
+        pass
+    return RedirectResponse(url=f"/administration/products/{duplicated.id}/details", status_code=303)
+
+
 def _format_tfv(value: TechnicalFeatureValue, display_format: str) -> str:
     """Render a technical feature value cell — mirrors the .NET
     TechnicalFeatureValue.Value(displayFormat) string.Format call."""
