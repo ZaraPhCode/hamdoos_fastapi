@@ -552,6 +552,57 @@ async def search_page(
     )
 
 
+@router.get("/newProducts", response_class=HTMLResponse)
+async def new_products_page(
+    request: Request,
+    order: str = Query("AlphabetAsc"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(28, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user_from_cookie),
+):
+    """All new products — search-result style listing (home tabs' view-all)."""
+    return await _render_product_list(
+        request, db,
+        order=order, page=page, page_size=page_size,
+        tags=["new"], page_title="محصولات جدید", current_user=current_user,
+    )
+
+
+@router.get("/discountProducts", response_class=HTMLResponse)
+async def discount_products_page(
+    request: Request,
+    order: str = Query("AlphabetAsc"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(28, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user_from_cookie),
+):
+    """All products of the home «discounted/featured» tab — search-result style."""
+    return await _render_product_list(
+        request, db,
+        order=order, page=page, page_size=page_size,
+        tags=["special"], page_title="محصولات ویژه", current_user=current_user,
+    )
+
+
+@router.get("/recentlyChargedProducts", response_class=HTMLResponse)
+async def recently_charged_products_page(
+    request: Request,
+    order: str = Query("AlphabetAsc"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(28, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user_from_cookie),
+):
+    """All restocked products — search-result style listing (home tabs' view-all)."""
+    return await _render_product_list(
+        request, db,
+        order=order, page=page, page_size=page_size,
+        tags=["restocked"], page_title="کالاهای تازه موجود", current_user=current_user,
+    )
+
+
 @router.post("/search/autocomplete", response_class=JSONResponse)
 async def search_autocomplete(
     q: str = Form(""),

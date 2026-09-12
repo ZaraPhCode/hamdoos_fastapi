@@ -26,6 +26,7 @@
         <div class="container">
             <div class="block block_id_2 clearfix box-bg md-bottom">
                 <div class="aone-tabs">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <ul class="nav nav-tabs">
                         {% if special_products %}
                         <li class="nav-item">
@@ -49,6 +50,8 @@
                         </li>
                         {% endif %}
                     </ul>
+                    <a id="homeTabsViewAll" class="btn btn-secondary" href="{% if special_products %}/discountProducts{% elif new_products %}/newProducts{% else %}/recentlyChargedProducts{% endif %}">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
+                    </div>
                     <div class="tab-content">
                         {% if special_products %}
                         <div id="aHomeTabTab1" class="tab-pane fade show active">
@@ -62,7 +65,7 @@
                                 </div>
                             </div>
                             <div class="view-all-link at-bottom">
-                                <a class="btn btn-secondary" href="/search?tag=special">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
+                                <a class="btn btn-secondary" href="/discountProducts">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
                             </div>
                         </div>
                         {% endif %}
@@ -78,7 +81,7 @@
                                 </div>
                             </div>
                             <div class="view-all-link at-bottom">
-                                <a class="btn btn-secondary" href="/search?tag=new">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
+                                <a class="btn btn-secondary" href="/newProducts">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
                             </div>
                         </div>
                         {% endif %}
@@ -94,7 +97,7 @@
                                 </div>
                             </div>
                             <div class="view-all-link at-bottom">
-                                <a class="btn btn-secondary" href="/search?tag=restocked">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
+                                <a class="btn btn-secondary" href="/recentlyChargedProducts">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></a>
                             </div>
                         </div>
                         {% endif %}
@@ -161,7 +164,7 @@
                         <div class="block block_id_10 clearfix box-bg md-bottom">
                             <div class="title-block d-flex flex-wrap">
                                 <span>محصولات جدید</span>
-                                <a href="/search?tag=new" style="margin-right:10px;">
+                                <a href="/newProducts" style="margin-right:10px;">
                                     <span class="view-all-link">مشاهده همه &nbsp;<i class="material-icons trending_flat"></i></span>
                                 </a>
                             </div>
@@ -325,4 +328,25 @@
     </div>
 </div>
 <div class="outside-container bottom-column-content"></div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+(function () {
+    // Maps each home tab pane to its full-listing page. The header
+    // «مشاهده همه» button follows the currently active tab.
+    var homeTabUrls = {
+        '#aHomeTabTab1': '/discountProducts',
+        '#aHomeTabTab3': '/newProducts',
+        '#aHomeTabTab4': '/recentlyChargedProducts'
+    };
+    function syncHomeTabsViewAll(target) {
+        var url = homeTabUrls[target];
+        if (url) $('#homeTabsViewAll').attr('href', url);
+    }
+    $('.aone-tabs a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        syncHomeTabsViewAll($(e.target).attr('href'));
+    });
+    syncHomeTabsViewAll($('.aone-tabs .nav-tabs .nav-link.active').attr('href'));
+})();
+</script>
 {% endblock %}
