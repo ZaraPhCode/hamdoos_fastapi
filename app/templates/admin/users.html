@@ -17,8 +17,18 @@
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="p-5 border-b border-gray-200">
-            <form method="GET" class="flex gap-2">
-                <input type="text" name="search" value="{{ search }}" placeholder="جستجوی کاربر..." class="form-input flex-1">
+            <form method="GET" class="flex gap-2 flex-wrap">
+                <input type="text" name="search" value="{{ search }}" placeholder="جستجوی کاربر..." class="form-input flex-1 min-w-40">
+                <select name="role" class="form-input" onchange="this.form.submit()">
+                    <option value="">همه نقش‌ها</option>
+                    {% for r in roles %}
+                    <option value="{{ r.id }}" {{ 'selected' if role_filter == r.id|string else '' }}>{{ r.name }}</option>
+                    {% endfor %}
+                </select>
+                <select name="sort" class="form-input" onchange="this.form.submit()">
+                    <option value="newest" {{ 'selected' if sort == 'newest' else '' }}>جدیدترین ثبت‌نام</option>
+                    <option value="oldest" {{ 'selected' if sort == 'oldest' else '' }}>قدیمی‌ترین ثبت‌نام</option>
+                </select>
                 <button type="submit" class="btn-primary"><i class="fas fa-search"></i></button>
             </form>
         </div>
@@ -66,7 +76,7 @@
         {% if total_pages and total_pages > 1 %}
         <div class="border-t px-5 py-4 flex justify-center gap-2">
             {% for p in range(1, total_pages + 1) %}
-            <a href="?page={{ p }}&search={{ search }}" class="px-3 py-1 rounded text-sm border {{ 'bg-blue-600 text-white border-blue-600' if p == page else 'border-gray-300 hover:bg-gray-100' }}">{{ p }}</a>
+            <a href="?page={{ p }}&search={{ search }}&role={{ role_filter }}&sort={{ sort }}" class="px-3 py-1 rounded text-sm border {{ 'bg-blue-600 text-white border-blue-600' if p == page else 'border-gray-300 hover:bg-gray-100' }}">{{ p }}</a>
             {% endfor %}
         </div>
         {% endif %}

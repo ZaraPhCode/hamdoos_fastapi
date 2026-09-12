@@ -2575,15 +2575,25 @@ async def admin_users(
     request: Request,
     page: int = Query(1),
     search: str = Query(""),
+    role: str = Query(""),
+    sort: str = Query("newest"),
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
 ):
-    users, total = await identity_service.get_users_paginated(db, page, 20, search)
+    role_id = None
+    if role:
+        try:
+            role_id = uuid.UUID(role)
+        except (ValueError, AttributeError):
+            role_id = None
+    if sort not in ("newest", "oldest"):
+        sort = "newest"
+    users, total = await identity_service.get_users_paginated(db, page, 20, search, role_id, sort)
     roles = (await db.execute(select(Role).where(Role.is_removed == False))).scalars().all()
     return templates.TemplateResponse("admin/users.html", {
         "request": request, "current_user": current_user,
         "users": users, "total": total, "page": page, "total_pages": (total + 19) // 20,
-        "search": search, "roles": roles,
+        "search": search, "roles": roles, "role_filter": role, "sort": sort,
     })
 
 

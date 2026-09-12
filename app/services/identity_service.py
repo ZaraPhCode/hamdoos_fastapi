@@ -21,7 +21,14 @@ from app.models.enums import IdentityType, IdentityStatus
 
 # ── Users ──
 
-async def get_users_paginated(db: AsyncSession, page: int = 1, page_size: int = 20, search: str = ""):
+async def get_users_paginated(
+    db: AsyncSession,
+    page: int = 1,
+    page_size: int = 20,
+    search: str = "",
+    role_id: Optional[uuid.UUID] = None,
+    sort: str = "newest",
+):
     query = select(User).where(User.is_removed == False)
     count_query = select(func.count(User.id)).where(User.is_removed == False)
 
@@ -42,10 +49,19 @@ async def get_users_paginated(db: AsyncSession, page: int = 1, page_size: int = 
             User.email.ilike(pattern)
         )
 
+    if role_id is not None:
+        has_role = User.roles.any(
+            (UserRole.role_id == role_id) & (UserRole.is_removed == False)
+        )
+        query = query.where(has_role)
+        count_query = count_query.where(has_role)
+
+    order = User.insert_date.desc() if sort != "oldest" else User.insert_date.asc()
+
     total = (await db.execute(count_query)).scalar() or 0
     users = (await db.execute(
         query.options(selectinload(User.roles).selectinload(UserRole.role))
-        .order_by(User.insert_date.desc())
+        .order_by(order)
         .offset((page - 1) * page_size).limit(page_size)
     )).unique().scalars().all()
     return users, total
